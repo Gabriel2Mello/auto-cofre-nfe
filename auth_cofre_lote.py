@@ -70,8 +70,8 @@ def input_dados():
     notas = [n.strip() for n in notas_input.split(',') if n.strip()]
 
     empresa = radiolist_dialog(
-        title='Empresa de faturamento',
-        text='Selecione a empresa de faturamento:',
+        title='Empresa',
+        text='Empresa de faturamento:',
         values=[
             ('MATRIZ', 'MATRIZ'),
             ('FILIAL', 'FILIAL')
@@ -80,12 +80,12 @@ def input_dados():
     encerrar_programa(empresa)
 
     mes_nota = escolher_mes(
-        'Mês de faturamento da nota',
+        'Mês da Nota',
         'Selecione o mês de faturamento da nota:'
     )
     mes_pasta = escolher_mes(
-        'Pasta destino',
-        'Selecione a pasta destino:'
+        'Pasta Destino',
+        'Pasta destino:'
     )
 
     return notas, empresa, mes_nota, mes_pasta
@@ -369,6 +369,7 @@ def main():
 
     elapsed_time = perf_counter() - start_time
     print(f"\nTerminado em: {elapsed_time:0.2f} segundos")
+    input('Pressione Enter para fechar...')
 
 
 if __name__ == "__main__":

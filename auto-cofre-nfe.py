@@ -69,24 +69,39 @@ def input_dados():
     notas_input = prompt('Nota: ').strip()
     notas = [n.strip() for n in notas_input.split(',') if n.strip()]
 
-    empresa = radiolist_dialog(
-        title='Empresa',
-        text='Empresa de faturamento:',
-        values=[
-            ('MATRIZ', 'MATRIZ'),
-            ('FILIAL', 'FILIAL')
-        ]
-    ).run()
-    encerrar_programa(empresa)
+    modo_input = prompt('Modo 1(Normal) 2(Manual): ').strip()
+    modo = 'NORMAL' if modo_input == '1' else 'MANUAL'
 
-    mes_nota = escolher_mes(
-        'Mês da Nota',
-        'Selecione o mês de faturamento da nota:'
-    )
-    mes_pasta = escolher_mes(
-        'Pasta Destino',
-        'Pasta destino:'
-    )
+    empresa = None
+    mes_nota = None
+    mes_pasta = None
+
+    if modo == 'NORMAL':
+        empresa_input = prompt('Empresa 1(Matriz) 2(Filial): ').strip()
+        empresa = 'MATRIZ' if empresa_input == '1' else 'FILIAL'
+
+        mes_atual = datetime.today().month
+        mes_nota = mes_atual
+        mes_pasta = mes_atual
+    else:
+        empresa = radiolist_dialog(
+            title='Empresa',
+            text='Empresa de faturamento:',
+            values=[
+                ('MATRIZ', 'MATRIZ'),
+                ('FILIAL', 'FILIAL')
+            ]
+        ).run()
+        encerrar_programa(empresa)
+
+        mes_nota = escolher_mes(
+            'Mês da Nota',
+            'Selecione o mês de faturamento da nota:'
+        )
+        mes_pasta = escolher_mes(
+            'Pasta Destino',
+            'Pasta destino:'
+        )
 
     return notas, empresa, mes_nota, mes_pasta
 

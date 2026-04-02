@@ -1,16 +1,19 @@
 # Standart library
-import argparse
 import json
 import os
+import sys
 import re
 from datetime import datetime
 from os import environ
 from pathlib import Path
 from time import perf_counter
 from urllib.parse import urljoin
+from time import sleep
 # Third-party libraries
 import requests
 from bs4 import BeautifulSoup
+from prompt_toolkit.shortcuts import radiolist_dialog
+from prompt_toolkit import prompt
 
 MONTHS = [
     None,
@@ -23,12 +26,69 @@ USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrom
 
 URL_BASE = 'https://painel.cofrenfe.com.br'
 
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('nota', help='Número da nota')
-    parser.add_argument('empresa', help='1(Matriz) 2(Filial)')
-    parser.add_argument('mes', help='Mês')
-    return parser.parse_args()
+def encerrar_programa(value):
+    if value is None:
+        print('\nOperação cancelada...encerrando programa.')
+        sleep(1)
+        sys.exit()
+
+
+def selecionar_mes():
+    meses = [(i, MONTHS[i]) for i in range(1,13)]
+
+    mes = radiolist_dialog(
+        title='Escolha o mês:',
+        values=meses
+    ).run()
+
+    encerrar_programa(mes)
+    return mes
+
+
+def escolher_mes(titulo, texto):
+    mes_atual = datetime.today().month
+
+    mes = radiolist_dialog(
+        title=titulo,
+        text=texto,
+        values=[
+            (mes_atual, f'ATUAL ({MONTHS[mes_atual]})'),
+            ('outro', 'OUTRO')
+        ]
+    ).run()
+
+    encerrar_programa(mes)
+
+    if mes == 'outro':
+        mes = selecionar_mes()
+
+    return mes
+
+
+def input_dados():
+    notas_input = prompt('Nota: ').strip()
+    notas = [n.strip() for n in notas_input.split(',') if n.strip()]
+
+    empresa = radiolist_dialog(
+        title='Empresa de faturamento',
+        text='Selecione a empresa de faturamento:',
+        values=[
+            ('MATRIZ', 'MATRIZ'),
+            ('FILIAL', 'FILIAL')
+        ]
+    ).run()
+    encerrar_programa(empresa)
+
+    mes_nota = escolher_mes(
+        'Mês de faturamento da nota',
+        'Selecione o mês de faturamento da nota:'
+    )
+    mes_pasta = escolher_mes(
+        'Pasta destino',
+        'Selecione a pasta destino:'
+    )
+
+    return notas, empresa, mes_nota, mes_pasta
 
 
 def login(session):
@@ -266,14 +326,9 @@ def marcar_flag(session, codigo_arquivo, codigo_flag = 10):
 
 
 def main():
+    numero_notas, empresa, mes_nota, mes_pasta = input_dados()
+
     start_time = perf_counter()
-
-    args = parse_args()
-    numero_notas = [n.strip() for n in args.nota.split(',') if n.strip()]
-    empresa = args.empresa
-    mes = int(args.mes)
-
-    empresa = 'MATRIZ' if empresa == '1' else 'FILIAL'
 
     session = requests.Session()
 
@@ -292,7 +347,7 @@ def main():
         try:
             linhas = carregar_notas(session, nota)
 
-            linha = encontrar_linha_nota(linhas, nota, mes)
+            linha = encontrar_linha_nota(linhas, nota, mes_nota)
 
             chave, empresa_id, codigo_arquivo, emitente = extrair_dados_nota(linha)
 
@@ -300,7 +355,9 @@ def main():
 
             nome_emitente = resolver_emitente(emitente)
 
-            salvar_arquivos(xml, pdf, nome_emitente, nota, empresa, mes)
+            salvar_arquivos(
+                xml, pdf, nome_emitente, nota, empresa, mes_pasta
+            )
 
             #marcar_flag(session, codigo_arquivo)
 

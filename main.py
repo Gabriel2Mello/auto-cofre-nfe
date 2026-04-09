@@ -1,0 +1,81 @@
+import sys
+from requests import Session
+from time import perf_counter
+
+from src.interface import input_dados
+from src.utils import (
+        resolver_emitente,
+        salvar_arquivos,
+)
+from src.core import (
+    login,
+    ver_arquivos_nfe,
+    extrair_empresas_href,
+    trocar_empresa,
+    carregar_nota,
+    encontrar_linha_nota,
+    extrair_dados_nota,
+    baixar_arquivos,
+    marcar_flag
+)
+
+
+def main():
+    notas, empresa, mes_nota, mes_pasta = input_dados()
+
+    start_time = perf_counter()
+
+    with Session() as session:
+        try:
+            html_login = login(session)
+            empresas_href = extrair_empresas_href(html_login)
+            trocar_empresa(session, empresa, empresas_href)
+            ver_arquivos_nfe(session)
+
+            for nota in notas:
+                print(f'\nProcessando: {nota}')
+
+                try:
+                    linhas = carregar_nota(session, nota)
+                    linha = encontrar_linha_nota(
+                        linhas,
+                        nota,
+                        mes_nota
+                    )
+                    dados = extrair_dados_nota(linha)
+
+                    xml, pdf = baixar_arquivos(
+                        session,
+                        dados['empresa_id'],
+                        dados['chave']
+                    )
+
+                    nome_emitente = resolver_emitente(
+                        dados['emitente']
+                    )
+                    salvar_arquivos(
+                        xml,
+                        pdf,
+                        nome_emitente,
+                        nota,
+                        empresa,
+                        mes_pasta
+                    )
+
+                    #marcar_flag(session, dados['codigo_arquivo'])
+
+                except Exception as e:
+                    print(f'Erro na nota {nota}: {e}')
+
+        except Exception as e:
+            print(f'Erro fatal no processo: {e}')
+            sys.exit(1)
+
+    elapsed_time = perf_counter() - start_time
+    print(f'\nTerminado em: {elapsed_time:0.2f} segundos')
+    input('Pressione Enter para fechar...')
+
+
+
+if __name__ == "__main__":
+    main()

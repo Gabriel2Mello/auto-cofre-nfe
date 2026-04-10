@@ -6,7 +6,9 @@ from bs4 import BeautifulSoup
 
 from src.config import (
     CONTENT_TYPE,
+    REQUESTED_WITH,
     USER_AGENT,
+    ACCEPT,
     URL_BASE,
     CNPJ_MATRIZ,
     SENHA_COFRE,
@@ -41,6 +43,12 @@ def login(session):
 def ver_arquivos_nfe(session):
     session.get(
         f'{URL_BASE}/nfe/empresa/ver-arquivos-nfe'
+    ).raise_for_status()
+
+
+def ver_arquivos_cfe(session):
+    session.get(
+        f'{URL_BASE}/nfe/empresa/ver_arquivos_cfe'
     ).raise_for_status()
 
 
@@ -97,13 +105,41 @@ def carregar_nota(session, numero_nota):
     }
 
     headers = {
-        'X-Requested-With': 'XMLHttpRequest',
+        'X-Requested-With': REQUESTED_WITH,
         'Referer': f'{URL_BASE}/nfe/empresa/ver-arquivos-nfe',
-        'Accept': 'application/json, text/javascript, */*; q=0.01',
+        'Accept': ACCEPT,
     }
 
     response = session.post(
         url=f'{URL_BASE}/nfe/empresa/ver-arquivos-nfe/load',
+        headers=headers,
+        data=payload
+    )
+    response.raise_for_status()
+
+    return response.json().get('aaData')
+
+
+def carregar_cte(session, numero):
+    payload = {
+        'sEcho': '1',
+        'iColumns': '8',
+        'sColumns': 'recebimento_quando,emitente_nome,destinatario_nome,nfe_data,nro_nota,vlr_total,tipo,tipo',
+        'nro_nota_de': str(numero),
+        'flag_cliente': '98',
+        'flag_conta': '98',
+        'iDisplayStart': '0',
+        'iDisplayLength': '25',
+    }
+
+    headers = {
+        'X-Requested-With': REQUESTED_WITH,
+        'Referer': f'{URL_BASE}/nfe/empresa/ver-arquivos-cte',
+        'Accept': ACCEPT,
+    }
+
+    response = session.post(
+        url=f'{URL_BASE}/nfe/empresa/ver-arquivos-cte/load',
         headers=headers,
         data=payload
     )
@@ -117,12 +153,17 @@ def encontrar_linha_nota(linhas, numero_nota, mes_atual):
         raise RuntimeError(f'Nenhum dado para nota: {numero_nota}')
 
     ano_atual = int(datetime.today().strftime('%y'))
+
     re_data = re.compile(r'(\d{2})/(\d{2})/(\d{2})')
     re_nota = re.compile(r'/(\d+)/')
 
     for linha in linhas:
-        data_emissao = linha[2]
-        nota_str = linha[3]
+        if len(linha) >= 8:
+            data_emissao = linha[3]
+            nota_str = linha[4]
+        else:
+            data_emissao = linha[2]
+            nota_str = linha[3]
 
         data_match = re_data.search(data_emissao)
         if not data_match:
@@ -143,10 +184,11 @@ def encontrar_linha_nota(linhas, numero_nota, mes_atual):
 
 
 def extrair_dados_nota(linha):
-    html = linha[6]
+    html = linha[-1]
 
-    re_chave = re.compile(r"chave='([^']+)'")
-    re_empresa = re.compile(r"nfe/(\d+)/")
+    #re_chave = re.compile(r"(?:chave='|receita/cte/|receita/nfe/)(\d{44})")
+    re_chave = re.compile(r'consultarSituacaoNota\("empresa","([^"]+)"\)')
+    re_empresa = re.compile(r"(?:nfe|cte)/(\d+)/")
     re_codigo_arquivo = re.compile(r"setaFlag\(\d+,'(\d+)'\)")
 
     try:
@@ -185,9 +227,14 @@ def extrair_dados_nota(linha):
 
 
 def baixar_arquivos(session, empresa_id, chave):
-    xml_url = f"{URL_BASE}/nfe/download-arquivo/nfe/{empresa_id}/{chave}.xml"
-    pdf_url = f"{URL_BASE}/nfe/ver-danfe/nfe/{empresa_id}/{chave}.pdf"
+    #xml_url = f"{URL_BASE}/nfe/download-arquivo/nfe/{empresa_id}/{chave}.xml"
+    #pdf_url = f"{URL_BASE}/nfe/ver-danfe/nfe/{empresa_id}/{chave}.pdf"
 
+    xml_url = f"{URL_BASE}/nfe/download-arquivo/cte/{empresa_id}/{chave}.xml"
+    pdf_url = f"{URL_BASE}/nfe/ver-dacte/cte/{empresa_id}/{chave}.pdf"
+
+    print(f'XML URL: {xml_url}')
+    print(f'PDF URL: {pdf_url}')
     response_xml = session.get(xml_url)
     response_pdf = session.get(pdf_url)
 

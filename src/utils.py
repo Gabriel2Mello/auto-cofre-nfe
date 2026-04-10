@@ -70,5 +70,5 @@ def salvar_arquivos(xml, pdf, nome_emitente, numero_nota, empresa, mes):
         raise RuntimeError('Caminho da pasta XML não existe')
 
     (path_pdf / f'{nome_limpo}.pdf').write_bytes(pdf)
-    (path_xml / f'{nome_arquivo}.xml').write_bytes(xml)
+    (path_xml / f'{nome_limpo}.xml').write_bytes(xml)
 

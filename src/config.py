@@ -13,6 +13,8 @@ USER_AGENT = (
 
 URL_BASE = 'https://painel.cofrenfe.com.br'
 CONTENT_TYPE = 'application/x-www-form-urlencoded; charset=UTF-8'
+ACCEPT = 'application/json, text/javascript, */*; q=0.01'
+REQUESTED_WITH = 'XMLHttpRequest'
 
 
 MONTHS = [

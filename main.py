@@ -8,6 +8,7 @@ from src.utils import (
         salvar_arquivos,
 )
 from src.core import (
+    carregar_cte,
     login,
     ver_arquivos_nfe,
     extrair_empresas_href,
@@ -36,7 +37,9 @@ def main():
                 print(f'\nProcessando: {nota}')
 
                 try:
-                    linhas = carregar_nota(session, nota)
+                    #linhas = carregar_nota(session, nota)
+                    linhas = carregar_cte(session, nota)
+                    print(f'Linhas: {linhas}')
                     linha = encontrar_linha_nota(
                         linhas,
                         nota,
@@ -61,9 +64,7 @@ def main():
                         empresa,
                         mes_pasta
                     )
-
                     #marcar_flag(session, dados['codigo_arquivo'])
-
                 except Exception as e:
                     print(f'Erro na nota {nota}: {e}')
 

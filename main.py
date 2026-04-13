@@ -8,14 +8,13 @@ from src.utils import (
         salvar_arquivos,
 )
 from src.core import (
-    carregar_cte,
     login,
     ver_arquivos,
     extrair_empresas_href,
     trocar_empresa,
-    carregar_nota,
-    encontrar_linha_nota,
-    extrair_dados_nota,
+    carregar_dados,
+    encontrar_linha,
+    extrair_dados,
     baixar_arquivos,
     marcar_flag
 )
@@ -37,18 +36,14 @@ def main():
                 print(f'\nProcessando: {nota}')
 
                 try:
-                    if tipo == 'NFE':
-                        linhas = carregar_nota(session, nota)
-                    else:
-                        linhas = carregar_cte(session, nota)
-
-                    print(f'Linhas: {linhas}')
-                    linha = encontrar_linha_nota(
+                    linhas = carregar_dados(session, nota, tipo)
+                    linha = encontrar_linha(
                         linhas,
                         nota,
-                        mes_nota
+                        mes_nota,
+                        tipo
                     )
-                    dados = extrair_dados_nota(linha, tipo)
+                    dados = extrair_dados(linha, tipo)
 
                     xml, pdf = baixar_arquivos(
                         session,
@@ -69,7 +64,9 @@ def main():
                         mes_pasta,
                         tipo
                     )
-                    #marcar_flag(session, dados['codigo_arquivo'])
+
+                    marcar_flag(session, dados['codigo_arquivo'])
+
                 except Exception as e:
                     print(f'Erro na nota {nota}: {e}')
 

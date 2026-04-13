@@ -10,10 +10,17 @@ from src.config import (
     USER_AGENT,
     ACCEPT,
     URL_BASE,
+    COLUNAS,
     CNPJ_MATRIZ,
     SENHA_COFRE,
     CNPJ
 )
+
+RE_CNPJ = re.compile(r'\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}')
+RE_DATA = re.compile(r'(\d{2})/(\d{2})/(\d{2})')
+RE_NOTA = re.compile(r'/(\d+)/')
+RE_EMPRESA_ID = re.compile(r"(?:nfe|cte)/(\d+)/")
+RE_CODIGO_ARQUIVO = re.compile(r"setaFlag\(\d+,'(\d+)'\)")
 
 
 def login(session):
@@ -41,21 +48,14 @@ def login(session):
 
 
 def ver_arquivos(session, tipo):
-    if tipo == 'NFE':
-        session.get(
-            f'{URL_BASE}/nfe/empresa/ver-arquivos-nfe'
-        ).raise_for_status()
-    else:
-        session.get(
-            f'{URL_BASE}/nfe/empresa/ver-arquivos-cfe'
-        ).raise_for_status()
+    session.get(
+        f'{URL_BASE}/nfe/empresa/ver-arquivos-{tipo}'
+    ).raise_for_status()
 
 
 def extrair_empresas_href(html):
     soup = BeautifulSoup(html, 'lxml')
     empresas = {}
-
-    re_cnpj = re.compile(r'\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}')
 
     for link in soup.find_all('a', href=True):
         href = link.get('href')
@@ -69,7 +69,7 @@ def extrair_empresas_href(html):
             if not texto_apos_link:
                 continue
 
-            cnpj_match = re_cnpj.search(str(texto_apos_link))
+            cnpj_match = RE_CNPJ.search(str(texto_apos_link))
 
             if cnpj_match:
                 empresas[cnpj_match.group()] = href
@@ -83,19 +83,20 @@ def trocar_empresa(session, empresa, empresas_href):
     if not empresa_link:
         raise RuntimeError('Link da empresa não encontrado')
 
-    response = session.get(
+    session.get(
         url=urljoin(URL_BASE, empresa_link),
         headers={'Referer': f'{URL_BASE}/login/enviar'},
         allow_redirects=True
-    )
-    response.raise_for_status()
+    ).raise_for_status()
 
 
-def carregar_nota(session, nota):
+def carregar_dados(session, nota, tipo):
+    endpoint = f'ver-arquivos-{tipo}'
+
     payload = {
         'sEcho': '1',
-        'iColumns': '7',
-        'sColumns': 'recebimento_quando,emitente_nome,nfe_data,nro_nota,vlr_total,tipo,',
+        'iColumns': '7' if tipo == 'nfe' else '8',
+        'sColumns': COLUNAS[tipo],
         'nro_nota_de': str(nota),
         'flag_cliente': '98',
         'flag_conta': '98',
@@ -105,12 +106,12 @@ def carregar_nota(session, nota):
 
     headers = {
         'X-Requested-With': REQUESTED_WITH,
-        'Referer': f'{URL_BASE}/nfe/empresa/ver-arquivos-nfe',
+        'Referer': f'{URL_BASE}/nfe/empresa/{endpoint}',
         'Accept': ACCEPT,
     }
 
     response = session.post(
-        url=f'{URL_BASE}/nfe/empresa/ver-arquivos-nfe/load',
+        url=f'{URL_BASE}/nfe/empresa/{endpoint}/load',
         headers=headers,
         data=payload
     )
@@ -119,95 +120,51 @@ def carregar_nota(session, nota):
     return response.json().get('aaData')
 
 
-def carregar_cte(session, nota):
-    payload = {
-        'sEcho': '1',
-        'iColumns': '8',
-        'sColumns': 'recebimento_quando,emitente_nome,destinatario_nome,nfe_data,nro_nota,vlr_total,tipo,tipo',
-        'nro_nota_de': str(nota),
-        'flag_cliente': '98',
-        'flag_conta': '98',
-        'iDisplayStart': '0',
-        'iDisplayLength': '25',
-    }
-
-    headers = {
-        'X-Requested-With': REQUESTED_WITH,
-        'Referer': f'{URL_BASE}/nfe/empresa/ver-arquivos-cte',
-        'Accept': ACCEPT,
-    }
-
-    response = session.post(
-        url=f'{URL_BASE}/nfe/empresa/ver-arquivos-cte/load',
-        headers=headers,
-        data=payload
-    )
-    response.raise_for_status()
-
-    return response.json().get('aaData')
-
-
-def encontrar_linha_nota(linhas, numero_nota, mes_atual):
+def encontrar_linha(linhas, nota, mes_atual, tipo):
     if not linhas:
-        raise RuntimeError(f'Nenhum dado para nota: {numero_nota}')
+        raise RuntimeError(f'Nenhum dado para nota: {nota}')
 
     ano_atual = int(datetime.today().strftime('%y'))
 
-    re_data = re.compile(r'(\d{2})/(\d{2})/(\d{2})')
-    re_nota = re.compile(r'/(\d+)/')
-
     for linha in linhas:
-        if len(linha) >= 8:
-            data_emissao = linha[3]
-            nota_str = linha[4]
-        else:
-            data_emissao = linha[2]
-            nota_str = linha[3]
+        index_emissao, index_nota = (3, 4) if tipo == 'cte' else (2, 3)
 
-        data_match = re_data.search(data_emissao)
-        if not data_match:
-            continue
+        data_match = RE_DATA.search(linha[index_emissao])
+        if not data_match: continue
 
         _, mes, ano = map(int, data_match.groups())
-        if mes != mes_atual or ano != ano_atual:
-            continue
+        if mes != mes_atual or ano != ano_atual: continue
 
-        nota_match = re_nota.search(nota_str)
-        if not nota_match:
-            continue
-
-        if nota_match.group(1) == str(numero_nota):
+        nota_match = RE_NOTA.search(linha[index_nota])
+        if nota_match and nota_match.group(1) == str(nota):
             return linha
 
     raise RuntimeError('Nenhuma nota encontrada')
 
 
-def extrair_dados_nota(linha, tipo):
-    html = " ".join([str(item) for item in linha])
+def extrair_dados(linha, tipo):
+    html = " ".join(map(str, linha))
 
     padroes = {
-        'NFE': r"chave='([^']+)'|consultarSituacaoNota\(\"empresa\",\"([^\"]+)\"\)",
-        'CTE': r'consultarSituacaoNota\("empresa","(.*?)"\)'
+        'nfe': r"chave='([^']+)'|consultarSituacaoNota\(\"empresa\",\"([^\"]+)\"\)",
+        'cte': r'consultarSituacaoNota\("empresa","(.*?)"\)'
     }
 
-    re_chave = re.compile(padroes.get(tipo, padroes['CTE']))
-    re_empresa = re.compile(r"(?:nfe|cte)/(\d+)/")
-    re_codigo_arquivo = re.compile(r"setaFlag\(\d+,'(\d+)'\)")
-
     try:
+        re_chave = re.compile(padroes.get(tipo, padroes['cte']))
         chave_match = re_chave.search(html)
         if not chave_match:
             raise RuntimeError('Chave da nota não encontrada')
 
         chave = next(g for g in chave_match.groups() if g is not None)
 
-        empresa_match = re_empresa.search(html)
+        empresa_match = RE_EMPRESA_ID.search(html)
         if not empresa_match:
             raise RuntimeError('ID da empresa não encontrado')
 
         empresa_id = empresa_match.group(1)
 
-        codigo_arquivo_match = re_codigo_arquivo.search(html)
+        codigo_arquivo_match = RE_CODIGO_ARQUIVO.search(html)
         if not codigo_arquivo_match:
             raise RuntimeError('Código setaFlag não encontrado')
 
@@ -236,15 +193,13 @@ def extrair_dados_nota(linha, tipo):
 
 
 def baixar_arquivos(session, empresa_id, chave, tipo):
-    if tipo == 'NFE':
-        xml_url = f"{URL_BASE}/nfe/download-arquivo/nfe/{empresa_id}/{chave}.xml"
-        pdf_url = f"{URL_BASE}/nfe/ver-danfe/nfe/{empresa_id}/{chave}.pdf"
-    else:
-        xml_url = f"{URL_BASE}/nfe/download-arquivo/cte/{empresa_id}/{chave}.xml"
-        pdf_url = f"{URL_BASE}/nfe/ver-dacte/cte/{empresa_id}/{chave}.pdf"
+    ver_path = 'danfe' if tipo == 'nfe' else 'dacte'
 
-    print(f'XML URL: {xml_url}')
-    print(f'PDF URL: {pdf_url}')
+    xml_url = f"{URL_BASE}/nfe/download-arquivo/{tipo}/{empresa_id}/{chave}.xml"
+    pdf_url = f"{URL_BASE}/nfe/ver-{ver_path}/{tipo}/{empresa_id}/{chave}.pdf"
+
+    #print(f'XML URL: {xml_url}')
+    #print(f'PDF URL: {pdf_url}')
     response_xml = session.get(xml_url)
     response_pdf = session.get(pdf_url)
 
@@ -255,8 +210,7 @@ def baixar_arquivos(session, empresa_id, chave, tipo):
 
 
 def marcar_flag(session, codigo_arquivo, codigo_flag = 10):
-    response = session.post(
+    session.post(
         f'{URL_BASE}/nfe/seta-flag/{codigo_arquivo}/{codigo_flag}'
-    )
-    response.raise_for_status()
+    ).raise_for_status()
 

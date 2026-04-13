@@ -41,10 +41,11 @@ def escolher_mes(titulo, texto):
 
 def input_dados():
     tipo_input = prompt('Tipo 1(NFe) 2(CTe): ').strip()
-    tipo = 'NFE' if tipo_input == '1' else 'CTE'
+    tipo = 'nfe' if tipo_input == '1' else 'cte'
 
     notas_input = prompt('Nota: ').strip()
     notas = [n.strip() for n in notas_input.split(',') if n.strip()]
+    encerrar_programa(notas)
 
     modo_input = prompt('Modo 1(Normal) 2(Manual): ').strip()
     modo = 'NORMAL' if modo_input == '1' else 'MANUAL'

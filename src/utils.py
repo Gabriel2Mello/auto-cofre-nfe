@@ -8,7 +8,7 @@ from pathlib import Path
 from src.config import CAMINHO_DOCUMENTO_ENTRADA, MONTHS
 
 def encerrar_programa(value):
-    if value is None:
+    if not value:
         print('\nOperação cancelada...encerrando programa.')
         sleep(1)
         sys.exit()
@@ -61,7 +61,7 @@ def salvar_arquivos(xml, pdf, nome_emitente, numero_nota, empresa, mes, tipo):
         raise RuntimeError('CAMINHO_DOCUMENTO_ENTRADA não configurado.')
 
 
-    tipo_caminho = 'NF-e' if tipo == 'NFE' else 'CT-e'
+    tipo_caminho = 'NF-e' if tipo == 'nfe' else 'CT-e'
     path_pdf = base_path / f'PDF {tipo_caminho}' / ano / empresa / MONTHS[mes]
     path_xml = base_path / f'XML - {tipo_caminho}' / ano / empresa / MONTHS[mes]
 

@@ -17,6 +17,11 @@ ACCEPT = 'application/json, text/javascript, */*; q=0.01'
 REQUESTED_WITH = 'XMLHttpRequest'
 
 
+COLUNAS = {
+    'nfe': 'recebimento_quando,emitente_nome,nfe_data,nro_nota,vlr_total,tipo,',
+    'cte': 'recebimento_quando,emitente_nome,destinatario_nome,nfe_data,nro_nota,vlr_total,tipo,tipo'
+}
+
 MONTHS = [
     None,
     'JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL',

@@ -1,4 +1,5 @@
 import sys
+import ctypes
 from requests import Session
 from time import perf_counter
 
@@ -20,9 +21,19 @@ from src.core import (
 )
 
 
-def main():
-    notas, empresa, mes_nota, mes_pasta, tipo = input_dados()
+def set_app_id():
+    try:
+        my_app_id = 'g2mello.autocofre.versao1'
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(my_app_id)
+    except Exception:
+        pass
 
+
+def main():
+    if sys.platform == 'win32':
+        set_app_id()
+
+    notas, empresa, mes_nota, mes_pasta, tipo = input_dados()
     start_time = perf_counter()
 
     with Session() as session:
@@ -65,7 +76,7 @@ def main():
                         tipo
                     )
 
-                    marcar_flag(session, dados['codigo_arquivo'])
+                    #marcar_flag(session, dados['codigo_arquivo'])
 
                 except Exception as e:
                     print(f'Erro na nota {nota}: {e}')
@@ -82,3 +93,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

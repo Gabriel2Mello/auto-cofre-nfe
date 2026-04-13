@@ -40,16 +40,15 @@ def login(session):
     return response.text
 
 
-def ver_arquivos_nfe(session):
-    session.get(
-        f'{URL_BASE}/nfe/empresa/ver-arquivos-nfe'
-    ).raise_for_status()
-
-
-def ver_arquivos_cfe(session):
-    session.get(
-        f'{URL_BASE}/nfe/empresa/ver_arquivos_cfe'
-    ).raise_for_status()
+def ver_arquivos(session, tipo):
+    if tipo == 'NFE':
+        session.get(
+            f'{URL_BASE}/nfe/empresa/ver-arquivos-nfe'
+        ).raise_for_status()
+    else:
+        session.get(
+            f'{URL_BASE}/nfe/empresa/ver-arquivos-cfe'
+        ).raise_for_status()
 
 
 def extrair_empresas_href(html):
@@ -92,12 +91,12 @@ def trocar_empresa(session, empresa, empresas_href):
     response.raise_for_status()
 
 
-def carregar_nota(session, numero_nota):
+def carregar_nota(session, nota):
     payload = {
         'sEcho': '1',
         'iColumns': '7',
         'sColumns': 'recebimento_quando,emitente_nome,nfe_data,nro_nota,vlr_total,tipo,',
-        'nro_nota_de': str(numero_nota),
+        'nro_nota_de': str(nota),
         'flag_cliente': '98',
         'flag_conta': '98',
         'iDisplayStart': '0',
@@ -120,12 +119,12 @@ def carregar_nota(session, numero_nota):
     return response.json().get('aaData')
 
 
-def carregar_cte(session, numero):
+def carregar_cte(session, nota):
     payload = {
         'sEcho': '1',
         'iColumns': '8',
         'sColumns': 'recebimento_quando,emitente_nome,destinatario_nome,nfe_data,nro_nota,vlr_total,tipo,tipo',
-        'nro_nota_de': str(numero),
+        'nro_nota_de': str(nota),
         'flag_cliente': '98',
         'flag_conta': '98',
         'iDisplayStart': '0',
@@ -183,33 +182,43 @@ def encontrar_linha_nota(linhas, numero_nota, mes_atual):
     raise RuntimeError('Nenhuma nota encontrada')
 
 
-def extrair_dados_nota(linha):
-    html = linha[-1]
+def extrair_dados_nota(linha, tipo):
+    html = " ".join([str(item) for item in linha])
 
-    #re_chave = re.compile(r"(?:chave='|receita/cte/|receita/nfe/)(\d{44})")
-    re_chave = re.compile(r'consultarSituacaoNota\("empresa","([^"]+)"\)')
+    padroes = {
+        'NFE': r"chave='([^']+)'|consultarSituacaoNota\(\"empresa\",\"([^\"]+)\"\)",
+        'CTE': r'consultarSituacaoNota\("empresa","(.*?)"\)'
+    }
+
+    re_chave = re.compile(padroes.get(tipo, padroes['CTE']))
     re_empresa = re.compile(r"(?:nfe|cte)/(\d+)/")
     re_codigo_arquivo = re.compile(r"setaFlag\(\d+,'(\d+)'\)")
 
     try:
         chave_match = re_chave.search(html)
         if not chave_match:
-            raise RuntimeError('Chave da NFe não encontrada')
+            raise RuntimeError('Chave da nota não encontrada')
+
+        chave = next(g for g in chave_match.groups() if g is not None)
 
         empresa_match = re_empresa.search(html)
         if not empresa_match:
             raise RuntimeError('ID da empresa não encontrado')
 
+        empresa_id = empresa_match.group(1)
+
         codigo_arquivo_match = re_codigo_arquivo.search(html)
         if not codigo_arquivo_match:
             raise RuntimeError('Código setaFlag não encontrado')
 
-        empresa_id = empresa_match.group(1)
-        chave = chave_match.group(1)
         codigo_arquivo = codigo_arquivo_match.group(1)
 
-        emitente_html = linha[1]
-        emitente = emitente_html.split('<br')[0].upper().strip()
+        emitente_html = str(linha[1])
+        emitente = (
+            re.split(r'<br', emitente_html, flags=re.IGNORECASE)[0]
+            .strip()
+            .upper()
+        )
 
         if not emitente:
             raise RuntimeError('Emitente não encontrado')
@@ -222,16 +231,17 @@ def extrair_dados_nota(linha):
             'emitente': emitente
         }
 
-    except AttributeError:
-            raise RuntimeError('Falha ao extrair dados')
+    except Exception as e:
+        raise RuntimeError(f'Erro ao processar {tipo}: {str(e)}')
 
 
-def baixar_arquivos(session, empresa_id, chave):
-    #xml_url = f"{URL_BASE}/nfe/download-arquivo/nfe/{empresa_id}/{chave}.xml"
-    #pdf_url = f"{URL_BASE}/nfe/ver-danfe/nfe/{empresa_id}/{chave}.pdf"
-
-    xml_url = f"{URL_BASE}/nfe/download-arquivo/cte/{empresa_id}/{chave}.xml"
-    pdf_url = f"{URL_BASE}/nfe/ver-dacte/cte/{empresa_id}/{chave}.pdf"
+def baixar_arquivos(session, empresa_id, chave, tipo):
+    if tipo == 'NFE':
+        xml_url = f"{URL_BASE}/nfe/download-arquivo/nfe/{empresa_id}/{chave}.xml"
+        pdf_url = f"{URL_BASE}/nfe/ver-danfe/nfe/{empresa_id}/{chave}.pdf"
+    else:
+        xml_url = f"{URL_BASE}/nfe/download-arquivo/cte/{empresa_id}/{chave}.xml"
+        pdf_url = f"{URL_BASE}/nfe/ver-dacte/cte/{empresa_id}/{chave}.pdf"
 
     print(f'XML URL: {xml_url}')
     print(f'PDF URL: {pdf_url}')

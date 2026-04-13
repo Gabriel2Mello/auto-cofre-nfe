@@ -40,6 +40,9 @@ def escolher_mes(titulo, texto):
 
 
 def input_dados():
+    tipo_input = prompt('Tipo 1(NFe) 2(CTe): ').strip()
+    tipo = 'NFE' if tipo_input == '1' else 'CTE'
+
     notas_input = prompt('Nota: ').strip()
     notas = [n.strip() for n in notas_input.split(',') if n.strip()]
 
@@ -77,5 +80,5 @@ def input_dados():
             'Pasta destino:'
         )
 
-    return notas, empresa, mes_nota, mes_pasta
+    return notas, empresa, mes_nota, mes_pasta, tipo
 

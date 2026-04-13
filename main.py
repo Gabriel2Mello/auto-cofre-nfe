@@ -10,7 +10,7 @@ from src.utils import (
 from src.core import (
     carregar_cte,
     login,
-    ver_arquivos_nfe,
+    ver_arquivos,
     extrair_empresas_href,
     trocar_empresa,
     carregar_nota,
@@ -22,7 +22,7 @@ from src.core import (
 
 
 def main():
-    notas, empresa, mes_nota, mes_pasta = input_dados()
+    notas, empresa, mes_nota, mes_pasta, tipo = input_dados()
 
     start_time = perf_counter()
 
@@ -31,26 +31,30 @@ def main():
             html_login = login(session)
             empresas_href = extrair_empresas_href(html_login)
             trocar_empresa(session, empresa, empresas_href)
-            ver_arquivos_nfe(session)
+            ver_arquivos(session, tipo)
 
             for nota in notas:
                 print(f'\nProcessando: {nota}')
 
                 try:
-                    #linhas = carregar_nota(session, nota)
-                    linhas = carregar_cte(session, nota)
+                    if tipo == 'NFE':
+                        linhas = carregar_nota(session, nota)
+                    else:
+                        linhas = carregar_cte(session, nota)
+
                     print(f'Linhas: {linhas}')
                     linha = encontrar_linha_nota(
                         linhas,
                         nota,
                         mes_nota
                     )
-                    dados = extrair_dados_nota(linha)
+                    dados = extrair_dados_nota(linha, tipo)
 
                     xml, pdf = baixar_arquivos(
                         session,
                         dados['empresa_id'],
-                        dados['chave']
+                        dados['chave'],
+                        tipo
                     )
 
                     nome_emitente = resolver_emitente(
@@ -62,7 +66,8 @@ def main():
                         nome_emitente,
                         nota,
                         empresa,
-                        mes_pasta
+                        mes_pasta,
+                        tipo
                     )
                     #marcar_flag(session, dados['codigo_arquivo'])
                 except Exception as e:

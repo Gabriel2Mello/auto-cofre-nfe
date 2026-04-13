@@ -50,7 +50,7 @@ def resolver_emitente(emitente):
     return emitente_identificado
 
 
-def salvar_arquivos(xml, pdf, nome_emitente, numero_nota, empresa, mes):
+def salvar_arquivos(xml, pdf, nome_emitente, numero_nota, empresa, mes, tipo):
     ano = str(datetime.today().year)
 
     nome_arquivo = f'{nome_emitente} {numero_nota}'
@@ -60,8 +60,10 @@ def salvar_arquivos(xml, pdf, nome_emitente, numero_nota, empresa, mes):
     if not base_path.exists():
         raise RuntimeError('CAMINHO_DOCUMENTO_ENTRADA não configurado.')
 
-    path_pdf = base_path / 'PDF NF-e' / ano / empresa / MONTHS[mes]
-    path_xml = base_path / 'XML - NF-e' / ano / empresa / MONTHS[mes]
+
+    tipo_caminho = 'NF-e' if tipo == 'NFE' else 'CT-e'
+    path_pdf = base_path / f'PDF {tipo_caminho}' / ano / empresa / MONTHS[mes]
+    path_xml = base_path / f'XML - {tipo_caminho}' / ano / empresa / MONTHS[mes]
 
     if not path_pdf.exists():
         raise RuntimeError('Caminho da pasta PDF não existe')

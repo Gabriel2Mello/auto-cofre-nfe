@@ -227,6 +227,7 @@ def resolver_emitente(emitente):
 
     return nome_emitente
 
+
 def salvar_arquivos(xml, pdf, nome_emitente, numero_nota, empresa):
     mes = datetime.today().month
     ano = datetime.today().year

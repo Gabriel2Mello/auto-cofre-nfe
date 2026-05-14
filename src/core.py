@@ -1,3 +1,4 @@
+import time
 import re
 from datetime import datetime
 from urllib.parse import urljoin
@@ -27,7 +28,8 @@ def login(session):
     session.headers.update({
         'User-Agent': USER_AGENT,
         'Origin': URL_BASE,
-        'Content-Type': CONTENT_TYPE
+        'Content-Type': CONTENT_TYPE,
+        'Connection': 'keep-alive'
     })
 
     payload = {
@@ -40,7 +42,8 @@ def login(session):
         url=f'{URL_BASE}/login/enviar',
         data=payload,
         headers={'Referer': f'{URL_BASE}/login'},
-        allow_redirects=True
+        allow_redirects=True,
+        timeout=15
     )
     response.raise_for_status()
 
@@ -48,9 +51,20 @@ def login(session):
 
 
 def ver_arquivos(session, tipo):
-    session.get(
-        f'{URL_BASE}/nfe/empresa/ver-arquivos-{tipo}'
-    ).raise_for_status()
+    tentativas = 3
+    for i in range(tentativas):
+        try:
+            response = session.get(
+                f'{URL_BASE}/nfe/empresa/ver-arquivos-{tipo}')
+            response.raise_for_status()
+            return
+        except Exception as e:
+            if i < tentativas - 1:
+                print(f"O site demorou a responder. Tentando acessar novamente ({i+1}/{tentativas})...")
+                time.sleep(5)
+            else:
+                print("\nErro interno do site")
+                raise e
 
 
 def extrair_empresas_href(html):

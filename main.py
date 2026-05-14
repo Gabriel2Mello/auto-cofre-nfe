@@ -1,3 +1,5 @@
+import time
+import random
 import sys
 import ctypes
 from requests import Session
@@ -41,6 +43,10 @@ def main():
             html_login = login(session)
             empresas_href = extrair_empresas_href(html_login)
             trocar_empresa(session, empresa, empresas_href)
+
+            print('Aguardando sincronização do sistema...')
+            time.sleep(2)
+
             ver_arquivos(session, tipo)
 
             for nota in notas:
@@ -78,8 +84,12 @@ def main():
 
                     #marcar_flag(session, dados['codigo_arquivo'])
 
+                    delay = random.uniform(1.5, 3.5)
+                    time.sleep(delay)
+
                 except Exception as e:
                     print(f'Erro na nota {nota}: {e}')
+                    time.sleep(5)
 
         except Exception as e:
             print(f'Erro fatal no processo: {e}')

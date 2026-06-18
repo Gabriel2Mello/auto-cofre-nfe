@@ -1,8 +1,18 @@
 from os import environ
+import sys
 
-CNPJ_MATRIZ = environ['CNPJ_MATRIZ']
-SENHA_COFRE = environ['SENHA_COFRE']
-CAMINHO_DOCUMENTO_ENTRADA = environ['CAMINHO_DOCUMENTO_ENTRADA']
+
+def carregar_env(chave):
+  valor = environ.get(chave)
+  if not valor:
+    print(f"Variável de ambiente '{chave}' não configurada.")
+    input('Pressione Enter para fechar...')
+    sys.exit(1)
+  return valor
+
+CNPJ_MATRIZ = carregar_env('CNPJ_MATRIZ')
+SENHA_COFRE = carregar_env('SENHA_COFRE')
+CAMINHO_DOCUMENTO_ENTRADA = carregar_env('CAMINHO_DOCUMENTO_ENTRADA')
 
 
 USER_AGENT = (

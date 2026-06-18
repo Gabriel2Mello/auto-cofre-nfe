@@ -7,6 +7,7 @@ from time import perf_counter
 from src.interface import input_dados
 from src.auth import login
 from src.emitente_handler import EmitenteHandler
+from src.http_client import TimeoutSession
 from src.utils import (
   salvar_arquivos,
   set_app_id,
@@ -25,14 +26,14 @@ from src.core import (
 )
 
 
-def main():
+def main() -> None:
   if sys.platform == 'win32':
     set_app_id()
 
   notas, empresa, mes_nota, mes_pasta, tipo = input_dados()
   start_time = perf_counter()
 
-  with Session() as session:
+  with TimeoutSession(default_timeout=10) as session:
     try:
       html_login = login(session)
       empresas_href = extrair_empresas_href(html_login)

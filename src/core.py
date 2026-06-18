@@ -15,7 +15,6 @@ def ver_arquivos(session, tipo, tentativas=3):
     try:
       response = session.get(
         f'{URL_BASE}/nfe/empresa/ver-arquivos-{tipo}',
-        timeout=10
       )
       response.raise_for_status()
       return
@@ -38,7 +37,6 @@ def trocar_empresa(session, empresa, empresas_href):
     url=urljoin(URL_BASE, empresa_link),
     headers={'Referer': f'{URL_BASE}/login/enviar'},
     allow_redirects=True,
-    timeout=10
   ).raise_for_status()
 
 
@@ -66,7 +64,6 @@ def carregar_dados(session, nota, tipo):
     url=f'{URL_BASE}/nfe/empresa/{endpoint}/load',
     headers=headers,
     data=payload,
-    timeout=10
   )
   response.raise_for_status()
 
@@ -79,8 +76,8 @@ def baixar_arquivos(session, empresa_id, chave, tipo):
   xml_url = f"{URL_BASE}/nfe/download-arquivo/{tipo}/{empresa_id}/{chave}.xml"
   pdf_url = f"{URL_BASE}/nfe/ver-{ver_path}/{tipo}/{empresa_id}/{chave}.pdf"
 
-  response_xml = session.get(xml_url, timeout=10)
-  response_pdf = session.get(pdf_url, timeout=10)
+  response_xml = session.get(xml_url)
+  response_pdf = session.get(pdf_url)
 
   response_xml.raise_for_status()
   response_pdf.raise_for_status()
@@ -91,6 +88,6 @@ def baixar_arquivos(session, empresa_id, chave, tipo):
 def marcar_flag(session, codigo_arquivo, codigo_flag=10):
   session.post(
     f'{URL_BASE}/nfe/seta-flag/{codigo_arquivo}/{codigo_flag}',
-    timeout=10
+    data={},
   ).raise_for_status()
 

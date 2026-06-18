@@ -26,7 +26,6 @@ def login(session):
     data=payload,
     headers={'Referer': f'{URL_BASE}/login'},
     allow_redirects=True,
-    timeout=10
   )
   response.raise_for_status()
 

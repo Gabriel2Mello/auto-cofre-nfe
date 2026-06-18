@@ -1,4 +1,5 @@
 from datetime import datetime
+from html import unescape
 import re
 
 from bs4 import BeautifulSoup
@@ -8,10 +9,12 @@ RE_DATA = re.compile(r'(\d{2})/(\d{2})/(\d{2})')
 RE_NOTA = re.compile(r'/(\d+)/')
 RE_EMPRESA_ID = re.compile(r"(?:nfe|cte)/(\d+)/")
 RE_CODIGO_ARQUIVO = re.compile(r"setaFlag\(\d+,'(\d+)'\)")
+RE_CHAVE_NFE = re.compile(r"chave='([^']+)'|consultarSituacaoNota\(\"empresa\",\"([^\"]+)\"\)")
+RE_CHAVE_CTE = re.compile(r'consultarSituacaoNota\("empresa","(.*?)"\)')
 
 
-def extrair_empresas_href(html):
-  soup = BeautifulSoup(html, 'lxml')
+def extrair_empresas_href(html_content):
+  soup = BeautifulSoup(html_content, 'lxml')
   empresas = {}
 
   for link in soup.find_all('a', href=True):
@@ -64,40 +67,42 @@ def encontrar_linha(linhas, nota, mes_atual, tipo):
   raise RuntimeError('Nenhuma nota encontrada')
 
 
-def extrair_dados(linha, tipo):
-  html = " ".join(map(str, linha))
+def resolve_emitente(emitente_html: str) -> str:
+  emitente_antes_do_br = (
+    re.split(r'<br', emitente_html, flags=re.IGNORECASE)[0]
+  )
+  emitente_limpo = re.sub(r'<[^>]+>', ' ', emitente_antes_do_br)
 
-  padroes = {
-    'nfe': r"chave='([^']+)'|consultarSituacaoNota\(\"empresa\",\"([^\"]+)\"\)",
-    'cte': r'consultarSituacaoNota\("empresa","(.*?)"\)'
-  }
+  emitente = unescape(emitente_limpo).strip().upper()
+  emitente = " ".join(emitente.split())
+
+  return emitente
+
+
+def extrair_dados(linha, tipo):
+  html_content = " ".join(map(str, linha))
 
   try:
-    re_chave = re.compile(padroes.get(tipo, padroes['cte']))
-    chave_match = re_chave.search(html)
+    re_chave = RE_CHAVE_CTE if tipo == 'cte' else RE_CHAVE_NFE
+    chave_match = re_chave.search(html_content)
     if not chave_match:
       raise RuntimeError('Chave da nota não encontrada')
 
     chave = next(g for g in chave_match.groups() if g is not None)
 
-    empresa_match = RE_EMPRESA_ID.search(html)
+    empresa_match = RE_EMPRESA_ID.search(html_content)
     if not empresa_match:
       raise RuntimeError('ID da empresa não encontrado')
 
     empresa_id = empresa_match.group(1)
 
-    codigo_arquivo_match = RE_CODIGO_ARQUIVO.search(html)
+    codigo_arquivo_match = RE_CODIGO_ARQUIVO.search(html_content)
     if not codigo_arquivo_match:
       raise RuntimeError('Código setaFlag não encontrado')
 
     codigo_arquivo = codigo_arquivo_match.group(1)
 
-    emitente_html = str(linha[1])
-    emitente = (
-      re.split(r'<br', emitente_html, flags=re.IGNORECASE)[0]
-      .strip()
-      .upper()
-    )
+    emitente = resolve_emitente(str(linha[1]))
 
     if not emitente:
       raise RuntimeError('Emitente não encontrado')

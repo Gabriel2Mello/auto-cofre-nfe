@@ -41,6 +41,17 @@ class EmitenteHandler:
 
 
   def _persist(self):
-    with open(self.caminho_json, 'w', encoding='utf-8') as f:
-      json.dump(self.emitentes_conhecidos, f, indent=4, ensure_ascii=False)
+    temp_path = self.caminho_json.with_suffix('.tmp')
+
+    try:
+      with open(temp_path, 'w', encoding='utf-8') as f:
+        json.dump(self.emitentes_conhecidos, f, indent=4, ensure_ascii=False)
+
+      temp_path.replace(self.caminho_json)
+
+    except Exception as e:
+      print(f"Erro ao salvar emitentes_conhecidos.json: {e}")
+    finally:
+      if temp_path.exists():
+        temp_path.unlink()
 

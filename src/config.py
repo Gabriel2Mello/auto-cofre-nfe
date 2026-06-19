@@ -14,13 +14,6 @@ CNPJ_MATRIZ = carregar_env('CNPJ_MATRIZ')
 SENHA_COFRE = carregar_env('SENHA_COFRE')
 CAMINHO_DOCUMENTO_ENTRADA = carregar_env('CAMINHO_DOCUMENTO_ENTRADA')
 
-
-USER_AGENT = (
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-  'AppleWebKit/537.36 (KHTML, like Gecko) '
-  'Chrome/145.0.0.0 Safari/537.36'
-)
-
 URL_BASE = 'https://painel.cofrenfe.com.br'
 CONTENT_TYPE = 'application/x-www-form-urlencoded; charset=UTF-8'
 ACCEPT = 'application/json, text/javascript, */*; q=0.01'

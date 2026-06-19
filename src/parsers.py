@@ -18,8 +18,8 @@ def extrair_empresas_href(html_content):
   empresas = {}
 
   for link in soup.find_all('a', href=True):
-    href = link.get('href')
 
+    href = link.get('href')
     if not href or 'trocarLogin?vid=' not in href:
       continue
 
@@ -49,18 +49,25 @@ def _validar_data_linha(data, mes_alvo, ano_alvo) -> bool:
   return mes == mes_alvo and ano == ano_alvo
 
 
+def _extrair_campo_regex(regex, texto, erro_msg):
+  match = regex.search(texto)
+  if not match:
+    raise RuntimeError(erro_msg)
+
+  val = next((g for g in match.groups() if g is not None), None)
+  if not val:
+    raise RuntimeError(erro_msg)
+
+  return val
+
+
 def encontrar_linha(linhas, nota, mes_atual, tipo):
   if not linhas:
     raise RuntimeError(f'Nenhum dado para nota: {nota}')
 
   mes_alvo = int(mes_atual)
   hoje = datetime.today()
-  ano_atual = hoje.year
-
-  if hoje.month == 1 and mes_atual == 12:
-    ano_alvo = ano_atual - 1
-  else:
-    ano_alvo = ano_atual
+  ano_alvo = hoje.year - 1 if (hoje.month == 1 and mes_alvo == 12) else hoje.year
 
   for linha in linhas:
     index_emissao, index_nota = (3, 4) if tipo == 'cte' else (2, 3)
@@ -84,35 +91,28 @@ def resolve_emitente(emitente_html: str) -> str:
   emitente_limpo = re.sub(r'<[^>]+>', ' ', emitente_antes_do_br)
 
   emitente = unescape(emitente_limpo).strip().upper()
-  emitente = " ".join(emitente.split())
-
-  return emitente
+  return " ".join(emitente.split())
 
 
 def extrair_dados(linha, tipo):
   html_content = " ".join(map(str, linha))
 
   try:
-    re_chave = RE_CHAVE_CTE if tipo == 'cte' else RE_CHAVE_NFE
-    chave_match = re_chave.search(html_content)
-    if not chave_match:
-      raise RuntimeError('Chave da nota não encontrada')
-
-    chave = next((g for g in chave_match.groups() if g is not None), None)
-    if not chave:
-      raise RuntimeError('Chave da nota não capturada')
-
-    empresa_match = RE_EMPRESA_ID.search(html_content)
-    if not empresa_match:
-      raise RuntimeError('ID da empresa não encontrado')
-
-    empresa_id = empresa_match.group(1)
-
-    codigo_arquivo_match = RE_CODIGO_ARQUIVO.search(html_content)
-    if not codigo_arquivo_match:
-      raise RuntimeError('Código setaFlag não encontrado')
-
-    codigo_arquivo = codigo_arquivo_match.group(1)
+    chave = _extrair_campo_regex(
+      RE_CHAVE_CTE if tipo == 'cte' else RE_CHAVE_NFE,
+      html_content,
+      'Chave da nota não encontrada'
+    )
+    empresa_id = _extrair_campo_regex(
+      RE_EMPRESA_ID,
+      html_content,
+      'ID da empresa não encontrado'
+    )
+    codigo_arquivo = _extrair_campo_regex(
+      RE_CODIGO_ARQUIVO,
+      html_content,
+      'Código setaFlag não encontrado'
+    )
 
     emitente = resolve_emitente(str(linha[1]))
     if not emitente:

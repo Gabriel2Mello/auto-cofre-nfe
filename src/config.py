@@ -10,7 +10,6 @@ def carregar_env(chave):
     sys.exit(1)
   return valor
 
-CNPJ_MATRIZ = carregar_env('CNPJ_MATRIZ')
 SENHA_COFRE = carregar_env('SENHA_COFRE')
 CAMINHO_DOCUMENTO_ENTRADA = carregar_env('CAMINHO_DOCUMENTO_ENTRADA')
 

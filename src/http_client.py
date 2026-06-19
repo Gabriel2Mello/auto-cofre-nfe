@@ -1,9 +1,23 @@
 from typing import Any
-from requests import Session, Response
+from cloudscraper import CloudScraper
+from requests import Response
 
-class TimeoutSession(Session):
-  def __init__(self, default_timeout: float = 10) -> None:
-    super().__init__()
+class TimeoutScraper(CloudScraper):
+  def __init__(
+    self,
+    default_timeout: float = 10,
+    *args: Any,
+    **kwargs: Any
+  ) -> None:
+    super().__init__(
+      browser={
+        'browser': 'chrome',
+        'platform': 'windows',
+        'desktop': True
+      },
+      *args,
+      **kwargs
+    )
     self.default_timeout = default_timeout
 
 

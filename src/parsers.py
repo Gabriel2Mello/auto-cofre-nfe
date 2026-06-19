@@ -88,7 +88,9 @@ def extrair_dados(linha, tipo):
     if not chave_match:
       raise RuntimeError('Chave da nota não encontrada')
 
-    chave = next(g for g in chave_match.groups() if g is not None)
+    chave = next((g for g in chave_match.groups() if g is not None), None)
+    if not chave:
+      raise RuntimeError('Chave da nota não capturada')
 
     empresa_match = RE_EMPRESA_ID.search(html_content)
     if not empresa_match:

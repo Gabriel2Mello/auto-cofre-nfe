@@ -5,11 +5,11 @@ import re
 from bs4 import BeautifulSoup
 
 RE_CNPJ = re.compile(r'\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}')
-RE_DATA = re.compile(r'(\d{2})/(\d{2})/(\d{2})')
+RE_DATA = re.compile(r'(\d{2})/(\d{2})/(\d{2,4})')
 RE_NOTA = re.compile(r'/(\d+)/')
 RE_EMPRESA_ID = re.compile(r"(?:nfe|cte)/(\d+)/")
 RE_CODIGO_ARQUIVO = re.compile(r"setaFlag\(\d+,'(\d+)'\)")
-RE_CHAVE_NFE = re.compile(r"chave='([^']+)'|consultarSituacaoNota\(\"empresa\",\"([^\"]+)\"\)")
+RE_CHAVE_NFE = re.compile(r"(?:chave='([^']+)'|consultarSituacaoNota\(\"empresa\",\"([^\"]+)\"\))")
 RE_CHAVE_CTE = re.compile(r'consultarSituacaoNota\("empresa","(.*?)"\)')
 
 
@@ -20,27 +20,40 @@ def extrair_empresas_href(html_content):
   for link in soup.find_all('a', href=True):
     href = link.get('href')
 
-    if not href:
+    if not href or 'trocarLogin?vid=' not in href:
       continue
 
-    if 'trocarLogin?vid=' in href:
-      texto_apos_link = link.next_sibling
+    texto_apos_link = link.next_sibling
+    if not texto_apos_link:
+      continue
 
-      if not texto_apos_link:
-        continue
-
-      cnpj_match = RE_CNPJ.search(str(texto_apos_link))
-
-      if cnpj_match:
-        empresas[cnpj_match.group()] = href
+    cnpj_match = RE_CNPJ.search(str(texto_apos_link))
+    if cnpj_match:
+      empresas[cnpj_match.group()] = href
 
   return empresas
+
+
+def _validar_data_linha(data, mes_alvo, ano_alvo) -> bool:
+  data_match = RE_DATA.search(data)
+  if not data_match:
+    return False
+
+  _, mes, ano_str = data_match.groups()
+  mes = int(mes)
+  ano = int(ano_str)
+
+  if ano < 100:
+    ano += 2000
+
+  return mes == mes_alvo and ano == ano_alvo
 
 
 def encontrar_linha(linhas, nota, mes_atual, tipo):
   if not linhas:
     raise RuntimeError(f'Nenhum dado para nota: {nota}')
 
+  mes_alvo = int(mes_atual)
   hoje = datetime.today()
   ano_atual = hoje.year
 
@@ -52,23 +65,14 @@ def encontrar_linha(linhas, nota, mes_atual, tipo):
   for linha in linhas:
     index_emissao, index_nota = (3, 4) if tipo == 'cte' else (2, 3)
 
-    data_match = RE_DATA.search(linha[index_emissao])
-    if not data_match:
-      continue
-
-    _, mes, ano_str = data_match.groups()
-    mes = int(mes)
-    ano = int(ano_str)
-
-    if ano < 100:
-      ano += 2000
-
-    if mes != int(mes_atual) or ano != ano_alvo:
+    if not _validar_data_linha(linha[index_emissao], mes_alvo, ano_alvo):
       continue
 
     nota_match = RE_NOTA.search(linha[index_nota])
-    if nota_match and nota_match.group(1) == str(nota):
-      return linha
+    if nota_match:
+      id_nota = next((g for g in nota_match.groups() if g is not None), None)
+      if id_nota == str(nota):
+        return linha
 
   raise RuntimeError('Nenhuma nota encontrada')
 

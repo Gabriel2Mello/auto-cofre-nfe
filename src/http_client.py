@@ -9,16 +9,13 @@ class TimeoutScraper(CloudScraper):
     *args: Any,
     **kwargs: Any
   ) -> None:
-    super().__init__(
-      browser={
-        'browser': 'chrome',
-        'platform': 'windows',
-        'desktop': True
-      },
-      *args,
-      **kwargs
-    )
+    super().__init__(*args, **kwargs)
     self.default_timeout = default_timeout
+    self.browser={
+      'browser': 'chrome',
+      'platform': 'windows',
+      'desktop': True
+    }
 
 
   def request(

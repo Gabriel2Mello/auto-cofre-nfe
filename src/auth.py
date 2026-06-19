@@ -1,15 +1,13 @@
 from src.config import (
   CONTENT_TYPE,
-  USER_AGENT,
+  CNPJ,
   URL_BASE,
-  CNPJ_MATRIZ,
   SENHA_COFRE,
 )
 
 def login(session):
   """Realiza a autenticação no site e retorna o HTML da página inicial."""
   session.headers.update({
-    'User-Agent': USER_AGENT,
     'Origin': URL_BASE,
     'Content-Type': CONTENT_TYPE,
     'Connection': 'keep-alive'
@@ -17,7 +15,7 @@ def login(session):
 
   payload = {
     's': 'nfe',
-    'cpf': CNPJ_MATRIZ,
+    'cpf': CNPJ['MATRIZ'],
     'senha': SENHA_COFRE
   }
 

@@ -1,13 +1,12 @@
 import time
 import random
 import sys
-from requests import Session
 from time import perf_counter
 
 from src.interface import input_dados
 from src.auth import login
 from src.emitente_handler import EmitenteHandler
-from src.http_client import TimeoutSession
+from src.http_client import TimeoutScraper
 from src.utils import (
   salvar_arquivos,
   set_app_id,
@@ -33,7 +32,8 @@ def main() -> None:
   notas, empresa, mes_nota, mes_pasta, tipo = input_dados()
   start_time = perf_counter()
 
-  with TimeoutSession(default_timeout=10) as session:
+  sucesso = True
+  with TimeoutScraper(default_timeout=10) as session:
     try:
       html_login = login(session)
       empresas_href = extrair_empresas_href(html_login)
@@ -87,7 +87,10 @@ def main() -> None:
 
     except Exception as e:
       print(f'Erro fatal no processo: {e}')
-      sys.exit(1)
+      sucesso = False
+
+  if not sucesso:
+    sys.exit(1)
 
   elapsed_time = perf_counter() - start_time
   print(f'\nTerminado em: {elapsed_time:0.2f} segundos')

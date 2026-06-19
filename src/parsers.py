@@ -45,9 +45,9 @@ def encontrar_linha(linhas, nota, mes_atual, tipo):
   ano_atual = hoje.year
 
   if hoje.month == 1 and mes_atual == 12:
-    ano_alvo = (ano_atual - 1) % 100
+    ano_alvo = ano_atual - 1
   else:
-    ano_alvo = ano_atual % 100
+    ano_alvo = ano_atual
 
   for linha in linhas:
     index_emissao, index_nota = (3, 4) if tipo == 'cte' else (2, 3)
@@ -56,8 +56,14 @@ def encontrar_linha(linhas, nota, mes_atual, tipo):
     if not data_match:
       continue
 
-    _, mes, ano = map(int, data_match.groups())
-    if mes != mes_atual or ano != ano_alvo:
+    _, mes, ano_str = data_match.groups()
+    mes = int(mes)
+    ano = int(ano_str)
+
+    if ano < 100:
+      ano += 2000
+
+    if mes != int(mes_atual) or ano != ano_alvo:
       continue
 
     nota_match = RE_NOTA.search(linha[index_nota])
@@ -105,7 +111,6 @@ def extrair_dados(linha, tipo):
     codigo_arquivo = codigo_arquivo_match.group(1)
 
     emitente = resolve_emitente(str(linha[1]))
-
     if not emitente:
       raise RuntimeError('Emitente não encontrado')
 

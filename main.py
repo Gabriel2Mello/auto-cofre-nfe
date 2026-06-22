@@ -75,7 +75,13 @@ def main() -> None:
             tipo
           )
 
-          nome_emitente = emitente_handler.get_or_create(dados['emitente'])
+          nome_emitente = emitente_handler.get_nome(dados['emitente'])
+
+          if not nome_emitente:
+            print(f"\nEmitente não reconhecido: {dados['emitente']}")
+            nome_emitente = input('Digite o nome: ').upper().strip() or dados['emitente']
+            emitente_handler.salvar(dados['emitente'], nome_emitente)
+
           salvar_arquivos(
             xml,
             pdf,

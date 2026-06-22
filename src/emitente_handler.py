@@ -20,24 +20,13 @@ class EmitenteHandler:
     return {}
 
 
-  def get_or_create(self, emitente: str) -> str:
-    emitente = emitente.upper().strip()
+  def get_nome(self, emitente: str) -> str | None:
+    return self.emitentes_conhecidos.get(emitente.upper().strip())
 
-    valor_salvo = self.emitentes_conhecidos.get(emitente)
 
-    if valor_salvo and valor_salvo.strip():
-      return valor_salvo
-
-    print(f'\nEmitente não reconhecido: {emitente}')
-    emitente_identificado = input('Digite o nome: ').upper().strip()
-
-    if not emitente_identificado:
-      emitente_identificado = emitente
-
-    self.emitentes_conhecidos[emitente] = emitente_identificado
+  def salvar(self, emitente: str, nome_identificado: str) -> None:
+    self.emitentes_conhecidos[emitente.upper().strip()] = nome_identificado.upper().strip()
     self._persist()
-
-    return emitente_identificado
 
 
   def _persist(self):

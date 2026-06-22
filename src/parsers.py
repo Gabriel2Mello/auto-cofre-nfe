@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import datetime
 from html import unescape
 import re
@@ -11,6 +12,50 @@ RE_EMPRESA_ID = re.compile(r"(?:nfe|cte)/(\d+)/")
 RE_CODIGO_ARQUIVO = re.compile(r"setaFlag\(\d+,'(\d+)'\)")
 RE_CHAVE_NFE = re.compile(r"(?:chave='([^']+)'|consultarSituacaoNota\(\"empresa\",\"([^\"]+)\"\))")
 RE_CHAVE_CTE = re.compile(r'consultarSituacaoNota\("empresa","(.*?)"\)')
+
+
+@dataclass
+class DocumentoFiscal:
+  recebimento_quando: str
+  emitente_html: str
+  data_emissao_html: str
+  nota_html: str
+  valor_total: str
+  dados_brutos: list | None = None
+
+  def html_completo(self) -> str:
+    if self.dados_brutos:
+      return " ".join(str(item) for item in self.dados_brutos)
+    return " ".join(str(v) for v in self.__dict__.values())
+
+@dataclass
+class LinhaNFe(DocumentoFiscal):
+  @classmethod
+  def de_lista(cls, lista: list):
+    return cls(
+      recebimento_quando=lista[0],
+      emitente_html=lista[1],
+      data_emissao_html=lista[2],
+      nota_html=lista[3],
+      valor_total=lista[4],
+      dados_brutos=lista
+    )
+
+@dataclass
+class LinhaCTe(DocumentoFiscal):
+  destinatario_html: str = ""
+
+  @classmethod
+  def de_lista(cls, lista: list):
+    return cls(
+      recebimento_quando=lista[0],
+      emitente_html=lista[1],
+      data_emissao_html=lista[3],
+      nota_html=lista[4],
+      valor_total=lista[5],
+      destinatario_html=lista[2],
+      dados_brutos=lista
+    )
 
 
 def extrair_empresas_href(html_content):
@@ -65,6 +110,8 @@ def encontrar_linha(linhas, nota, mes_atual, tipo):
   if not linhas:
     raise RuntimeError(f'Nenhum dado para nota: {nota}')
 
+  fabrica_documento = LinhaCTe if tipo == 'cte' else LinhaNFe
+
   mes_alvo = int(mes_atual)
   hoje = datetime.today()
   ano_alvo = hoje.year - 1 if (hoje.month == 1 and mes_alvo == 12) else hoje.year
@@ -72,16 +119,16 @@ def encontrar_linha(linhas, nota, mes_atual, tipo):
   linhas_encontradas = []
 
   for linha in linhas:
-    index_emissao, index_nota = (3, 4) if tipo == 'cte' else (2, 3)
+    objeto_linha = fabrica_documento.de_lista(linha)
 
-    if not _validar_data_linha(linha[index_emissao], mes_alvo, ano_alvo):
+    if not _validar_data_linha(objeto_linha.data_emissao_html, mes_alvo, ano_alvo):
       continue
 
-    nota_match = RE_NOTA.search(linha[index_nota])
+    nota_match = RE_NOTA.search(objeto_linha.nota_html)
     if nota_match:
       id_nota = next((g for g in nota_match.groups() if g is not None), None)
       if id_nota == str(nota):
-        linhas_encontradas.append(linha)
+        linhas_encontradas.append(objeto_linha)
 
   if not linhas_encontradas:
     raise RuntimeError('Nenhuma nota encontrada')
@@ -99,8 +146,8 @@ def resolve_emitente(emitente_html: str) -> str:
   return " ".join(emitente.split())
 
 
-def extrair_dados(linha, tipo):
-  html_content = " ".join(map(str, linha))
+def extrair_dados(linha: DocumentoFiscal, tipo):
+  html_content = linha.html_completo()
 
   try:
     chave = _extrair_campo_regex(
@@ -119,7 +166,7 @@ def extrair_dados(linha, tipo):
       'Código setaFlag não encontrado'
     )
 
-    emitente = resolve_emitente(str(linha[1]))
+    emitente = resolve_emitente(linha.emitente_html)
     if not emitente:
       raise RuntimeError('Emitente não encontrado')
 

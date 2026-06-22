@@ -91,7 +91,7 @@ def escolher_emitente(linhas_validas):
   print('\nMAIS DE UM EMITENTE ENCONTRADO:')
 
   for idx, linha in enumerate(linhas_validas, start=1):
-    nome_emitente = resolve_emitente(str(linha[1]))
+    nome_emitente = resolve_emitente(linha.emitente_html)
 
     print(f"({idx}) {nome_emitente}")
 

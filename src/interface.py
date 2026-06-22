@@ -5,6 +5,7 @@ from prompt_toolkit.shortcuts import radiolist_dialog
 
 from src.config import MONTHS
 from src.utils import encerrar_programa
+from src.parsers import resolve_emitente
 
 
 def selecionar_mes():
@@ -84,4 +85,27 @@ def input_dados():
     )
 
   return notas, empresa, mes_nota, mes_pasta, tipo
+
+
+def escolher_emitente(linhas_validas):
+  print('\nMAIS DE UM EMITENTE ENCONTRADO:')
+
+  for idx, linha in enumerate(linhas_validas, start=1):
+    nome_emitente = resolve_emitente(str(linha[1]))
+
+    print(f"({idx}) {nome_emitente}")
+
+  while True:
+    try:
+      escolha_input = prompt('Escolha: ').strip()
+      encerrar_programa(escolha_input)
+
+      opcao = int(escolha_input)
+      if 1 <= opcao <= len(linhas_validas):
+        return linhas_validas[opcao - 1]
+
+      print(f"Digite um número entre 1 e {len(linhas_validas)}")
+
+    except ValueError:
+      print('Valor inválido')
 

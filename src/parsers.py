@@ -69,6 +69,8 @@ def encontrar_linha(linhas, nota, mes_atual, tipo):
   hoje = datetime.today()
   ano_alvo = hoje.year - 1 if (hoje.month == 1 and mes_alvo == 12) else hoje.year
 
+  linhas_encontradas = []
+
   for linha in linhas:
     index_emissao, index_nota = (3, 4) if tipo == 'cte' else (2, 3)
 
@@ -79,9 +81,12 @@ def encontrar_linha(linhas, nota, mes_atual, tipo):
     if nota_match:
       id_nota = next((g for g in nota_match.groups() if g is not None), None)
       if id_nota == str(nota):
-        return linha
+        linhas_encontradas.append(linha)
 
-  raise RuntimeError('Nenhuma nota encontrada')
+  if not linhas_encontradas:
+    raise RuntimeError('Nenhuma nota encontrada')
+
+  return linhas_encontradas
 
 
 def resolve_emitente(emitente_html: str) -> str:

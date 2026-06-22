@@ -3,10 +3,13 @@ import random
 import sys
 from time import perf_counter
 
-from src.interface import input_dados
 from src.auth import login
 from src.emitente_handler import EmitenteHandler
 from src.http_client import TimeoutScraper
+from src.interface import (
+  input_dados,
+  escolher_emitente,
+)
 from src.utils import (
   salvar_arquivos,
   set_app_id,
@@ -50,12 +53,19 @@ def main() -> None:
 
         try:
           linhas = carregar_dados(session, nota, tipo)
-          linha = encontrar_linha(
+
+          linhas_validas = encontrar_linha(
             linhas,
             nota,
             mes_nota,
             tipo
           )
+
+          if len(linhas_validas) == 1:
+            linha = linhas_validas[0]
+          else:
+            linha = escolher_emitente(linhas_validas)
+
           dados = extrair_dados(linha, tipo)
 
           xml, pdf = baixar_arquivos(

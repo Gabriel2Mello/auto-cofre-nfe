@@ -1,17 +1,14 @@
 from os import environ
-import sys
 
 
-def carregar_env(chave):
-  valor = environ.get(chave)
-  if not valor:
-    print(f"Variável de ambiente '{chave}' não configurada.")
-    input('Pressione Enter para fechar...')
-    sys.exit(1)
-  return valor
+def load_env(variable: str):
+  value = environ.get(variable)
+  if not value:
+    raise ValueError(f"Environment variable '{variable}' missing.")
+  return value
 
-SENHA_COFRE = carregar_env('SENHA_COFRE')
-CAMINHO_DOCUMENTO_ENTRADA = carregar_env('CAMINHO_DOCUMENTO_ENTRADA')
+SENHA_COFRE = load_env('SENHA_COFRE')
+CAMINHO_DOCUMENTO_ENTRADA = load_env('CAMINHO_DOCUMENTO_ENTRADA')
 
 URL_BASE = 'https://painel.cofrenfe.com.br'
 CONTENT_TYPE = 'application/x-www-form-urlencoded; charset=UTF-8'

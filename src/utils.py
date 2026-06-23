@@ -10,9 +10,7 @@ from src.config import CAMINHO_DOCUMENTO_ENTRADA, MONTHS
 
 def encerrar_programa(value):
   if not value:
-    print('\nOperação cancelada... encerrando programa.')
-    sleep(1)
-    sys.exit()
+    sys.exit(0)
 
 
 def obter_caminho_json():
@@ -51,9 +49,9 @@ def salvar_arquivos(xml, pdf, nome_emitente, numero_nota, empresa, mes, tipo):
 
 
 def set_app_id():
-  """Define o ID do aplicativo para o Windows."""
   try:
     my_app_id = 'g2mello.autocofre.versao1'
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(my_app_id)
   except Exception:
     pass
+

@@ -1,5 +1,6 @@
 from urllib.parse import urljoin
 import time
+import requests
 
 from src.config import (
   ACCEPT,
@@ -18,18 +19,20 @@ def ver_arquivos(session, tipo, tentativas=3):
       )
       response.raise_for_status()
       return
-    except Exception as e:
+    except requests.RequestException as e:
       if i < tentativas - 1:
         print(f"O site demorou a responder. Tentando acessar novamente ({i+1}/{tentativas})...")
         time.sleep(5)
       else:
-        print("\nErro interno do site")
-        raise e
+        raise RuntimeError(f"\nNetwork error: {e}")
 
 
 def trocar_empresa(session, empresa, empresas_href):
-  empresa_link = empresas_href.get(CNPJ[empresa])
+  cnpj_target = CNPJ.get(empresa)
+  if not cnpj_target:
+    raise KeyError(f"CNPJ '{empresa}' não encontrado")
 
+  empresa_link = empresas_href.get(cnpj_target)
   if not empresa_link:
     raise RuntimeError('Link da empresa não encontrado')
 
@@ -77,9 +80,9 @@ def baixar_arquivos(session, empresa_id, chave, tipo):
   pdf_url = f"{URL_BASE}/nfe/ver-{ver_path}/{tipo}/{empresa_id}/{chave}.pdf"
 
   response_xml = session.get(xml_url)
-  response_pdf = session.get(pdf_url)
-
   response_xml.raise_for_status()
+
+  response_pdf = session.get(pdf_url)
   response_pdf.raise_for_status()
 
   return response_xml.content, response_pdf.content

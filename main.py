@@ -32,85 +32,92 @@ def main() -> None:
   if sys.platform == 'win32':
     set_app_id()
 
-  notas, empresa, mes_nota, mes_pasta, tipo = input_dados()
-  start_time = perf_counter()
-
   sucesso = True
-  with TimeoutScraper(default_timeout=10) as session:
-    try:
-      html_login = login(session)
-      empresas_href = extrair_empresas_href(html_login)
-      trocar_empresa(session, empresa, empresas_href)
+  try:
+    notas, empresa, mes_nota, mes_pasta, tipo = input_dados()
+    start_time = perf_counter()
 
-      print('Aguardando sincronização do sistema...')
-      time.sleep(0.5)
+    with TimeoutScraper(default_timeout=10) as session:
+      try:
+        html_login = login(session)
+        empresas_href = extrair_empresas_href(html_login)
+        trocar_empresa(session, empresa, empresas_href)
 
-      ver_arquivos(session, tipo)
-      emitente_handler = EmitenteHandler()
+        print('Aguardando sincronização do sistema...')
+        time.sleep(0.5)
 
-      for nota in notas:
-        print(f'\nProcessando: {nota}')
+        ver_arquivos(session, tipo)
+        emitente_handler = EmitenteHandler()
 
-        try:
-          linhas = carregar_dados(session, nota, tipo)
+        for nota in notas:
+          print(f'\nProcessando: {nota}')
 
-          linhas_validas = encontrar_linha(
-            linhas,
-            nota,
-            mes_nota,
-            tipo
-          )
+          try:
+            linhas = carregar_dados(session, nota, tipo)
 
-          if len(linhas_validas) == 1:
-            linha = linhas_validas[0]
-          else:
-            linha = escolher_emitente(linhas_validas)
+            linhas_validas = encontrar_linha(
+              linhas,
+              nota,
+              mes_nota,
+              tipo
+            )
 
-          dados = extrair_dados(linha, tipo)
+            if len(linhas_validas) == 1:
+              linha = linhas_validas[0]
+            else:
+              linha = escolher_emitente(linhas_validas)
 
-          xml, pdf = baixar_arquivos(
-            session,
-            dados['empresa_id'],
-            dados['chave'],
-            tipo
-          )
+            dados = extrair_dados(linha, tipo)
 
-          nome_emitente = emitente_handler.get_nome(dados['emitente'])
+            xml, pdf = baixar_arquivos(
+              session,
+              dados['empresa_id'],
+              dados['chave'],
+              tipo
+            )
 
-          if not nome_emitente:
-            print(f"\nEmitente não reconhecido: {dados['emitente']}")
-            nome_emitente = input('Digite o nome: ').upper().strip() or dados['emitente']
-            emitente_handler.salvar(dados['emitente'], nome_emitente)
+            nome_emitente = emitente_handler.get_nome(dados['emitente'])
 
-          salvar_arquivos(
-            xml,
-            pdf,
-            nome_emitente,
-            nota,
-            empresa,
-            mes_pasta,
-            tipo
-          )
+            if not nome_emitente:
+              print(f"\nEmitente não reconhecido: {dados['emitente']}")
+              nome_emitente = input('Digite o nome: ').upper().strip() or dados['emitente']
+              emitente_handler.salvar(dados['emitente'], nome_emitente)
 
-          marcar_flag(session, dados['codigo_arquivo'])
+            salvar_arquivos(
+              xml,
+              pdf,
+              nome_emitente,
+              nota,
+              empresa,
+              mes_pasta,
+              tipo
+            )
 
-          delay = random.uniform(0.5, 1.5)
-          time.sleep(delay)
+            marcar_flag(session, dados['codigo_arquivo'])
 
-        except Exception as e:
-          print(f'Erro na nota {nota}: {e}')
-          time.sleep(5)
+            delay = random.uniform(0.5, 1.5)
+            time.sleep(delay)
 
-    except Exception as e:
-      print(f'Erro fatal no processo: {e}')
-      sucesso = False
+          except Exception as e:
+            print(f'Erro na nota {nota}: {e}')
+            time.sleep(5)
 
-  if not sucesso:
-    sys.exit(1)
+      except Exception as e:
+        print(f'Erro fatal no processo: {e}')
+        sucesso = False
 
-  elapsed_time = perf_counter() - start_time
-  print(f'\nTerminado em: {elapsed_time:0.2f} segundos')
-  input('Pressione Enter para fechar...')
+    elapsed_time = perf_counter() - start_time
+    print(f'\nTerminado em: {elapsed_time:0.2f} segundos')
+
+  except Exception as fatal_init_err:
+    print(f"\nErro crítico de inicialização: {fatal_init_err}")
+    sucesso = False
+
+  finally:
+    input('Pressione Enter para fechar...')
+    if not sucesso:
+      sys.exit(1)
+
 
 
 if __name__ == "__main__":

@@ -32,6 +32,8 @@ class DocumentoFiscal:
 class LinhaNFe(DocumentoFiscal):
   @classmethod
   def de_lista(cls, lista: list):
+    if len(lista) < 5:
+      raise ValueError('Malformed raw NFe row')
     return cls(
       recebimento_quando=lista[0],
       emitente_html=lista[1],
@@ -47,6 +49,8 @@ class LinhaCTe(DocumentoFiscal):
 
   @classmethod
   def de_lista(cls, lista: list):
+    if len(lista) < 6:
+      raise ValueError('Malformed raw CTe row')
     return cls(
       recebimento_quando=lista[0],
       emitente_html=lista[1],
@@ -99,11 +103,11 @@ def _extrair_campo_regex(regex, texto, erro_msg):
   if not match:
     raise RuntimeError(erro_msg)
 
-  val = next((g for g in match.groups() if g is not None), None)
-  if not val:
-    raise RuntimeError(erro_msg)
+  for group in match.groups():
+    if group is not None:
+      return group
 
-  return val
+  raise RuntimeError(erro_msg)
 
 
 def encontrar_linha(linhas, nota, mes_atual, tipo):
@@ -112,16 +116,16 @@ def encontrar_linha(linhas, nota, mes_atual, tipo):
 
   fabrica_documento = LinhaCTe if tipo == 'cte' else LinhaNFe
 
-  mes_alvo = int(mes_atual)
+  mes_target = int(mes_atual)
   hoje = datetime.today()
-  ano_alvo = hoje.year - 1 if (hoje.month == 1 and mes_alvo == 12) else hoje.year
+  ano_target = hoje.year - 1 if (hoje.month == 1 and mes_target == 12) else hoje.year
 
   linhas_encontradas = []
 
   for linha in linhas:
     objeto_linha = fabrica_documento.de_lista(linha)
 
-    if not _validar_data_linha(objeto_linha.data_emissao_html, mes_alvo, ano_alvo):
+    if not _validar_data_linha(objeto_linha.data_emissao_html, mes_target, ano_target):
       continue
 
     nota_match = RE_NOTA.search(objeto_linha.nota_html)

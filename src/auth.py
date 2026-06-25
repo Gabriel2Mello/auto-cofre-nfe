@@ -3,7 +3,7 @@ from src.config import (
   CONTENT_TYPE,
   CNPJ,
   URL_BASE,
-  SENHA_COFRE,
+  Config,
 )
 
 def login(session: CloudScraper) -> str:
@@ -17,7 +17,7 @@ def login(session: CloudScraper) -> str:
   payload = {
     's': 'nfe',
     'cpf': CNPJ['MATRIZ'],
-    'senha': SENHA_COFRE
+    'senha': Config.SENHA_COFRE
   }
 
   response = session.post(

@@ -8,8 +8,10 @@ def load_env(variable: str, default: str = "") -> str:
   return value
 
 
-SENHA_COFRE = load_env('SENHA_COFRE')
-CAMINHO_DOCUMENTO_ENTRADA = load_env('CAMINHO_DOCUMENTO_ENTRADA')
+class Config:
+  SENHA_COFRE: str
+  CAMINHO_DOCUMENTO_ENTRADA: str
+
 
 URL_BASE = 'https://painel.cofrenfe.com.br'
 CONTENT_TYPE = 'application/x-www-form-urlencoded; charset=UTF-8'
@@ -41,4 +43,8 @@ MONTHS = [
   'NOVEMBRO',
   'DEZEMBRO',
 ]
+
+def init_config() -> None:
+  Config.SENHA_COFRE = load_env('SENHA_COFRE')
+  Config.CAMINHO_DOCUMENTO_ENTRADA = load_env('CAMINHO_DOCUMENTO_ENTRADA')
 

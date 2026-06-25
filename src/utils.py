@@ -5,7 +5,10 @@ from pathlib import Path
 import re
 import sys
 
-from src.config import CAMINHO_DOCUMENTO_ENTRADA, MONTHS
+from src.config import (
+  Config,
+  MONTHS
+)
 
 
 def encerrar_programa(value: Any) -> None:
@@ -30,7 +33,7 @@ def salvar_arquivos(xml: bytes, pdf: bytes, nome_emitente: str, numero_nota: str
   nome_arquivo = f'{nome_emitente} {numero_nota}'
   nome_limpo = re.sub(r'[\\/*?:"<>|]', '', nome_arquivo)
 
-  base_path = Path(CAMINHO_DOCUMENTO_ENTRADA)
+  base_path = Path(Config.CAMINHO_DOCUMENTO_ENTRADA)
   if not base_path.exists():
     raise RuntimeError('CAMINHO_DOCUMENTO_ENTRADA não configurado.')
 

@@ -1,11 +1,12 @@
 from os import environ
 
 
-def load_env(variable: str):
-  value = environ.get(variable)
-  if not value:
+def load_env(variable: str, default: str = "") -> str:
+  value = environ.get(variable, default)
+  if not value and not default:
     raise ValueError(f"Environment variable '{variable}' missing.")
   return value
+
 
 SENHA_COFRE = load_env('SENHA_COFRE')
 CAMINHO_DOCUMENTO_ENTRADA = load_env('CAMINHO_DOCUMENTO_ENTRADA')

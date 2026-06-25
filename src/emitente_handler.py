@@ -5,7 +5,7 @@ from src.utils import obter_caminho_json
 
 
 class EmitenteHandler:
-  def __init__(self):
+  def __init__(self) -> None:
     self.caminho_json = obter_caminho_json()
     self.emitentes_conhecidos = self._carregar_emitentes()
 
@@ -29,7 +29,7 @@ class EmitenteHandler:
     self._persist()
 
 
-  def _persist(self):
+  def _persist(self) -> None:
     temp_path = self.caminho_json.with_suffix('.tmp')
 
     try:

@@ -1,9 +1,10 @@
-from time import sleep
 import sys
-from time import perf_counter
+from time import sleep, perf_counter
+from requests import RequestException
 
 from src.auth import login
 from src.http_client import TimeoutScraper
+from src.config import init_config
 from src.interface import (
   input_dados,
 )
@@ -24,12 +25,8 @@ def main() -> None:
   if sys.platform == 'win32':
     set_app_id()
 
-  try:
-    notas, empresa, mes_nota, mes_pasta, tipo = input_dados()
-  except Exception as e:
-    print(f'Erro de inicialização: {e}')
-    input('Pressione Enter para fechar...')
-    sys.exit(1)
+  init_config()
+  notas, empresa, mes_nota, mes_pasta, tipo = input_dados()
 
   start_time = perf_counter()
 
@@ -55,6 +52,8 @@ def main() -> None:
           mes_pasta
         )
 
+  except (RequestException, KeyError) as e:
+    print(f'Erro no site: {e}')
   except Exception as e:
     print(f'Erro inesperado: {type(e).__name__}: {e}')
 

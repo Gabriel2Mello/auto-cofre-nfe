@@ -1,30 +1,22 @@
-import time
-import random
+from time import sleep
 import sys
 from time import perf_counter
 
 from src.auth import login
-from src.emitente_handler import EmitenteHandler
 from src.http_client import TimeoutScraper
 from src.interface import (
   input_dados,
-  escolher_emitente,
 )
 from src.utils import (
-  salvar_arquivos,
   set_app_id,
 )
 from src.parsers import (
   extrair_empresas_href,
-  encontrar_linha,
-  extrair_dados,
 )
 from src.core import (
   ver_arquivos,
   trocar_empresa,
-  carregar_dados,
-  baixar_arquivos,
-  marcar_flag,
+  processar_nota,
 )
 
 
@@ -32,94 +24,51 @@ def main() -> None:
   if sys.platform == 'win32':
     set_app_id()
 
-  sucesso = True
   try:
     notas, empresa, mes_nota, mes_pasta, tipo = input_dados()
-    start_time = perf_counter()
-
-    with TimeoutScraper(default_timeout=10) as session:
-      try:
-        html_login = login(session)
-        empresas_href = extrair_empresas_href(html_login)
-        trocar_empresa(session, empresa, empresas_href)
-
-        print('Aguardando sincronização do sistema...')
-        time.sleep(0.5)
-
-        ver_arquivos(session, tipo)
-        emitente_handler = EmitenteHandler()
-
-        for nota in notas:
-          print(f'\nProcessando: {nota}')
-
-          try:
-            linhas = carregar_dados(session, nota, tipo)
-
-            linhas_validas = encontrar_linha(
-              linhas,
-              nota,
-              mes_nota,
-              tipo
-            )
-
-            if len(linhas_validas) == 1:
-              linha = linhas_validas[0]
-            else:
-              linha = escolher_emitente(linhas_validas)
-
-            dados = extrair_dados(linha, tipo)
-
-            xml, pdf = baixar_arquivos(
-              session,
-              dados['empresa_id'],
-              dados['chave'],
-              tipo
-            )
-
-            nome_emitente = emitente_handler.get_nome(dados['emitente'])
-
-            if not nome_emitente:
-              print(f"\nEmitente não reconhecido: {dados['emitente']}")
-              nome_emitente = input('Digite o nome: ').upper().strip() or dados['emitente']
-              emitente_handler.salvar(dados['emitente'], nome_emitente)
-
-            salvar_arquivos(
-              xml,
-              pdf,
-              nome_emitente,
-              nota,
-              empresa,
-              mes_pasta,
-              tipo
-            )
-
-            marcar_flag(session, dados['codigo_arquivo'])
-
-            delay = random.uniform(0.5, 1.5)
-            time.sleep(delay)
-
-          except Exception as e:
-            print(f'Erro na nota {nota}: {e}')
-            time.sleep(5)
-
-      except Exception as e:
-        print(f'Erro fatal no processo: {e}')
-        sucesso = False
-
-    elapsed_time = perf_counter() - start_time
-    print(f'\nTerminado em: {elapsed_time:0.2f} segundos')
-
-  except Exception as fatal_init_err:
-    print(f"\nErro crítico de inicialização: {fatal_init_err}")
-    sucesso = False
-
-  finally:
+  except Exception as e:
+    print(f'Erro de inicialização: {e}')
     input('Pressione Enter para fechar...')
-    if not sucesso:
-      sys.exit(1)
+    sys.exit(1)
 
+  start_time = perf_counter()
+
+  try:
+    with TimeoutScraper(default_timeout=10) as session:
+      html_login = login(session)
+      empresas_href = extrair_empresas_href(html_login)
+      trocar_empresa(session, empresa, empresas_href)
+
+      print('Aguardando sincronização...')
+      sleep(0.5)
+
+      ver_arquivos(session, tipo)
+
+      for nota in notas:
+        print(f'\nProcessando: {nota}')
+        processar_nota(
+          session,
+          nota,
+          mes_nota,
+          tipo,
+          empresa,
+          mes_pasta
+        )
+
+  except Exception as e:
+    print(f'Erro inesperado: {type(e).__name__}: {e}')
+
+  elapsed_time = perf_counter() - start_time
+  print(f'\nTerminado em: {elapsed_time:0.2f} segundos')
+
+  input('Pressione Enter para fechar...')
 
 
 if __name__ == "__main__":
-  main()
+  try:
+    main()
+  except Exception as fatal_error:
+    print(f'\nErro fatal: {fatal_error}')
+    input('Pressione Enter para fechar...')
+    sys.exit(1)
 

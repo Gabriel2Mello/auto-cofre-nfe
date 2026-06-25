@@ -1,9 +1,20 @@
 from urllib.parse import urljoin
 import time
-import requests
+import random
+from requests import RequestException
+from typing import cast
+
 
 from cloudscraper import CloudScraper
 
+from src.emitente_handler import EmitenteHandler
+from src.interface import escolher_emitente
+from src.utils import salvar_arquivos
+from src.parsers import (
+  encontrar_linha,
+  extrair_dados,
+  DocumentoFiscal,
+)
 from src.config import (
   ACCEPT,
   COLUNAS,
@@ -11,6 +22,56 @@ from src.config import (
   REQUESTED_WITH,
   URL_BASE,
 )
+
+
+def processar_nota(
+    session: CloudScraper,
+    nota: str,
+    mes_nota: int,
+    tipo: str,
+    empresa: str,
+    mes_pasta: int
+) -> None:
+  try:
+    linhas = carregar_dados(session, nota, tipo)
+    linhas_validas = encontrar_linha(linhas, nota, mes_nota, tipo)
+
+    if len(linhas_validas) == 1:
+      linha = linhas_validas[0]
+    else:
+      linha = escolher_emitente(linhas_validas)
+
+    linha_objeto = cast(DocumentoFiscal, linha)
+    dados = extrair_dados(linha_objeto, tipo)
+
+    xml, pdf = baixar_arquivos(
+      session,
+      dados['empresa_id'],
+      dados['chave'],
+      tipo
+    )
+
+    emitente_handler = EmitenteHandler()
+    nome_emitente = emitente_handler.get_nome(dados['emitente'])
+
+    salvar_arquivos(
+      xml,
+      pdf,
+      nome_emitente,
+      nota,
+      empresa,
+      mes_pasta,
+      tipo
+    )
+
+    #marcar_flag(session, dados['codigo_arquivo'])
+
+    delay = random.uniform(0.5, 1.5)
+    time.sleep(delay)
+
+  except (KeyError, ValueError, RequestException) as e:
+    print(f'Erro na nota {nota}: {e}')
+    time.sleep(5)
 
 
 def ver_arquivos(session: CloudScraper, tipo: str, tentativas: int = 3) -> None:
@@ -21,7 +82,7 @@ def ver_arquivos(session: CloudScraper, tipo: str, tentativas: int = 3) -> None:
       )
       response.raise_for_status()
       return
-    except requests.RequestException as e:
+    except RequestException as e:
       if i < tentativas - 1:
         print(f"O site demorou a responder. Tentando acessar novamente ({i+1}/{tentativas})...")
         time.sleep(5)

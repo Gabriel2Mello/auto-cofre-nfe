@@ -1,5 +1,6 @@
 import ctypes
 from datetime import datetime
+from typing import Any
 from pathlib import Path
 import re
 import sys
@@ -7,7 +8,7 @@ import sys
 from src.config import CAMINHO_DOCUMENTO_ENTRADA, MONTHS
 
 
-def encerrar_programa(value: str | int) -> None:
+def encerrar_programa(value: Any) -> None:
   if not value:
     sys.exit(0)
 

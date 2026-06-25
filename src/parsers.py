@@ -1,17 +1,18 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from html import unescape
 import re
+from typing import Pattern
 
 from bs4 import BeautifulSoup
 
-RE_CNPJ = re.compile(r'\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}')
-RE_DATA = re.compile(r'(\d{2})/(\d{2})/(\d{2,4})')
-RE_NOTA = re.compile(r'/(\d+)/')
-RE_EMPRESA_ID = re.compile(r"(?:nfe|cte)/(\d+)/")
-RE_CODIGO_ARQUIVO = re.compile(r"setaFlag\(\d+,'(\d+)'\)")
-RE_CHAVE_NFE = re.compile(r"(?:chave='([^']+)'|consultarSituacaoNota\(\"empresa\",\"([^\"]+)\"\))")
-RE_CHAVE_CTE = re.compile(r'consultarSituacaoNota\("empresa","(.*?)"\)')
+RE_CNPJ: Pattern[str] = re.compile(r'\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}')
+RE_DATA: Pattern[str] = re.compile(r'(\d{2})/(\d{2})/(\d{2,4})')
+RE_NOTA: Pattern[str] = re.compile(r'/(\d+)/')
+RE_EMPRESA_ID: Pattern[str] = re.compile(r"(?:nfe|cte)/(\d+)/")
+RE_CODIGO_ARQUIVO: Pattern[str] = re.compile(r"setaFlag\(\d+,'(\d+)'\)")
+RE_CHAVE_NFE: Pattern[str] = re.compile(r"(?:chave='([^']+)'|consultarSituacaoNota\(\"empresa\",\"([^\"]+)\"\))")
+RE_CHAVE_CTE: Pattern[str] = re.compile(r'consultarSituacaoNota\("empresa","(.*?)"\)')
 
 
 @dataclass
@@ -21,7 +22,7 @@ class DocumentoFiscal:
   data_emissao_html: str
   nota_html: str
   valor_total: str
-  dados_brutos: list | None = None
+  dados_brutos: list = field(default_factory=list)
 
   def html_completo(self) -> str:
     if self.dados_brutos:
@@ -31,7 +32,7 @@ class DocumentoFiscal:
 @dataclass
 class LinhaNFe(DocumentoFiscal):
   @classmethod
-  def de_lista(cls, lista: list):
+  def de_lista(cls, lista: list) -> 'LinhaNFe':
     if len(lista) < 5:
       raise ValueError('Malformed raw NFe row')
     return cls(
@@ -48,7 +49,7 @@ class LinhaCTe(DocumentoFiscal):
   destinatario_html: str = ""
 
   @classmethod
-  def de_lista(cls, lista: list):
+  def de_lista(cls, lista: list) -> 'LinhaCTe':
     if len(lista) < 6:
       raise ValueError('Malformed raw CTe row')
     return cls(
@@ -62,7 +63,7 @@ class LinhaCTe(DocumentoFiscal):
     )
 
 
-def extrair_empresas_href(html_content):
+def extrair_empresas_href(html_content: str) -> dict[str, str]:
   soup = BeautifulSoup(html_content, 'lxml')
   empresas = {}
 
@@ -83,13 +84,13 @@ def extrair_empresas_href(html_content):
   return empresas
 
 
-def _validar_data_linha(data, mes_alvo, ano_alvo) -> bool:
+def _validar_data_linha(data: str, mes_alvo: int, ano_alvo: int) -> bool:
   data_match = RE_DATA.search(data)
   if not data_match:
     return False
 
-  _, mes, ano_str = data_match.groups()
-  mes = int(mes)
+  _, mes_str, ano_str = data_match.groups()
+  mes = int(mes_str)
   ano = int(ano_str)
 
   if ano < 100:
@@ -98,7 +99,7 @@ def _validar_data_linha(data, mes_alvo, ano_alvo) -> bool:
   return mes == mes_alvo and ano == ano_alvo
 
 
-def _extrair_campo_regex(regex, texto, erro_msg):
+def _extrair_campo_regex(regex: Pattern[str], texto: str, erro_msg: str) -> str:
   match = regex.search(texto)
   if not match:
     raise RuntimeError(erro_msg)
@@ -110,7 +111,7 @@ def _extrair_campo_regex(regex, texto, erro_msg):
   raise RuntimeError(erro_msg)
 
 
-def encontrar_linha(linhas, nota, mes_atual, tipo):
+def encontrar_linha(linhas: list, nota: str, mes_atual: int, tipo: str) -> list:
   if not linhas:
     raise RuntimeError(f'Nenhum dado para nota: {nota}')
 
@@ -150,7 +151,7 @@ def resolve_emitente(emitente_html: str) -> str:
   return " ".join(emitente.split())
 
 
-def extrair_dados(linha: DocumentoFiscal, tipo):
+def extrair_dados(linha: DocumentoFiscal, tipo: str) -> dict[str, str]:
   html_content = linha.html_completo()
 
   try:

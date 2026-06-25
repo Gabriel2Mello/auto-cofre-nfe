@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 
 from prompt_toolkit import prompt
 from prompt_toolkit.shortcuts import radiolist_dialog
@@ -8,7 +9,7 @@ from src.utils import encerrar_programa
 from src.parsers import resolve_emitente
 
 
-def selecionar_mes():
+def selecionar_mes() -> int:
   meses = [(i, MONTHS[i]) for i in range(1, 13)]
 
   mes = radiolist_dialog(
@@ -20,7 +21,7 @@ def selecionar_mes():
   return mes
 
 
-def escolher_mes(titulo, texto):
+def escolher_mes(titulo: str, texto: str) -> int:
   mes_atual = datetime.today().month
 
   mes = radiolist_dialog(
@@ -37,10 +38,10 @@ def escolher_mes(titulo, texto):
   if mes == 'outro':
     mes = selecionar_mes()
 
-  return mes
+  return int(mes)
 
 
-def input_dados():
+def input_dados() -> tuple[list[str], str, int, int, str]:
   #tipo_input = prompt('Tipo 1(NFe) 2(CTe): ').strip()
   #tipo = 'cte' if tipo_input == '2' else 'nfe'
   tipo = 'nfe'
@@ -87,7 +88,7 @@ def input_dados():
   return notas, empresa, mes_nota, mes_pasta, tipo
 
 
-def escolher_emitente(linhas_validas):
+def escolher_emitente(linhas_validas: list) -> str:
   print('\nMAIS DE UM EMITENTE ENCONTRADO:')
 
   for idx, linha in enumerate(linhas_validas, start=1):

@@ -3,17 +3,16 @@ from datetime import datetime
 from pathlib import Path
 import re
 import sys
-from time import sleep
 
 from src.config import CAMINHO_DOCUMENTO_ENTRADA, MONTHS
 
 
-def encerrar_programa(value):
+def encerrar_programa(value: str | int) -> None:
   if not value:
     sys.exit(0)
 
 
-def obter_caminho_json():
+def obter_caminho_json() -> Path:
   if hasattr(sys, 'frozen'):
     diretorio_execucao = Path(sys.executable).parent
   else:
@@ -22,7 +21,7 @@ def obter_caminho_json():
   return diretorio_execucao / 'emitentes_conhecidos.json'
 
 
-def salvar_arquivos(xml, pdf, nome_emitente, numero_nota, empresa, mes, tipo):
+def salvar_arquivos(xml: bytes, pdf: bytes, nome_emitente: str, numero_nota: str, empresa: str, mes: int, tipo: str) -> None:
   hoje = datetime.today()
   ano_pasta = hoje.year - 1 if (hoje.month == 1 and mes == 12) else hoje.year
   ano = str(ano_pasta)
@@ -35,6 +34,7 @@ def salvar_arquivos(xml, pdf, nome_emitente, numero_nota, empresa, mes, tipo):
     raise RuntimeError('CAMINHO_DOCUMENTO_ENTRADA não configurado.')
 
   tipo_caminho = 'NF-e' if tipo == 'nfe' else 'CT-e'
+ 
   path_pdf = base_path / f'PDF {tipo_caminho}' / ano / empresa / MONTHS[mes]
   path_xml = base_path / f'XML - {tipo_caminho}' / ano / empresa / MONTHS[mes]
 
@@ -48,7 +48,7 @@ def salvar_arquivos(xml, pdf, nome_emitente, numero_nota, empresa, mes, tipo):
   (path_xml / f'{nome_limpo}.xml').write_bytes(xml)
 
 
-def set_app_id():
+def set_app_id() -> None:
   try:
     my_app_id = 'g2mello.autocofre.versao1'
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(my_app_id)

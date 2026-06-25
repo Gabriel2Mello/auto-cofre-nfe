@@ -1,3 +1,4 @@
+from cloudscraper import CloudScraper
 from src.config import (
   CONTENT_TYPE,
   CNPJ,
@@ -5,7 +6,7 @@ from src.config import (
   SENHA_COFRE,
 )
 
-def login(session):
+def login(session: CloudScraper) -> str:
   """Realiza a autenticação no site e retorna o HTML da página inicial."""
   session.headers.update({
     'Origin': URL_BASE,

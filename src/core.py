@@ -4,7 +4,6 @@ import random
 from requests import RequestException
 from typing import cast
 
-
 from cloudscraper import CloudScraper
 
 from src.emitente_handler import EmitenteHandler
@@ -64,7 +63,7 @@ def processar_nota(
       tipo
     )
 
-    #marcar_flag(session, dados['codigo_arquivo'])
+    marcar_flag(session, dados['codigo_arquivo'])
 
     delay = random.uniform(0.5, 1.5)
     time.sleep(delay)

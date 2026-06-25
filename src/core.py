@@ -2,6 +2,8 @@ from urllib.parse import urljoin
 import time
 import requests
 
+from cloudscraper import CloudScraper
+
 from src.config import (
   ACCEPT,
   COLUNAS,
@@ -11,7 +13,7 @@ from src.config import (
 )
 
 
-def ver_arquivos(session, tipo, tentativas=3):
+def ver_arquivos(session: CloudScraper, tipo: str, tentativas: int = 3) -> None:
   for i in range(tentativas):
     try:
       response = session.get(
@@ -27,7 +29,7 @@ def ver_arquivos(session, tipo, tentativas=3):
         raise RuntimeError(f"\nNetwork error: {e}")
 
 
-def trocar_empresa(session, empresa, empresas_href):
+def trocar_empresa(session: CloudScraper, empresa: str, empresas_href: dict) -> None:
   cnpj_target = CNPJ.get(empresa)
   if not cnpj_target:
     raise KeyError(f"CNPJ '{empresa}' não encontrado")
@@ -43,7 +45,7 @@ def trocar_empresa(session, empresa, empresas_href):
   ).raise_for_status()
 
 
-def carregar_dados(session, nota, tipo):
+def carregar_dados(session: CloudScraper, nota: str, tipo: str) -> list:
   endpoint = f'ver-arquivos-{tipo}'
 
   payload = {
@@ -70,10 +72,10 @@ def carregar_dados(session, nota, tipo):
   )
   response.raise_for_status()
 
-  return response.json().get('aaData')
+  return response.json().get('aaData', [])
 
 
-def baixar_arquivos(session, empresa_id, chave, tipo):
+def baixar_arquivos(session: CloudScraper, empresa_id: str, chave: str, tipo: str) -> tuple[bytes, bytes]:
   ver_path = 'danfe' if tipo == 'nfe' else 'dacte'
 
   xml_url = f"{URL_BASE}/nfe/download-arquivo/{tipo}/{empresa_id}/{chave}.xml"
@@ -88,7 +90,7 @@ def baixar_arquivos(session, empresa_id, chave, tipo):
   return response_xml.content, response_pdf.content
 
 
-def marcar_flag(session, codigo_arquivo, codigo_flag=10):
+def marcar_flag(session: CloudScraper, codigo_arquivo: str, codigo_flag: int = 10) -> None:
   session.post(
     f'{URL_BASE}/nfe/seta-flag/{codigo_arquivo}/{codigo_flag}',
     data={},

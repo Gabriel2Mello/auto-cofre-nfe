@@ -45,10 +45,10 @@ def salvar_arquivos(
   if not base_path.exists():
     raise RuntimeError('CAMINHO_DOCUMENTO_ENTRADA não configurado.')
 
-  tipo_caminho = 'NF-e' if tipo == 'nfe' else 'CT-e'
+  tipo_prefix = 'NF-e' if tipo == 'nfe' else 'CT-e'
  
-  path_pdf = base_path / f'PDF {tipo_caminho}' / ano / empresa / MONTHS[mes]
-  path_xml = base_path / f'XML - {tipo_caminho}' / ano / empresa / MONTHS[mes]
+  path_pdf = base_path / f'PDF {tipo_prefix}' / ano / empresa / MONTHS[mes]
+  path_xml = base_path / f'XML - {tipo_prefix}' / ano / empresa / MONTHS[mes]
 
   if not path_pdf.exists():
     raise RuntimeError('Caminho da pasta PDF não existe')

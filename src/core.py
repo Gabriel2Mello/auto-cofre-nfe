@@ -22,6 +22,7 @@ from src.config import (
   URL_BASE,
 )
 
+CHECK_FLAG = 10
 
 def processar_nota(
   session: CloudScraper,
@@ -172,7 +173,7 @@ def baixar_arquivos(
 def marcar_flag(
   session: CloudScraper,
   codigo_arquivo: str,
-  codigo_flag: int = 10
+  codigo_flag: int = CHECK_FLAG
 ) -> None:
   session.post(
     f'{URL_BASE}/nfe/seta-flag/{codigo_arquivo}/{codigo_flag}',

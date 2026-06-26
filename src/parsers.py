@@ -15,6 +15,8 @@ RE_EMPRESA_ID: Pattern[str] = re.compile(r"(?:nfe|cte)/(\d+)/")
 RE_CODIGO_ARQUIVO: Pattern[str] = re.compile(r"setaFlag\(\d+,'(\d+)'\)")
 RE_CHAVE_NFE: Pattern[str] = re.compile(r"(?:chave='([^']+)'|consultarSituacaoNota\(\"empresa\",\"([^\"]+)\"\))")
 RE_CHAVE_CTE: Pattern[str] = re.compile(r'consultarSituacaoNota\("empresa","(.*?)"\)')
+RE_CARTA_CORRECAO: Pattern[str] = re.compile(r'\bC\.\s*Correção\b', re.IGNORECASE)
+RE_NOTA_CANCELADA: Pattern[str] = re.compile(r'\bCancelada\b|\bCancelamento\b', re.IGNORECASE)
 
 
 @dataclass
@@ -128,7 +130,7 @@ def encontrar_linha(
   tipo: str
 ) -> list:
   if not linhas:
-    raise RuntimeError(f'Nenhum dado para nota: {nota}')
+    raise KeyError(f'Nenhum dado para nota: {nota}')
 
   fabrica_documento = LinhaCTe if tipo == 'cte' else LinhaNFe
 
@@ -144,6 +146,16 @@ def encontrar_linha(
     if not _validar_data_linha(objeto_linha.data_emissao_html, mes_target, ano_target):
       continue
 
+    conteudo_html = objeto_linha.html_completo()
+
+    if RE_CARTA_CORRECAO.search(conteudo_html):
+      print('Ignorando Carta de Correção')
+      continue
+
+    if RE_NOTA_CANCELADA.search(conteudo_html):
+      print('Ignorando Cancelada')
+      continue
+
     nota_match = RE_NOTA.search(objeto_linha.nota_html)
     if nota_match:
       id_nota = next((g for g in nota_match.groups() if g is not None), None)
@@ -151,7 +163,7 @@ def encontrar_linha(
         linhas_encontradas.append(objeto_linha)
 
   if not linhas_encontradas:
-    raise RuntimeError('Nenhuma nota encontrada')
+    raise KeyError('Nenhuma nota autorizada foi encontrada')
 
   return linhas_encontradas
 

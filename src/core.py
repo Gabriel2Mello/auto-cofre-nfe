@@ -70,7 +70,7 @@ def processar_nota(
 
   except (KeyError, ValueError, RequestException) as e:
     print(f'Erro na nota {nota}: {e}')
-    sleep(5)
+    sleep(1)
 
 
 def ver_arquivos(

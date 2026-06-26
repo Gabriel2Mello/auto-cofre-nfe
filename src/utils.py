@@ -11,6 +11,13 @@ from src.config import (
 )
 
 
+def pause() -> None:
+  try:
+    input('\nPressione Enter para fechar...')
+  except (EOFError, KeyboardInterrupt):
+    pass
+
+
 def encerrar_programa(value: Any) -> None:
   if not value:
     sys.exit(0)

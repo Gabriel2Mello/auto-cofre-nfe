@@ -6,6 +6,8 @@ from typing import Pattern
 
 from bs4 import BeautifulSoup
 
+from src.utils import upper_strip
+
 RE_CNPJ: Pattern[str] = re.compile(r'\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}')
 RE_DATA: Pattern[str] = re.compile(r'(\d{2})/(\d{2})/(\d{2,4})')
 RE_NOTA: Pattern[str] = re.compile(r'/(\d+)/')
@@ -147,7 +149,10 @@ def resolve_emitente(emitente_html: str) -> str:
   )
   emitente_limpo = re.sub(r'<[^>]+>', ' ', emitente_antes_do_br)
 
-  emitente = unescape(emitente_limpo).strip().upper()
+  emitente = upper_strip(unescape(emitente_limpo))
+  if not emitente:
+    return ""
+
   return " ".join(emitente.split())
 
 

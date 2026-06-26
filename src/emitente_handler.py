@@ -1,7 +1,9 @@
-from pathlib import Path
 import json
 
-from src.utils import obter_caminho_json
+from src.utils import (
+  obter_caminho_json,
+  upper_strip
+)
 
 
 class EmitenteHandler:
@@ -21,14 +23,14 @@ class EmitenteHandler:
 
 
   def get_nome(self, emitente: str) -> str:
-    nome_emitente = self.emitentes_conhecidos.get(emitente.upper().strip())
+    nome_emitente = self.emitentes_conhecidos.get(upper_strip(emitente))
     if nome_emitente:
       return nome_emitente
 
     print(f"Emitente não reconhecido: {emitente}")
 
     try:
-      emitente_identificado = input('Digite o nome: ').upper().strip() or emitente
+      emitente_identificado = upper_strip(input('Digite o nome: ')) or emitente
       self._salvar(emitente, emitente_identificado)
     except(EOFError, KeyboardInterrupt):
       return emitente
@@ -37,7 +39,7 @@ class EmitenteHandler:
 
 
   def _salvar(self, emitente: str, nome_identificado: str) -> None:
-    self.emitentes_conhecidos[emitente.upper().strip()] = nome_identificado.upper().strip()
+    self.emitentes_conhecidos[upper_strip(emitente)] = upper_strip(nome_identificado)
     self._persist()
 
 

@@ -5,15 +5,9 @@ from requests import RequestException
 from src.auth import login
 from src.http_client import TimeoutScraper
 from src.config import init_config
-from src.interface import (
-  input_dados,
-)
-from src.utils import (
-  set_app_id,
-)
-from src.parsers import (
-  extrair_empresas_href,
-)
+from src.interface import input_dados
+from src.utils import set_app_id
+from src.parsers import extrair_empresas_href
 from src.core import (
   ver_arquivos,
   trocar_empresa,

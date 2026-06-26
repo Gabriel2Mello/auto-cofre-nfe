@@ -1,5 +1,5 @@
 from urllib.parse import urljoin
-import time
+from time import sleep
 import random
 from requests import RequestException
 from typing import cast
@@ -24,12 +24,12 @@ from src.config import (
 
 
 def processar_nota(
-    session: CloudScraper,
-    nota: str,
-    mes_nota: int,
-    tipo: str,
-    empresa: str,
-    mes_pasta: int
+  session: CloudScraper,
+  nota: str,
+  mes_nota: int,
+  tipo: str,
+  empresa: str,
+  mes_pasta: int
 ) -> None:
   try:
     linhas = carregar_dados(session, nota, tipo)
@@ -66,30 +66,40 @@ def processar_nota(
     marcar_flag(session, dados['codigo_arquivo'])
 
     delay = random.uniform(0.5, 1.5)
-    time.sleep(delay)
+    sleep(delay)
 
   except (KeyError, ValueError, RequestException) as e:
     print(f'Erro na nota {nota}: {e}')
-    time.sleep(5)
+    sleep(5)
 
 
-def ver_arquivos(session: CloudScraper, tipo: str, tentativas: int = 3) -> None:
+def ver_arquivos(
+  session: CloudScraper,
+  tipo: str,
+  tentativas: int = 3
+) -> None:
   for i in range(tentativas):
+
     try:
       response = session.get(
         f'{URL_BASE}/nfe/empresa/ver-arquivos-{tipo}',
       )
       response.raise_for_status()
       return
+
     except RequestException as e:
       if i < tentativas - 1:
         print(f"O site demorou a responder. Tentando acessar novamente ({i+1}/{tentativas})...")
-        time.sleep(5)
+        sleep(5)
       else:
-        raise RuntimeError(f"\nNetwork error: {e}")
+        raise RuntimeError(f"\nNetwork Error: {e}")
 
 
-def trocar_empresa(session: CloudScraper, empresa: str, empresas_href: dict) -> None:
+def trocar_empresa(
+  session: CloudScraper,
+  empresa: str,
+  empresas_href: dict
+) -> None:
   cnpj_target = CNPJ.get(empresa)
   if not cnpj_target:
     raise KeyError(f"CNPJ '{empresa}' não encontrado")
@@ -105,7 +115,11 @@ def trocar_empresa(session: CloudScraper, empresa: str, empresas_href: dict) -> 
   ).raise_for_status()
 
 
-def carregar_dados(session: CloudScraper, nota: str, tipo: str) -> list:
+def carregar_dados(
+  session: CloudScraper,
+  nota: str,
+  tipo: str
+) -> list:
   endpoint = f'ver-arquivos-{tipo}'
 
   payload = {
@@ -135,7 +149,12 @@ def carregar_dados(session: CloudScraper, nota: str, tipo: str) -> list:
   return response.json().get('aaData', [])
 
 
-def baixar_arquivos(session: CloudScraper, empresa_id: str, chave: str, tipo: str) -> tuple[bytes, bytes]:
+def baixar_arquivos(
+  session: CloudScraper,
+  empresa_id: str,
+  chave: str,
+  tipo: str
+) -> tuple[bytes, bytes]:
   ver_path = 'danfe' if tipo == 'nfe' else 'dacte'
 
   xml_url = f"{URL_BASE}/nfe/download-arquivo/{tipo}/{empresa_id}/{chave}.xml"
@@ -150,7 +169,11 @@ def baixar_arquivos(session: CloudScraper, empresa_id: str, chave: str, tipo: st
   return response_xml.content, response_pdf.content
 
 
-def marcar_flag(session: CloudScraper, codigo_arquivo: str, codigo_flag: int = 10) -> None:
+def marcar_flag(
+  session: CloudScraper,
+  codigo_arquivo: str,
+  codigo_flag: int = 10
+) -> None:
   session.post(
     f'{URL_BASE}/nfe/seta-flag/{codigo_arquivo}/{codigo_flag}',
     data={},

@@ -25,7 +25,15 @@ def obter_caminho_json() -> Path:
   return diretorio_execucao / 'emitentes_conhecidos.json'
 
 
-def salvar_arquivos(xml: bytes, pdf: bytes, nome_emitente: str, numero_nota: str, empresa: str, mes: int, tipo: str) -> None:
+def salvar_arquivos(
+  xml: bytes,
+  pdf: bytes,
+  nome_emitente: str,
+  numero_nota: str,
+  empresa: str,
+  mes: int,
+  tipo: str
+) -> None:
   hoje = datetime.today()
   ano_pasta = hoje.year - 1 if (hoje.month == 1 and mes == 12) else hoje.year
   ano = str(ano_pasta)
@@ -58,4 +66,10 @@ def set_app_id() -> None:
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(my_app_id)
   except Exception:
     pass
+
+def upper_strip(value: str | None) -> str | None:
+  if not value:
+    return
+
+  return value.upper().strip()
 

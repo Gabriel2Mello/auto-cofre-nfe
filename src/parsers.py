@@ -86,7 +86,11 @@ def extrair_empresas_href(html_content: str) -> dict[str, str]:
   return empresas
 
 
-def _validar_data_linha(data: str, mes_alvo: int, ano_alvo: int) -> bool:
+def _validar_data_linha(
+  data: str,
+  mes_alvo: int,
+  ano_alvo: int
+) -> bool:
   data_match = RE_DATA.search(data)
   if not data_match:
     return False
@@ -101,7 +105,11 @@ def _validar_data_linha(data: str, mes_alvo: int, ano_alvo: int) -> bool:
   return mes == mes_alvo and ano == ano_alvo
 
 
-def _extrair_campo_regex(regex: Pattern[str], texto: str, erro_msg: str) -> str:
+def _extrair_campo_regex(
+  regex: Pattern[str],
+  texto: str,
+  erro_msg: str
+) -> str:
   match = regex.search(texto)
   if not match:
     raise RuntimeError(erro_msg)
@@ -113,7 +121,12 @@ def _extrair_campo_regex(regex: Pattern[str], texto: str, erro_msg: str) -> str:
   raise RuntimeError(erro_msg)
 
 
-def encontrar_linha(linhas: list, nota: str, mes_atual: int, tipo: str) -> list:
+def encontrar_linha(
+  linhas: list,
+  nota: str,
+  mes_atual: int,
+  tipo: str
+) -> list:
   if not linhas:
     raise RuntimeError(f'Nenhum dado para nota: {nota}')
 

@@ -6,7 +6,10 @@ from src.auth import login
 from src.http_client import TimeoutScraper
 from src.config import init_config
 from src.interface import input_dados
-from src.utils import set_app_id
+from src.utils import (
+  set_app_id,
+  pause,
+)
 from src.parsers import extrair_empresas_href
 from src.core import (
   ver_arquivos,
@@ -54,7 +57,7 @@ def main() -> None:
   elapsed_time = perf_counter() - start_time
   print(f'\nTerminado em: {elapsed_time:0.2f} segundos')
 
-  input('Pressione Enter para fechar...')
+  pause()
 
 
 if __name__ == "__main__":
@@ -62,6 +65,6 @@ if __name__ == "__main__":
     main()
   except Exception as fatal_error:
     print(f'\nErro fatal: {fatal_error}')
-    input('Pressione Enter para fechar...')
+    pause()
     sys.exit(1)
 

@@ -54,7 +54,7 @@ class EmitenteHandler:
 
     except Exception as e:
       print(f"Erro ao salvar emitentes_conhecidos.json: {e}")
-    finally:
       if temp_path.exists():
         temp_path.unlink()
+      raise
 

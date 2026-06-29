@@ -114,13 +114,13 @@ def _extrair_campo_regex(
 ) -> str:
   match = regex.search(texto)
   if not match:
-    raise RuntimeError(erro_msg)
+    raise ValueError(erro_msg)
 
   for group in match.groups():
     if group is not None:
       return group
 
-  raise RuntimeError(erro_msg)
+  raise ValueError(erro_msg)
 
 
 def encontrar_linha(
@@ -203,7 +203,7 @@ def extrair_dados(linha: DocumentoFiscal, tipo: str) -> dict[str, str]:
 
     emitente = resolve_emitente(linha.emitente_html)
     if not emitente:
-      raise RuntimeError('Emitente não encontrado')
+      raise KeyError('Emitente não encontrado')
 
     print('Emitente:', emitente)
     return {
@@ -213,6 +213,8 @@ def extrair_dados(linha: DocumentoFiscal, tipo: str) -> dict[str, str]:
       'emitente': emitente
     }
 
+  except ValueError:
+    raise
   except Exception as e:
-    raise RuntimeError(f'Erro ao processar {tipo}: {str(e)}')
+    raise RuntimeError(f'Erro ao processar {tipo}: {str(e)}') from e
 

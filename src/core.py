@@ -1,7 +1,11 @@
 from urllib.parse import urljoin
 from time import sleep
 import random
-from requests import RequestException
+from requests import (
+  Timeout,
+  RequestException,
+  HTTPError,
+)
 from typing import cast
 
 from cloudscraper import CloudScraper
@@ -9,6 +13,12 @@ from cloudscraper import CloudScraper
 from src.emitente_handler import EmitenteHandler
 from src.interface import escolher_emitente
 from src.utils import salvar_arquivos
+from src.helpers import (
+  handle_timeout,
+  handle_http_error,
+  handle_request_error,
+  handle_exception,
+)
 from src.parsers import (
   encontrar_linha,
   extrair_dados,
@@ -69,9 +79,14 @@ def processar_nota(
     delay = random.uniform(0.5, 1.5)
     sleep(delay)
 
-  except (KeyError, ValueError, RequestException) as e:
-    print(f'Erro na nota {nota}: {e}')
-    sleep(1)
+  except Timeout as e:
+    handle_timeout(e)
+  except HTTPError as e:
+    handle_http_error(e)
+  except RequestException as e:
+    handle_request_error(e)
+  except Exception as e:
+    handle_exception(e, f'Erro na nota {nota}')
 
 
 def ver_arquivos(
@@ -88,12 +103,12 @@ def ver_arquivos(
       response.raise_for_status()
       return
 
-    except RequestException as e:
+    except Timeout as e:
       if i < tentativas - 1:
         print(f"O site demorou a responder. Tentando acessar novamente ({i+1}/{tentativas})...")
         sleep(5)
       else:
-        raise RuntimeError(f"\nNetwork Error: {e}")
+        raise Timeout(f"\nNetwork Error: {e}")
 
 
 def trocar_empresa(
@@ -107,7 +122,7 @@ def trocar_empresa(
 
   empresa_link = empresas_href.get(cnpj_target)
   if not empresa_link:
-    raise RuntimeError('Link da empresa não encontrado')
+    raise KeyError(f"Link da empresa '{empresa}' não encontrado")
 
   session.get(
     url=urljoin(URL_BASE, empresa_link),

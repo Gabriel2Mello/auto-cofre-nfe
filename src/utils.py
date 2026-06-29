@@ -57,11 +57,8 @@ def salvar_arquivos(
   path_pdf = base_path / f'PDF {tipo_prefix}' / ano / empresa / MONTHS[mes]
   path_xml = base_path / f'XML - {tipo_prefix}' / ano / empresa / MONTHS[mes]
 
-  if not path_pdf.exists():
-    raise RuntimeError('Caminho da pasta PDF não existe')
-
-  if not path_xml.exists():
-    raise RuntimeError('Caminho da pasta XML não existe')
+  path_pdf.mkdir(parents=True, exist_ok=True)
+  path_xml.mkdir(parents=True, exist_ok=True)
 
   (path_pdf / f'{nome_limpo}.pdf').write_bytes(pdf)
   (path_xml / f'{nome_limpo}.xml').write_bytes(xml)

@@ -1,30 +1,26 @@
-import time
-import random
 import sys
-from time import perf_counter
+from time import sleep, perf_counter
+from requests import (
+  RequestException,
+  HTTPError,
+  Timeout,
+)
 
 from src.auth import login
-from src.emitente_handler import EmitenteHandler
 from src.http_client import TimeoutScraper
-from src.interface import (
-  input_dados,
-  escolher_emitente,
-)
+from src.config import init_config
+from src.interface import input_dados
+from src.parsers import extrair_empresas_href
+from src.emitente_handler import EmitenteHandler
 from src.utils import (
-  salvar_arquivos,
   set_app_id,
-)
-from src.parsers import (
-  extrair_empresas_href,
-  encontrar_linha,
-  extrair_dados,
+  pause,
+  handle_error,
 )
 from src.core import (
   ver_arquivos,
   trocar_empresa,
-  carregar_dados,
-  baixar_arquivos,
-  marcar_flag,
+  processar_nota,
 )
 
 
@@ -32,87 +28,58 @@ def main() -> None:
   if sys.platform == 'win32':
     set_app_id()
 
+  init_config()
   notas, empresa, mes_nota, mes_pasta, tipo = input_dados()
   start_time = perf_counter()
+  emitente_handler = EmitenteHandler()
 
-  sucesso = True
-  with TimeoutScraper(default_timeout=10) as session:
-    try:
+  try:
+    with TimeoutScraper(default_timeout=10) as session:
       html_login = login(session)
       empresas_href = extrair_empresas_href(html_login)
       trocar_empresa(session, empresa, empresas_href)
 
-      print('Aguardando sincronização do sistema...')
-      time.sleep(0.5)
-
+      print('Aguardando sincronização...')
+      sleep(0.5)
       ver_arquivos(session, tipo)
-      emitente_handler = EmitenteHandler()
 
       for nota in notas:
         print(f'\nProcessando: {nota}')
+        processar_nota(
+          session,
+          nota,
+          mes_nota,
+          tipo,
+          empresa,
+          mes_pasta,
+          emitente_handler
+        )
 
-        try:
-          linhas = carregar_dados(session, nota, tipo)
-
-          linhas_validas = encontrar_linha(
-            linhas,
-            nota,
-            mes_nota,
-            tipo
-          )
-
-          if len(linhas_validas) == 1:
-            linha = linhas_validas[0]
-          else:
-            linha = escolher_emitente(linhas_validas)
-
-          dados = extrair_dados(linha, tipo)
-
-          xml, pdf = baixar_arquivos(
-            session,
-            dados['empresa_id'],
-            dados['chave'],
-            tipo
-          )
-
-          nome_emitente = emitente_handler.get_nome(dados['emitente'])
-
-          if not nome_emitente:
-            print(f"\nEmitente não reconhecido: {dados['emitente']}")
-            nome_emitente = input('Digite o nome: ').upper().strip() or dados['emitente']
-            emitente_handler.salvar(dados['emitente'], nome_emitente)
-
-          salvar_arquivos(
-            xml,
-            pdf,
-            nome_emitente,
-            nota,
-            empresa,
-            mes_pasta,
-            tipo
-          )
-
-          marcar_flag(session, dados['codigo_arquivo'])
-
-          delay = random.uniform(0.5, 1.5)
-          time.sleep(delay)
-
-        except Exception as e:
-          print(f'Erro na nota {nota}: {e}')
-          time.sleep(5)
-
-    except Exception as e:
-      print(f'Erro fatal no processo: {e}')
-      sucesso = False
-
-  if not sucesso:
-    sys.exit(1)
+  except Timeout as e:
+    handle_error(e, msg='Site demorou a responder')
+  except HTTPError as e:
+    handle_error(e, msg='Erro HTTP')
+  except RequestException as e:
+    handle_error(e, msg='Erro desconhecido no site')
+  except KeyError as e:
+    handle_error(e, msg='Valor faltando')
+  except ValueError as e:
+    handle_error(e, msg='Valor inadequado')
+  except Exception as e:
+    handle_error(e)
+  finally:
+    emitente_handler.close()
 
   elapsed_time = perf_counter() - start_time
   print(f'\nTerminado em: {elapsed_time:0.2f} segundos')
-  input('Pressione Enter para fechar...')
+  pause()
 
 
 if __name__ == "__main__":
-  main()
+  try:
+    main()
+  except Exception as e:
+    handle_error(e, msg='\nErro fatal')
+    pause()
+    sys.exit(1)
 

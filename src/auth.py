@@ -1,28 +1,24 @@
-from src.config import (
-  CONTENT_TYPE,
-  CNPJ,
-  URL_BASE,
-  SENHA_COFRE,
-)
+from cloudscraper import CloudScraper
+from src.config import Config
 
-def login(session):
+def login(session: CloudScraper) -> str:
   """Realiza a autenticação no site e retorna o HTML da página inicial."""
   session.headers.update({
-    'Origin': URL_BASE,
-    'Content-Type': CONTENT_TYPE,
+    'Origin': Config.URL_BASE,
+    'Content-Type': Config.CONTENT_TYPE,
     'Connection': 'keep-alive'
   })
 
   payload = {
     's': 'nfe',
-    'cpf': CNPJ['MATRIZ'],
-    'senha': SENHA_COFRE
+    'cpf': Config.CNPJ.get('MATRIZ'),
+    'senha': Config.SENHA_COFRE
   }
 
   response = session.post(
-    url=f'{URL_BASE}/login/enviar',
+    url=f'{Config.URL_BASE}/login/enviar',
     data=payload,
-    headers={'Referer': f'{URL_BASE}/login'},
+    headers={'Referer': f'{Config.URL_BASE}/login'},
     allow_redirects=True,
   )
   response.raise_for_status()

@@ -11,7 +11,7 @@ def login(session: CloudScraper) -> str:
 
   payload = {
     's': 'nfe',
-    'cpf': Config.CNPJ['MATRIZ'],
+    'cpf': Config.CNPJ.get('MATRIZ'),
     'senha': Config.SENHA_COFRE
   }
 

@@ -40,8 +40,7 @@ def salvar_arquivos(
   mes: int,
   tipo: str
 ) -> None:
-  hoje = datetime.today()
-  ano_pasta = hoje.year - 1 if (hoje.month == 1 and mes == 12) else hoje.year
+  ano_pasta = ano_referencia(mes)
   ano = str(ano_pasta)
 
   nome_arquivo = f'{nome_emitente} {numero_nota}'
@@ -87,4 +86,11 @@ def handle_error(
 
   if sleep_time > 0:
     sleep(sleep_time)
+
+def ano_referencia(mes_target: int) -> int:
+  hoje = datetime.today()
+  if (hoje.month == 1 and mes_target == 12):
+    return hoje.year - 1
+
+  return hoje.year
 

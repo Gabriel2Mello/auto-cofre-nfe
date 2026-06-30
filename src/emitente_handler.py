@@ -1,16 +1,13 @@
 import json
 
-from src.utils import (
-  obter_caminho_json,
-  upper_strip
-)
+from src.utils import obter_caminho_json, upper_strip
 
 
 class EmitenteHandler:
   def __init__(self) -> None:
     self.caminho_json = obter_caminho_json()
     self.emitentes_conhecidos = self._carregar_emitentes()
-
+    self._dirty = False
 
   def _carregar_emitentes(self) -> dict:
     if self.caminho_json.exists():
@@ -21,36 +18,36 @@ class EmitenteHandler:
         return {}
     return {}
 
-
   def get_nome(self, emitente: str) -> str:
-    nome_emitente = self.emitentes_conhecidos.get(upper_strip(emitente))
+    key = upper_strip(emitente)
+    if not key:
+      return ""
+
+    nome_emitente = self.emitentes_conhecidos.get(key)
     if nome_emitente:
       return nome_emitente
 
     print(f"Emitente não reconhecido: {emitente}")
-
     try:
       emitente_identificado = upper_strip(input('Digite o nome: ')) or emitente
-      self._salvar(emitente, emitente_identificado)
+      self.emitentes_conhecidos[key] = upper_strip(emitente_identificado)
+      self._dirty = True
     except(EOFError, KeyboardInterrupt):
       return emitente
 
     return emitente_identificado
 
+  def close(self) -> None:
+    if not self._dirty:
+      return
 
-  def _salvar(self, emitente: str, nome_identificado: str) -> None:
-    self.emitentes_conhecidos[upper_strip(emitente)] = upper_strip(nome_identificado)
-    self._persist()
-
-
-  def _persist(self) -> None:
     temp_path = self.caminho_json.with_suffix('.tmp')
-
     try:
       with open(temp_path, 'w', encoding='utf-8') as f:
         json.dump(self.emitentes_conhecidos, f, indent=4, ensure_ascii=False)
 
       temp_path.replace(self.caminho_json)
+      self._dirty = False
 
     except Exception as e:
       print(f"Erro ao salvar emitentes_conhecidos.json: {e}")

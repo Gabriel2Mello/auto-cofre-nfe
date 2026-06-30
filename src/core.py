@@ -1,36 +1,25 @@
 from urllib.parse import urljoin
 from time import sleep
+from typing import cast
 import random
 from requests import (
   Timeout,
   RequestException,
   HTTPError,
 )
-from typing import cast
 
 from cloudscraper import CloudScraper
 
 from src.emitente_handler import EmitenteHandler
 from src.interface import escolher_emitente
-from src.utils import salvar_arquivos
-from src.helpers import (
-  handle_timeout,
-  handle_http_error,
-  handle_request_error,
-  handle_exception,
-)
+from src.utils import salvar_arquivos, handle_error
+from src.config import Config
 from src.parsers import (
   encontrar_linha,
   extrair_dados,
   DocumentoFiscal,
 )
-from src.config import (
-  ACCEPT,
-  COLUNAS,
-  CNPJ,
-  REQUESTED_WITH,
-  URL_BASE,
-)
+
 
 CHECK_FLAG = 10
 
@@ -40,7 +29,8 @@ def processar_nota(
   mes_nota: int,
   tipo: str,
   empresa: str,
-  mes_pasta: int
+  mes_pasta: int,
+  emitente_handler: EmitenteHandler
 ) -> None:
   try:
     linhas = carregar_dados(session, nota, tipo)
@@ -61,7 +51,6 @@ def processar_nota(
       tipo
     )
 
-    emitente_handler = EmitenteHandler()
     nome_emitente = emitente_handler.get_nome(dados['emitente'])
 
     salvar_arquivos(
@@ -75,18 +64,16 @@ def processar_nota(
     )
 
     marcar_flag(session, dados['codigo_arquivo'])
-
-    delay = random.uniform(0.5, 1.5)
-    sleep(delay)
+    sleep(random.uniform(0.5, 1.5))
 
   except Timeout as e:
-    handle_timeout(e)
+    handle_error(e, msg='Site demorou a responder')
   except HTTPError as e:
-    handle_http_error(e)
+    handle_error(e, msg='Erro HTTP')
   except RequestException as e:
-    handle_request_error(e)
+    handle_error(e, msg='Erro desconhecido no site')
   except Exception as e:
-    handle_exception(e, f'Erro na nota {nota}')
+    handle_error(e, msg=f'Erro na nota {nota}')
 
 
 def ver_arquivos(
@@ -98,7 +85,7 @@ def ver_arquivos(
 
     try:
       response = session.get(
-        f'{URL_BASE}/nfe/empresa/ver-arquivos-{tipo}',
+        f'{Config.URL_BASE}/nfe/empresa/ver-arquivos-{tipo}',
       )
       response.raise_for_status()
       return
@@ -116,7 +103,7 @@ def trocar_empresa(
   empresa: str,
   empresas_href: dict
 ) -> None:
-  cnpj_target = CNPJ.get(empresa)
+  cnpj_target = Config.CNPJ.get(empresa)
   if not cnpj_target:
     raise KeyError(f"CNPJ '{empresa}' não encontrado")
 
@@ -125,8 +112,8 @@ def trocar_empresa(
     raise KeyError(f"Link da empresa '{empresa}' não encontrado")
 
   session.get(
-    url=urljoin(URL_BASE, empresa_link),
-    headers={'Referer': f'{URL_BASE}/login/enviar'},
+    url=urljoin(Config.URL_BASE, empresa_link),
+    headers={'Referer': f'{Config.URL_BASE}/login/enviar'},
     allow_redirects=True,
   ).raise_for_status()
 
@@ -141,7 +128,7 @@ def carregar_dados(
   payload = {
     'sEcho': '1',
     'iColumns': '7' if tipo == 'nfe' else '8',
-    'sColumns': COLUNAS[tipo],
+    'sColumns': Config.COLUNAS[tipo],
     'nro_nota_de': str(nota),
     'flag_cliente': '98',
     'flag_conta': '98',
@@ -150,13 +137,13 @@ def carregar_dados(
   }
 
   headers = {
-    'X-Requested-With': REQUESTED_WITH,
-    'Referer': f'{URL_BASE}/nfe/empresa/{endpoint}',
-    'Accept': ACCEPT,
+    'X-Requested-With': Config.REQUESTED_WITH,
+    'Referer': f'{Config.URL_BASE}/nfe/empresa/{endpoint}',
+    'Accept': Config.ACCEPT,
   }
 
   response = session.post(
-    url=f'{URL_BASE}/nfe/empresa/{endpoint}/load',
+    url=f'{Config.URL_BASE}/nfe/empresa/{endpoint}/load',
     headers=headers,
     data=payload,
   )
@@ -173,8 +160,8 @@ def baixar_arquivos(
 ) -> tuple[bytes, bytes]:
   ver_path = 'danfe' if tipo == 'nfe' else 'dacte'
 
-  xml_url = f"{URL_BASE}/nfe/download-arquivo/{tipo}/{empresa_id}/{chave}.xml"
-  pdf_url = f"{URL_BASE}/nfe/ver-{ver_path}/{tipo}/{empresa_id}/{chave}.pdf"
+  xml_url = f"{Config.URL_BASE}/nfe/download-arquivo/{tipo}/{empresa_id}/{chave}.xml"
+  pdf_url = f"{Config.URL_BASE}/nfe/ver-{ver_path}/{tipo}/{empresa_id}/{chave}.pdf"
 
   response_xml = session.get(xml_url)
   response_xml.raise_for_status()
@@ -191,7 +178,7 @@ def marcar_flag(
   codigo_flag: int = CHECK_FLAG
 ) -> None:
   session.post(
-    f'{URL_BASE}/nfe/seta-flag/{codigo_arquivo}/{codigo_flag}',
+    f'{Config.URL_BASE}/nfe/seta-flag/{codigo_arquivo}/{codigo_flag}',
     data={},
   ).raise_for_status()
 

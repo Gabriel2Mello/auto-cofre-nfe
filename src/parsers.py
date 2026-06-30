@@ -130,7 +130,7 @@ def encontrar_linha(
   tipo: str
 ) -> list:
   if not linhas:
-    raise KeyError(f'Nenhum dado para nota: {nota}')
+    raise KeyError('Nenhum dado encontrado')
 
   fabrica_documento = LinhaCTe if tipo == 'cte' else LinhaNFe
 
@@ -163,7 +163,7 @@ def encontrar_linha(
         linhas_encontradas.append(objeto_linha)
 
   if not linhas_encontradas:
-    raise KeyError('Nenhuma nota autorizada foi encontrada')
+    raise KeyError('Nenhuma foi encontrada')
 
   return linhas_encontradas
 

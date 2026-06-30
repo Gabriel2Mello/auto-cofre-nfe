@@ -1,12 +1,11 @@
 from dataclasses import dataclass, field
-from datetime import datetime
 from html import unescape
 import re
 from typing import Pattern
 
 from bs4 import BeautifulSoup
 
-from src.utils import upper_strip
+from src.utils import upper_strip, ano_referencia
 
 RE_CNPJ: Pattern[str] = re.compile(r'\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}')
 RE_DATA: Pattern[str] = re.compile(r'(\d{2})/(\d{2})/(\d{2,4})')
@@ -128,15 +127,14 @@ def encontrar_linha(
   nota: str,
   mes_atual: int,
   tipo: str
-) -> list:
+) -> list[DocumentoFiscal]:
   if not linhas:
     raise KeyError('Nenhum dado encontrado')
 
   fabrica_documento = LinhaCTe if tipo == 'cte' else LinhaNFe
 
   mes_target = int(mes_atual)
-  hoje = datetime.today()
-  ano_target = hoje.year - 1 if (hoje.month == 1 and mes_target == 12) else hoje.year
+  ano_target = ano_referencia(mes_target)
 
   linhas_encontradas = []
 
@@ -169,6 +167,9 @@ def encontrar_linha(
 
 
 def resolve_emitente(emitente_html: str) -> str:
+  if not emitente_html:
+    return ""
+
   emitente_antes_do_br = (
     re.split(r'<br', emitente_html, flags=re.IGNORECASE)[0]
   )
@@ -184,37 +185,31 @@ def resolve_emitente(emitente_html: str) -> str:
 def extrair_dados(linha: DocumentoFiscal, tipo: str) -> dict[str, str]:
   html_content = linha.html_completo()
 
-  try:
-    chave = _extrair_campo_regex(
-      RE_CHAVE_CTE if tipo == 'cte' else RE_CHAVE_NFE,
-      html_content,
-      'Chave da nota não encontrada'
-    )
-    empresa_id = _extrair_campo_regex(
-      RE_EMPRESA_ID,
-      html_content,
-      'ID da empresa não encontrado'
-    )
-    codigo_arquivo = _extrair_campo_regex(
-      RE_CODIGO_ARQUIVO,
-      html_content,
-      'Código setaFlag não encontrado'
-    )
+  chave = _extrair_campo_regex(
+    RE_CHAVE_CTE if tipo == 'cte' else RE_CHAVE_NFE,
+    html_content,
+    'Chave da nota não encontrada'
+  )
+  empresa_id = _extrair_campo_regex(
+    RE_EMPRESA_ID,
+    html_content,
+    'ID da empresa não encontrado'
+  )
+  codigo_arquivo = _extrair_campo_regex(
+    RE_CODIGO_ARQUIVO,
+    html_content,
+    'Código setaFlag não encontrado'
+  )
 
-    emitente = resolve_emitente(linha.emitente_html)
-    if not emitente:
-      raise KeyError('Emitente não encontrado')
+  emitente = resolve_emitente(linha.emitente_html)
+  if not emitente:
+    raise KeyError('Emitente não encontrado')
 
-    print('Emitente:', emitente)
-    return {
-      'chave': chave,
-      'empresa_id': empresa_id,
-      'codigo_arquivo': codigo_arquivo,
-      'emitente': emitente
-    }
-
-  except ValueError:
-    raise
-  except Exception as e:
-    raise RuntimeError(f'Erro ao processar {tipo}: {str(e)}') from e
+  print('Emitente:', emitente)
+  return {
+    'chave': chave,
+    'empresa_id': empresa_id,
+    'codigo_arquivo': codigo_arquivo,
+    'emitente': emitente
+  }
 

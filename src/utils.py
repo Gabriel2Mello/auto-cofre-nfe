@@ -4,11 +4,10 @@ from typing import Any
 from pathlib import Path
 import re
 import sys
+from typing import Union
+from time import sleep
 
-from src.config import (
-  Config,
-  MONTHS
-)
+from src.config import Config
 
 
 def pause() -> None:
@@ -54,8 +53,8 @@ def salvar_arquivos(
 
   tipo_prefix = 'NF-e' if tipo == 'nfe' else 'CT-e'
  
-  path_pdf = base_path / f'PDF {tipo_prefix}' / ano / empresa / MONTHS[mes]
-  path_xml = base_path / f'XML - {tipo_prefix}' / ano / empresa / MONTHS[mes]
+  path_pdf = base_path / f'PDF {tipo_prefix}' / ano / empresa / Config.MONTHS[mes]
+  path_xml = base_path / f'XML - {tipo_prefix}' / ano / empresa / Config.MONTHS[mes]
 
   path_pdf.mkdir(parents=True, exist_ok=True)
   path_xml.mkdir(parents=True, exist_ok=True)
@@ -76,4 +75,16 @@ def upper_strip(value: str | None) -> str | None:
     return
 
   return value.upper().strip()
+
+
+def handle_error(
+  err: Union[str, Exception],
+  msg: str = "",
+  sleep_time: int = 1
+) -> None:
+  base_message = msg or 'Erro inesperado'
+  print(f'{base_message}: {err}')
+
+  if sleep_time > 0:
+    sleep(sleep_time)
 

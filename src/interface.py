@@ -3,13 +3,13 @@ from datetime import datetime
 from prompt_toolkit import prompt
 from prompt_toolkit.shortcuts import radiolist_dialog
 
-from src.config import MONTHS
+from src.config import Config
 from src.utils import encerrar_programa
 from src.parsers import resolve_emitente
 
 
 def selecionar_mes() -> int:
-  meses = [(i, MONTHS[i]) for i in range(1, 13)]
+  meses = [(i, Config.MONTHS[i]) for i in range(1, 13)]
 
   mes = radiolist_dialog(
     title='Escolha o mês:',
@@ -27,7 +27,7 @@ def escolher_mes(titulo: str, texto: str) -> int:
     title=titulo,
     text=texto,
     values=[
-      (mes_atual, f'ATUAL ({MONTHS[mes_atual]})'),
+      (mes_atual, f'ATUAL ({Config.MONTHS[mes_atual]})'),
       ('outro', 'OUTRO')
     ]
   ).run()

@@ -19,6 +19,8 @@ def pause() -> None:
 
 def encerrar_programa(value: Any) -> None:
   if not value:
+    print('\nNenhum valor informado...')
+    pause()
     sys.exit(0)
 
 

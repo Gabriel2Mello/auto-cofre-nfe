@@ -41,17 +41,15 @@ def escolher_mes(titulo: str, texto: str) -> int:
 
 
 def input_dados() -> tuple[list[str], str, int, int, str]:
-  #tipo_input = prompt('Tipo 1(NFe) 2(CTe): ').strip()
-  #tipo = 'cte' if tipo_input == '2' else 'nfe'
-  tipo = 'nfe'
+  tipo_input = prompt('Tipo 1(NFe) 2(CTe): ').strip()
+  tipo = 'cte' if tipo_input == '2' else 'nfe'
 
   notas_input = prompt('Nota: ').strip()
   notas = [n.strip() for n in notas_input.split(',') if n.strip()]
   encerrar_programa(notas)
 
-  #modo_input = prompt('Modo 1(Normal) 2(Manual): ').strip()
-  #modo = 'MANUAL' if modo_input == '2' else 'NORMAL'
-  modo = 'NORMAL'
+  modo_input = prompt('Modo 1(Normal) 2(Manual): ').strip()
+  modo = 'MANUAL' if modo_input == '2' else 'NORMAL'
 
   empresa = None
   mes_nota = None

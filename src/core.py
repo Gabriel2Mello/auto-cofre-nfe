@@ -42,7 +42,7 @@ def processar_nota(
       linha = escolher_emitente(linhas_validas)
 
     linha_objeto = cast(DocumentoFiscal, linha)
-    dados = extrair_dados(linha_objeto, tipo)
+    dados = extrair_dados(linha_objeto)
 
     xml, pdf = baixar_arquivos(
       session,
@@ -72,6 +72,8 @@ def processar_nota(
     handle_error(e, msg='Erro HTTP')
   except RequestException as e:
     handle_error(e, msg='Erro desconhecido no site')
+  except (KeyError, ValueError) as e:
+    handle_error(e, msg='Valor faltando/inadequado')
   except Exception as e:
     handle_error(e, msg=f'Erro na nota {nota}')
 

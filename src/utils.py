@@ -1,11 +1,11 @@
 import ctypes
 from datetime import datetime
-from typing import Any
+from typing import Any, Union
 from pathlib import Path
-import re
 import sys
-from typing import Union
 from time import sleep
+
+from unidecode import unidecode
 
 from src.config import Config
 
@@ -45,8 +45,7 @@ def salvar_arquivos(
   ano_pasta = ano_referencia(mes)
   ano = str(ano_pasta)
 
-  nome_arquivo = f'{nome_emitente} {numero_nota}'
-  nome_limpo = re.sub(r'[\\/*?:"<>|]', '', nome_arquivo)
+  nome_limpo = f'{nome_emitente} {numero_nota}'
 
   base_path = Path(Config.CAMINHO_DOCUMENTO_ENTRADA)
   if not base_path.exists():
@@ -71,10 +70,9 @@ def set_app_id() -> None:
   except Exception:
     pass
 
-def upper_strip(value: str | None) -> str | None:
+def upper_strip(value: str | None) -> str:
   if not value:
-    return
-
+    return ""
   return value.upper().strip()
 
 
@@ -89,10 +87,31 @@ def handle_error(
   if sleep_time > 0:
     sleep(sleep_time)
 
+
 def ano_referencia(mes_target: int) -> int:
   hoje = datetime.today()
   if (hoje.month == 1 and mes_target == 12):
     return hoje.year - 1
 
   return hoje.year
+
+
+def validate_nfe_row(lista: list) -> list:
+  if len(lista) < 5:
+    raise ValueError('NFe row requires 5+ fields')
+  return lista
+
+
+def validate_cte_row(lista: list) -> list:
+  if len(lista) < 6:
+    raise ValueError('CTe row requires 6+ fields')
+  return lista
+
+
+def clean_name(text: str) -> str:
+  forbidden_chars = r'\/*?:"><|'
+  nome_decoded = unidecode(text)
+  nome_limpo = "".join(c for c in nome_decoded if c not in forbidden_chars)
+
+  return " ".join(nome_limpo.split()).strip('.')
 

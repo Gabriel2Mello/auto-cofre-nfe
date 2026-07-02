@@ -25,18 +25,17 @@ class DocumentoFiscal:
   valor_total: str
   dados_brutos: list = field(default_factory=list)
   _html_completo: str = field(init=False, repr=False)
+  _texto_limpo: str = field(init=False, repr=False)
 
   def __post_init__(self):
-    if self.dados_brutos:
-      self._html_completo = " ".join(str(item) for item in self.dados_brutos)
-    else:
-      self._html_completo = " ".join(str(v) for v in [
-        self.recebimento_quando,
-        self.emitente_html,
-        self.data_emissao_html,
-        self.nota_html,
-        self.valor_total
-      ])
+    self._html_completo = " ".join(str(item) for item in (self.dados_brutos or [
+      self.recebimento_quando,
+      self.emitente_html,
+      self.data_emissao_html,
+      self.nota_html,
+      self.valor_total
+    ]))
+    self._texto_limpo = BeautifulSoup(self._html_completo, 'lxml').get_text().lower()
 
   def html_completo(self) -> str:
     return self._html_completo
@@ -47,15 +46,14 @@ class LinhaNFe(DocumentoFiscal):
   @classmethod
   def de_lista(cls, lista: list) -> 'LinhaNFe':
     validate_nfe_row(lista)
-    instance = cls(
-      recebimento_quando=lista[0],
-      emitente_html=lista[1],
-      data_emissao_html=lista[2],
-      nota_html=lista[3],
-      valor_total=lista[4],
+    return cls(
+      lista[0],
+      lista[1],
+      lista[2],
+      lista[3],
+      lista[4],
       dados_brutos=lista
     )
-    return instance
 
 
 @dataclass
@@ -65,16 +63,15 @@ class LinhaCTe(DocumentoFiscal):
   @classmethod
   def de_lista(cls, lista: list) -> 'LinhaCTe':
     validate_cte_row(lista)
-    instance = cls(
-      recebimento_quando=lista[0],
-      emitente_html=lista[1],
-      data_emissao_html=lista[3],
-      nota_html=lista[4],
-      valor_total=lista[5],
+    return cls(
+      lista[0],
+      lista[1],
+      lista[3],
+      lista[4],
+      lista[5],
       destinatario_html=lista[2],
       dados_brutos=lista
     )
-    return instance
 
 
 def encontrar_linha(
@@ -102,8 +99,12 @@ def encontrar_linha(
     ):
       continue
 
-    html = linha._html_completo
-    if _is_carta_correcao(html) or _is_cancelada(html):
+    if 'c. correção' in linha._texto_limpo or 'carta de correção' in linha._texto_limpo:
+      print('Carta de Correção encontrada')
+      continue
+
+    if 'cancelada' in linha._texto_limpo or 'cancelamento' in linha._texto_limpo:
+      print('Nota Cancelada encontrada')
       continue
 
     if _matches_nota(linha.nota_html, target_nota_digits):
@@ -121,8 +122,7 @@ def extrair_dados(linha: DocumentoFiscal) -> dict[str, str]:
   link_element = soup.select_one('a.linkManifestar[onclick]')
   onclick_attr = link_element.get('onclick') if link_element else None
 
-  chave_str = str(onclick_attr) if onclick_attr is not None else None
-  chave = _extract_chave(chave_str)
+  chave = _extract_chave(str(onclick_attr) if onclick_attr is not None else None)
   if not chave:
     raise ValueError('Chave da nota não encontrada')
 
@@ -131,13 +131,9 @@ def extrair_dados(linha: DocumentoFiscal) -> dict[str, str]:
   if len(url_parts) < 2:
     raise ValueError('ID da empresa não encontrado')
 
-  empresa_id = url_parts[-2]
-
   div_flag = soup.select_one('div[id^="flagArq"]')
   if not div_flag or not (id_str := div_flag.get('id', '')):
     raise ValueError('Código setaFlag não encontrado')
-
-  codigo_arquivo = str(id_str).replace('flagArq', '')
 
   emitente = resolve_emitente(linha.emitente_html)
   if not emitente:
@@ -146,8 +142,8 @@ def extrair_dados(linha: DocumentoFiscal) -> dict[str, str]:
   print('Emitente:', emitente)
   return {
     'chave': chave,
-    'empresa_id': empresa_id,
-    'codigo_arquivo': codigo_arquivo,
+    'empresa_id': url_parts[-2],
+    'codigo_arquivo': str(id_str).replace('flagArq', ''),
     'emitente': emitente
   }
 
@@ -158,13 +154,11 @@ def extrair_empresas_href(html_content: str) -> dict[str, str]:
   cnpj_validator = CNPJ()
 
   for link in soup.find_all('a', href=True):
-
     href = link.get('href', '')
     if not href or TROCAR_LOGIN_URL not in href:
       continue
 
     vizinho = link.next_sibling
-
     if vizinho and hasattr(vizinho, 'get_text'):
       texto = vizinho.get_text()
     else:
@@ -196,8 +190,7 @@ def _validar_data_linha(
   mes_alvo: int,
   ano_alvo: int
 ) -> bool:
-  texto_raw = _clean_text(data_html)
-  texto_data = texto_raw.split()
+  texto_data = BeautifulSoup(data_html, 'lxml').get_text().strip().split()
   if not texto_data:
     return False
 
@@ -212,7 +205,6 @@ def _validar_data_linha(
 
 
 def _extract_chave(onclick_text: str | None) -> str | None:
-  """Parse chave de 22 digitos do onclick attribute."""
   if not onclick_text:
     return None
 
@@ -220,14 +212,7 @@ def _extract_chave(onclick_text: str | None) -> str | None:
   if len(partes) < 2:
     return None
 
-  id_limpo = (
-    partes[1]
-    .replace(')', '')
-    .replace(';', '')
-    .replace('"', '')
-    .replace("'", '')
-    .strip()
-  )
+  id_limpo = partes[1].translate(str.maketrans('', '', ')(;"\'')).strip()
 
   if len(id_limpo) == TAMANHO_CHAVE:
     return id_limpo
@@ -235,38 +220,16 @@ def _extract_chave(onclick_text: str | None) -> str | None:
   return None
 
 
-def _clean_text(html: str) -> str:
-  return BeautifulSoup(html, 'lxml').get_text().strip()
-
-
 def _extract_digits(text: str) -> str:
   return ''.join(c for c in text if c.isdigit())
 
 
-def _is_carta_correcao(html: str) -> bool:
-  html_lower = html.lower()
-  if 'c. correção' in html_lower or 'carta de correção' in html_lower:
-    print('Carta de Correção encontrada')
-    return True
-
-  return False
-
-
-def _is_cancelada(html: str) -> bool:
-  html_lower = html.lower()
-  if 'cancelada' in html_lower or 'cancelamento' in html_lower:
-    print('Nota Cancelada encontrada')
-    return True
-
-  return False
-
-
 def _matches_nota(html: str, target_nota: str) -> bool:
-  texto = _clean_text(html)
+  texto = BeautifulSoup(html, 'lxml').get_text().strip()
   partes = [p.strip() for p in texto.split('/') if p.strip()]
   id_nota = partes[1] if len(partes) > 1 else texto
-
   id_nota_limpa = _extract_digits(id_nota)
+
   target_nota_limpa = _extract_digits(target_nota)
 
   if id_nota_limpa and target_nota_limpa:

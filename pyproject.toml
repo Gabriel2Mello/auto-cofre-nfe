@@ -1,0 +1,10 @@
+[tool.pyright]
+extraPaths = ["./src"]
+stubPath = "./typings"
+typeCheckingMode = "standard"
+useLibraryCodeForTypes = true
+
+reportMissingModuleSource = "none"
+reportMissingTypeStubs = "none"
+reportUnknownMemberType = "none"
+reportUnknownVariableType = "none"

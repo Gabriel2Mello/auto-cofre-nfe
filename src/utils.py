@@ -42,17 +42,14 @@ def salvar_arquivos(
   mes: int,
   tipo: str
 ) -> None:
-  ano_pasta = ano_referencia(mes)
-  ano = str(ano_pasta)
-
+  ano = str(ano_referencia(mes))
   nome_limpo = f'{nome_emitente} {numero_nota}'
-
   base_path = Path(Config.CAMINHO_DOCUMENTO_ENTRADA)
+
   if not base_path.exists():
     raise RuntimeError('CAMINHO_DOCUMENTO_ENTRADA não configurado.')
 
   tipo_prefix = 'NF-e' if tipo == 'nfe' else 'CT-e'
- 
   path_pdf = base_path / f'PDF {tipo_prefix}' / ano / empresa / Config.MONTHS[mes]
   path_xml = base_path / f'XML - {tipo_prefix}' / ano / empresa / Config.MONTHS[mes]
 
@@ -70,10 +67,9 @@ def set_app_id() -> None:
   except Exception:
     pass
 
+
 def upper_strip(value: str | None) -> str:
-  if not value:
-    return ""
-  return value.upper().strip()
+  return value.upper().strip() if value else ""
 
 
 def handle_error(
@@ -81,9 +77,7 @@ def handle_error(
   msg: str = "",
   sleep_time: int = 1
 ) -> None:
-  base_message = msg or 'Erro inesperado'
-  print(f'{base_message}: {err}')
-
+  print(f"{msg or 'Erro inesperado'}: {err}")
   if sleep_time > 0:
     sleep(sleep_time)
 
@@ -109,9 +103,7 @@ def validate_cte_row(lista: list) -> list:
 
 
 def clean_name(text: str) -> str:
-  forbidden_chars = r'\/*?:"><|'
-  nome_decoded = unidecode(text)
-  nome_limpo = "".join(c for c in nome_decoded if c not in forbidden_chars)
-
+  remocao = str.maketrans('', '', r'\/*?:"><|')
+  nome_limpo = unidecode(text).translate(remocao)
   return " ".join(nome_limpo.split()).strip('.')
 

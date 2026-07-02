@@ -39,8 +39,8 @@ def main() -> None:
       empresas_href = extrair_empresas_href(html_login)
       trocar_empresa(session, empresa, empresas_href)
 
-      print('Aguardando sincronização...')
-      sleep(0.5)
+      print('Sincronizado...')
+      sleep(0.2)
       ver_arquivos(session, tipo)
 
       for nota in notas:
@@ -61,17 +61,15 @@ def main() -> None:
     handle_error(e, msg='Erro HTTP')
   except RequestException as e:
     handle_error(e, msg='Erro desconhecido no site')
-  except KeyError as e:
-    handle_error(e, msg='Valor faltando')
-  except ValueError as e:
-    handle_error(e, msg='Valor inadequado')
+  except (KeyError, ValueError) as e:
+    handle_error(e, msg='Valor faltando/inadequado')
   except Exception as e:
     handle_error(e)
   finally:
     emitente_handler.close()
 
   elapsed_time = perf_counter() - start_time
-  print(f'\nTerminado em: {elapsed_time:0.2f} segundos')
+  print(f'\nTerminado em {elapsed_time:0.2f} segundos')
   pause()
 
 

@@ -2,17 +2,12 @@ from urllib.parse import urljoin
 from time import sleep
 from typing import cast
 import random
-from requests import (
-  Timeout,
-  RequestException,
-  HTTPError,
-)
 
 from cloudscraper import CloudScraper
 
 from src.emitente_handler import EmitenteHandler
 from src.interface import escolher_emitente
-from src.utils import salvar_arquivos, handle_error
+from src.utils import salvar_arquivos
 from src.config import Config
 from src.parsers import (
   encontrar_linha,
@@ -20,8 +15,8 @@ from src.parsers import (
   DocumentoFiscal,
 )
 
-
 CHECK_FLAG = 10
+
 
 def processar_nota(
   session: CloudScraper,
@@ -32,50 +27,35 @@ def processar_nota(
   mes_pasta: int,
   emitente_handler: EmitenteHandler
 ) -> None:
-  try:
-    linhas = carregar_dados(session, nota, tipo)
-    linhas_validas = encontrar_linha(linhas, nota, mes_nota, tipo)
+  linhas = carregar_dados(session, nota, tipo)
+  linhas_validas = encontrar_linha(linhas, nota, mes_nota, tipo)
 
-    if len(linhas_validas) == 1:
-      linha = linhas_validas[0]
-    else:
-      linha = escolher_emitente(linhas_validas)
+  if len(linhas_validas) == 1:
+    linha = linhas_validas[0]
+  else:
+    linha = escolher_emitente(linhas_validas)
 
-    linha_objeto = cast(DocumentoFiscal, linha)
-    dados = extrair_dados(linha_objeto)
+  dados = extrair_dados(cast(DocumentoFiscal, linha))
 
-    xml, pdf = baixar_arquivos(
-      session,
-      dados['empresa_id'],
-      dados['chave'],
-      tipo
-    )
+  xml, pdf = baixar_arquivos(
+    session,
+    dados['empresa_id'],
+    dados['chave'],
+    tipo
+  )
+  nome_emitente = emitente_handler.get_nome(dados['emitente'])
 
-    nome_emitente = emitente_handler.get_nome(dados['emitente'])
-
-    salvar_arquivos(
-      xml,
-      pdf,
-      nome_emitente,
-      nota,
-      empresa,
-      mes_pasta,
-      tipo
-    )
-
-    marcar_flag(session, dados['codigo_arquivo'])
-    sleep(random.uniform(0.5, 1.5))
-
-  except Timeout as e:
-    handle_error(e, msg='Site demorou a responder')
-  except HTTPError as e:
-    handle_error(e, msg='Erro HTTP')
-  except RequestException as e:
-    handle_error(e, msg='Erro desconhecido no site')
-  except (KeyError, ValueError) as e:
-    handle_error(e, msg='Valor faltando/inadequado')
-  except Exception as e:
-    handle_error(e, msg=f'Erro na nota {nota}')
+  salvar_arquivos(
+    xml,
+    pdf,
+    nome_emitente,
+    nota,
+    empresa,
+    mes_pasta,
+    tipo
+  )
+  marcar_flag(session, dados['codigo_arquivo'])
+  sleep(random.uniform(0.5, 1.5))
 
 
 def ver_arquivos(
@@ -84,7 +64,6 @@ def ver_arquivos(
   tentativas: int = 3
 ) -> None:
   for i in range(tentativas):
-
     try:
       response = session.get(
         f'{Config.URL_BASE}/nfe/empresa/ver-arquivos-{tipo}',
@@ -92,12 +71,12 @@ def ver_arquivos(
       response.raise_for_status()
       return
 
-    except Timeout as e:
+    except Exception as e:
       if i < tentativas - 1:
         print(f"O site demorou a responder. Tentando acessar novamente ({i+1}/{tentativas})...")
         sleep(5)
       else:
-        raise Timeout(f"\nNetwork Error: {e}")
+        raise e
 
 
 def trocar_empresa(
@@ -105,12 +84,10 @@ def trocar_empresa(
   empresa: str,
   empresas_href: dict
 ) -> None:
-  cnpj_target = Config.CNPJ.get(empresa)
-  if not cnpj_target:
+  if not (cnpj_target := Config.CNPJ.get(empresa)):
     raise KeyError(f"CNPJ '{empresa}' não encontrado")
 
-  empresa_link = empresas_href.get(cnpj_target)
-  if not empresa_link:
+  if not (empresa_link := empresas_href.get(cnpj_target)):
     raise KeyError(f"Link da empresa '{empresa}' não encontrado")
 
   session.get(

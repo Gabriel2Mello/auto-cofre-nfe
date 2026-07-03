@@ -81,7 +81,7 @@ def encontrar_linha(
   tipo: str
 ) -> list[DocumentoFiscal]:
   if not linhas:
-    raise ValueError('Nenhum dado encontrado')
+    raise RuntimeError('Nenhum dado encontrado')
 
   fabrica = LinhaCTe if tipo == 'cte' else LinhaNFe
   mes_target = int(mes_atual)
@@ -111,7 +111,7 @@ def encontrar_linha(
       matches.append(linha)
 
   if not matches:
-    raise ValueError('Nenhuma foi encontrada')
+    raise RuntimeError('Nenhuma foi encontrada')
 
   return matches
 

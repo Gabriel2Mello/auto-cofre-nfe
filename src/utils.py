@@ -8,6 +8,7 @@ from time import sleep
 from unidecode import unidecode
 
 from src.config import Config
+from src.enums import TipoDocumento, Empresa
 
 
 def pause() -> None:
@@ -38,9 +39,9 @@ def salvar_arquivos(
   pdf: bytes,
   nome_emitente: str,
   numero_nota: str,
-  empresa: str,
+  empresa: Empresa,
   mes: int,
-  tipo: str
+  tipo: TipoDocumento
 ) -> None:
   ano = str(ano_referencia(mes))
   nome_limpo = f'{nome_emitente} {numero_nota}'
@@ -49,7 +50,7 @@ def salvar_arquivos(
   if not base_path.exists():
     raise RuntimeError('CAMINHO_DOCUMENTO_ENTRADA não configurado.')
 
-  tipo_prefix = 'NF-e' if tipo == 'nfe' else 'CT-e'
+  tipo_prefix = 'NF-e' if tipo == TipoDocumento.NFE else 'CT-e'
   path_pdf = base_path / f'PDF {tipo_prefix}' / ano / empresa / Config.MONTHS[mes]
   path_xml = base_path / f'XML - {tipo_prefix}' / ano / empresa / Config.MONTHS[mes]
 

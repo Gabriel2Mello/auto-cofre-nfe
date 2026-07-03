@@ -9,6 +9,7 @@ from src.emitente_handler import EmitenteHandler
 from src.interface import escolher_emitente
 from src.utils import salvar_arquivos
 from src.config import Config
+from src.enums import TipoDocumento, Empresa
 from src.parsers import (
   encontrar_linha,
   extrair_dados,
@@ -22,8 +23,8 @@ def processar_nota(
   session: CloudScraper,
   nota: str,
   mes_nota: int,
-  tipo: str,
-  empresa: str,
+  tipo: TipoDocumento,
+  empresa: Empresa,
   mes_pasta: int,
   emitente_handler: EmitenteHandler
 ) -> None:
@@ -60,7 +61,7 @@ def processar_nota(
 
 def ver_arquivos(
   session: CloudScraper,
-  tipo: str,
+  tipo: TipoDocumento,
   tentativas: int = 3
 ) -> None:
   for i in range(tentativas):
@@ -81,7 +82,7 @@ def ver_arquivos(
 
 def trocar_empresa(
   session: CloudScraper,
-  empresa: str,
+  empresa: Empresa,
   empresas_href: dict
 ) -> None:
   if not (cnpj_target := Config.CNPJ.get(empresa)):
@@ -100,13 +101,13 @@ def trocar_empresa(
 def carregar_dados(
   session: CloudScraper,
   nota: str,
-  tipo: str
+  tipo: TipoDocumento
 ) -> list:
   endpoint = f'ver-arquivos-{tipo}'
 
   payload = {
     'sEcho': '1',
-    'iColumns': '7' if tipo == 'nfe' else '8',
+    'iColumns': '7' if tipo == TipoDocumento.NFE else '8',
     'sColumns': Config.COLUNAS[tipo],
     'nro_nota_de': str(nota),
     'flag_cliente': '98',
@@ -135,9 +136,9 @@ def baixar_arquivos(
   session: CloudScraper,
   empresa_id: str,
   chave: str,
-  tipo: str
+  tipo: TipoDocumento
 ) -> tuple[bytes, bytes]:
-  ver_path = 'danfe' if tipo == 'nfe' else 'dacte'
+  ver_path = 'danfe' if tipo == TipoDocumento.NFE else 'dacte'
 
   xml_url = f"{Config.URL_BASE}/nfe/download-arquivo/{tipo}/{empresa_id}/{chave}.xml"
   pdf_url = f"{Config.URL_BASE}/nfe/ver-{ver_path}/{tipo}/{empresa_id}/{chave}.pdf"

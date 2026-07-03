@@ -5,6 +5,7 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 from validate_docbr import CNPJ
 
+from src.enums import TipoDocumento
 from src.utils import (
   upper_strip,
   ano_referencia,
@@ -73,12 +74,12 @@ def encontrar_linha(
   linhas: list,
   nota: str,
   mes_atual: int,
-  tipo: str
+  tipo: TipoDocumento
 ) -> list[DocumentoFiscal]:
   if not linhas:
     raise RuntimeError('Nenhum dado encontrado')
 
-  fabrica = LinhaCTe if tipo == 'cte' else LinhaNFe
+  fabrica = LinhaCTe if tipo == TipoDocumento.CTE else LinhaNFe
   mes_target = int(mes_atual)
   ano_target = ano_referencia(mes_target)
   matches = []

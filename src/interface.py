@@ -7,6 +7,7 @@ from prompt_toolkit.shortcuts import radiolist_dialog
 from src.config import Config
 from src.utils import encerrar_programa
 from src.parsers import resolve_emitente, DocumentoFiscal
+from src.enums import TipoDocumento, Empresa
 
 T = TypeVar('T')
 
@@ -36,9 +37,9 @@ def escolher_mes(titulo: str, texto: str) -> int:
   return int(mes)
 
 
-def input_dados() -> tuple[list[str], str, int, int, str]:
+def input_dados() -> tuple[list[str], Empresa, int, int, TipoDocumento]:
   tipo_input = prompt('Tipo 1(NFe) 2(CTe): ').strip()
-  tipo = 'cte' if tipo_input == '2' else 'nfe'
+  tipo = TipoDocumento.CTE if tipo_input == '2' else TipoDocumento.NFE
 
   notas_input = prompt('Nota: ').strip()
   notas = [n.strip() for n in notas_input.split(',') if n.strip()]
@@ -49,25 +50,16 @@ def input_dados() -> tuple[list[str], str, int, int, str]:
 
   if modo == 'NORMAL':
     empresa_input = prompt('Empresa 1(Matriz) 2(Filial): ').strip()
-    empresa = 'MATRIZ' if empresa_input == '1' else 'FILIAL'
+    empresa = Empresa.MATRIZ if empresa_input == '1' else Empresa.FILIAL
 
     mes_atual = datetime.today().month
     mes_nota = mes_pasta = mes_atual
   else:
-    valores = [('MATRIZ', 'MATRIZ'), ('FILIAL', 'FILIAL')]
-    empresa = exibir_dialogo(
-      'Empresa',
-      'Empresa:',
-      valores
-    )
-    mes_nota = escolher_mes(
-      'Mês da Nota',
-      'Mês da Nota:'
-    )
-    mes_pasta = escolher_mes(
-      'Pasta Destino',
-      'Pasta Destino:'
-    )
+    valores = [(Empresa.MATRIZ, 'MATRIZ'), (Empresa.FILIAL, 'FILIAL')]
+    empresa = exibir_dialogo('Empresa', 'Empresa:', valores)
+
+    mes_nota = escolher_mes('Mês da Nota', 'Mês da Nota:')
+    mes_pasta = escolher_mes('Pasta Destino', 'Pasta Destino:')
 
   return notas, empresa, mes_nota, mes_pasta, tipo
 

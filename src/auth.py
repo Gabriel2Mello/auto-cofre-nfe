@@ -1,5 +1,6 @@
 from cloudscraper import CloudScraper
 from src.config import Config
+from src.enums import Empresa
 
 def login(session: CloudScraper) -> str:
   """Realiza a autenticação no site e retorna o HTML da página inicial."""
@@ -11,7 +12,7 @@ def login(session: CloudScraper) -> str:
 
   payload = {
     's': 'nfe',
-    'cpf': Config.CNPJ.get('MATRIZ'),
+    'cpf': Config.CNPJ.get(Empresa.MATRIZ),
     'senha': Config.SENHA_COFRE
   }
 

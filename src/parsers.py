@@ -24,21 +24,23 @@ class DocumentoFiscal:
   nota_html: str
   valor_total: str
   dados_brutos: list = field(default_factory=list)
-  _html_completo: str = field(init=False, repr=False)
+
+  _soup: BeautifulSoup = field(init=False, repr=False)
   _texto_limpo: str = field(init=False, repr=False)
 
   def __post_init__(self):
-    self._html_completo = " ".join(str(item) for item in (self.dados_brutos or [
+    html_completo = " ".join(str(item) for item in (self.dados_brutos or [
       self.recebimento_quando,
       self.emitente_html,
       self.data_emissao_html,
       self.nota_html,
       self.valor_total
     ]))
-    self._texto_limpo = BeautifulSoup(self._html_completo, 'lxml').get_text().lower()
+    self._soup = BeautifulSoup(html_completo, 'lxml')
+    self._texto_limpo = self._soup.get_text().lower()
 
   def html_completo(self) -> str:
-    return self._html_completo
+    return str(self._soup)
 
 
 @dataclass
@@ -46,14 +48,7 @@ class LinhaNFe(DocumentoFiscal):
   @classmethod
   def de_lista(cls, lista: list) -> 'LinhaNFe':
     validate_nfe_row(lista)
-    return cls(
-      lista[0],
-      lista[1],
-      lista[2],
-      lista[3],
-      lista[4],
-      dados_brutos=lista
-    )
+    return cls(*lista[:5], dados_brutos=lista)
 
 
 @dataclass
@@ -99,11 +94,11 @@ def encontrar_linha(
     ):
       continue
 
-    if 'c. correção' in linha._texto_limpo or 'carta de correção' in linha._texto_limpo:
+    if any(x in linha._texto_limpo for x in ['c. correção', 'carta de correção']):
       print('Carta de Correção encontrada')
       continue
 
-    if 'cancelada' in linha._texto_limpo or 'cancelamento' in linha._texto_limpo:
+    if any(x in linha._texto_limpo for x in ['cancelada', 'cancelamento']):
       print('Nota Cancelada encontrada')
       continue
 
@@ -117,21 +112,19 @@ def encontrar_linha(
 
 
 def extrair_dados(linha: DocumentoFiscal) -> dict[str, str]:
-  soup = BeautifulSoup(linha._html_completo, 'lxml')
-
-  link_element = soup.select_one('a.linkManifestar[onclick]')
+  link_element = linha._soup.select_one('a.linkManifestar[onclick]')
   onclick_attr = link_element.get('onclick') if link_element else None
 
   chave = _extract_chave(str(onclick_attr) if onclick_attr is not None else None)
   if not chave:
     raise ValueError('Chave da nota não encontrada')
 
-  link_xml = soup.select_one('a.iconeXML[href]')
+  link_xml = linha._soup.select_one('a.iconeXML[href]')
   url_parts = [p for p in str(link_xml.get('href', '')).split('/') if p] if link_xml else []
   if len(url_parts) < 2:
     raise ValueError('ID da empresa não encontrado')
 
-  div_flag = soup.select_one('div[id^="flagArq"]')
+  div_flag = linha._soup.select_one('div[id^="flagArq"]')
   if not div_flag or not (id_str := div_flag.get('id', '')):
     raise ValueError('Código setaFlag não encontrado')
 
@@ -208,12 +201,11 @@ def _extract_chave(onclick_text: str | None) -> str | None:
   if not onclick_text:
     return None
 
-  partes = [p.strip('\'"() ') for p in onclick_text.split(',')]
+  partes = onclick_text.split(',')
   if len(partes) < 2:
     return None
 
-  id_limpo = partes[1].translate(str.maketrans('', '', ')(;"\'')).strip()
-
+  id_limpo = "".join(c for c in partes[1] if c.isalnum())
   if len(id_limpo) == TAMANHO_CHAVE:
     return id_limpo
 
@@ -221,15 +213,15 @@ def _extract_chave(onclick_text: str | None) -> str | None:
 
 
 def _extract_digits(text: str) -> str:
-  return ''.join(c for c in text if c.isdigit())
+  return "".join(c for c in text if c.isdigit())
 
 
 def _matches_nota(html: str, target_nota: str) -> bool:
   texto = BeautifulSoup(html, 'lxml').get_text().strip()
   partes = [p.strip() for p in texto.split('/') if p.strip()]
   id_nota = partes[1] if len(partes) > 1 else texto
-  id_nota_limpa = _extract_digits(id_nota)
 
+  id_nota_limpa = _extract_digits(id_nota)
   target_nota_limpa = _extract_digits(target_nota)
 
   if id_nota_limpa and target_nota_limpa:

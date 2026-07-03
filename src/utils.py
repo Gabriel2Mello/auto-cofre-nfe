@@ -1,13 +1,14 @@
 import ctypes
 from datetime import datetime
-from typing import Any
+from typing import Any, Union
 from pathlib import Path
-import re
 import sys
-from typing import Union
 from time import sleep
 
+from unidecode import unidecode
+
 from src.config import Config
+from src.enums import TipoDocumento, Empresa
 
 
 def pause() -> None:
@@ -38,22 +39,18 @@ def salvar_arquivos(
   pdf: bytes,
   nome_emitente: str,
   numero_nota: str,
-  empresa: str,
+  empresa: Empresa,
   mes: int,
-  tipo: str
+  tipo: TipoDocumento
 ) -> None:
-  ano_pasta = ano_referencia(mes)
-  ano = str(ano_pasta)
-
-  nome_arquivo = f'{nome_emitente} {numero_nota}'
-  nome_limpo = re.sub(r'[\\/*?:"<>|]', '', nome_arquivo)
-
+  ano = str(ano_referencia(mes))
+  nome_limpo = f'{nome_emitente} {numero_nota}'
   base_path = Path(Config.CAMINHO_DOCUMENTO_ENTRADA)
+
   if not base_path.exists():
     raise RuntimeError('CAMINHO_DOCUMENTO_ENTRADA não configurado.')
 
-  tipo_prefix = 'NF-e' if tipo == 'nfe' else 'CT-e'
- 
+  tipo_prefix = 'NF-e' if tipo == TipoDocumento.NFE else 'CT-e'
   path_pdf = base_path / f'PDF {tipo_prefix}' / ano / empresa / Config.MONTHS[mes]
   path_xml = base_path / f'XML - {tipo_prefix}' / ano / empresa / Config.MONTHS[mes]
 
@@ -71,11 +68,9 @@ def set_app_id() -> None:
   except Exception:
     pass
 
-def upper_strip(value: str | None) -> str | None:
-  if not value:
-    return
 
-  return value.upper().strip()
+def upper_strip(value: str | None) -> str:
+  return value.upper().strip() if value else ""
 
 
 def handle_error(
@@ -83,11 +78,10 @@ def handle_error(
   msg: str = "",
   sleep_time: int = 1
 ) -> None:
-  base_message = msg or 'Erro inesperado'
-  print(f'{base_message}: {err}')
-
+  print(f"{msg or 'Erro inesperado'}: {err}")
   if sleep_time > 0:
     sleep(sleep_time)
+
 
 def ano_referencia(mes_target: int) -> int:
   hoje = datetime.today()
@@ -95,4 +89,22 @@ def ano_referencia(mes_target: int) -> int:
     return hoje.year - 1
 
   return hoje.year
+
+
+def validate_nfe_row(lista: list) -> list:
+  if len(lista) < 5:
+    raise ValueError('NFe row requires 5+ fields')
+  return lista
+
+
+def validate_cte_row(lista: list) -> list:
+  if len(lista) < 6:
+    raise ValueError('CTe row requires 6+ fields')
+  return lista
+
+
+def clean_name(text: str) -> str:
+  remocao = str.maketrans('', '', r'\/*?:"><|')
+  nome_limpo = unidecode(text).translate(remocao)
+  return " ".join(nome_limpo.split()).strip('.')
 

@@ -1,5 +1,6 @@
 from os import environ
 from typing import ClassVar, Dict, List
+from src.enums import TipoDocumento, Empresa
 
 
 def load_env(variable: str, default: str = "") -> str:
@@ -18,14 +19,14 @@ class Config:
   ACCEPT: ClassVar[str] = 'application/json, text/javascript, */*; q=0.01'
   REQUESTED_WITH: ClassVar[str] = 'XMLHttpRequest'
 
-  CNPJ: ClassVar[Dict[str, str]] = {
-    'MATRIZ': '09.034.052/0001-53',
-    'FILIAL': '09.034.052/0002-34'
+  CNPJ: ClassVar[Dict[Empresa, str]] = {
+    Empresa.MATRIZ: '09.034.052/0001-53',
+    Empresa.FILIAL: '09.034.052/0002-34'
   }
 
-  COLUNAS: ClassVar[Dict[str, str]] = {
-    'nfe': 'recebimento_quando,emitente_nome,nfe_data,nro_nota,vlr_total,tipo,',
-    'cte': 'recebimento_quando,emitente_nome,destinatario_nome,nfe_data,nro_nota,vlr_total,tipo,tipo'
+  COLUNAS: ClassVar[Dict[TipoDocumento, str]] = {
+    TipoDocumento.NFE: 'recebimento_quando,emitente_nome,nfe_data,nro_nota,vlr_total,tipo,',
+    TipoDocumento.CTE: 'recebimento_quando,emitente_nome,destinatario_nome,nfe_data,nro_nota,vlr_total,tipo,tipo'
   }
 
   MONTHS: ClassVar[List[str]] = [

@@ -39,39 +39,40 @@ def main() -> None:
       empresas_href = extrair_empresas_href(html_login)
       trocar_empresa(session, empresa, empresas_href)
 
-      print('Aguardando sincronização...')
-      sleep(0.5)
+      print('Sincronizado...')
+      sleep(0.2)
       ver_arquivos(session, tipo)
 
       for nota in notas:
         print(f'\nProcessando: {nota}')
-        processar_nota(
-          session,
-          nota,
-          mes_nota,
-          tipo,
-          empresa,
-          mes_pasta,
-          emitente_handler
-        )
+        try:
+          processar_nota(
+            session,
+            nota,
+            mes_nota,
+            tipo,
+            empresa,
+            mes_pasta,
+            emitente_handler
+          )
+        except Timeout as e:
+          handle_error(e, msg='Site demorou a responder')
+        except HTTPError as e:
+          handle_error(e, msg='Erro HTTP')
+        except RequestException as e:
+          handle_error(e, msg='Erro desconhecido no site')
+        except (KeyError, ValueError) as e:
+          handle_error(e, msg='Valor faltando/inadequado')
+        except Exception as e:
+          handle_error(e, msg=f'Erro na nota {nota}')
 
-  except Timeout as e:
-    handle_error(e, msg='Site demorou a responder')
-  except HTTPError as e:
-    handle_error(e, msg='Erro HTTP')
-  except RequestException as e:
-    handle_error(e, msg='Erro desconhecido no site')
-  except KeyError as e:
-    handle_error(e, msg='Valor faltando')
-  except ValueError as e:
-    handle_error(e, msg='Valor inadequado')
   except Exception as e:
     handle_error(e)
   finally:
     emitente_handler.close()
 
   elapsed_time = perf_counter() - start_time
-  print(f'\nTerminado em: {elapsed_time:0.2f} segundos')
+  print(f'\nTerminado em {elapsed_time:0.2f} segundos')
   pause()
 
 

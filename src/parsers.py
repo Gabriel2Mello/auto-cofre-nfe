@@ -1,22 +1,21 @@
 from dataclasses import dataclass, field
 from html import unescape
-import re
-from typing import Pattern
+from datetime import datetime
 
 from bs4 import BeautifulSoup
+from validate_docbr import CNPJ
 
-from src.utils import upper_strip, ano_referencia
+from src.enums import TipoDocumento
+from src.utils import (
+  upper_strip,
+  ano_referencia,
+  validate_nfe_row,
+  validate_cte_row,
+)
 
-RE_CNPJ: Pattern[str] = re.compile(r'\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}')
-RE_DATA: Pattern[str] = re.compile(r'(\d{2})/(\d{2})/(\d{2,4})')
-RE_NOTA: Pattern[str] = re.compile(r'/(\d+)/')
-RE_EMPRESA_ID: Pattern[str] = re.compile(r"(?:nfe|cte)/(\d+)/")
-RE_CODIGO_ARQUIVO: Pattern[str] = re.compile(r"setaFlag\(\d+,'(\d+)'\)")
-RE_CHAVE_NFE: Pattern[str] = re.compile(r"(?:chave='([^']+)'|consultarSituacaoNota\(\"empresa\",\"([^\"]+)\"\))")
-RE_CHAVE_CTE: Pattern[str] = re.compile(r'consultarSituacaoNota\("empresa","(.*?)"\)')
-RE_CARTA_CORRECAO: Pattern[str] = re.compile(r'\bC\.\s*Correção\b', re.IGNORECASE)
-RE_NOTA_CANCELADA: Pattern[str] = re.compile(r'\bCancelada\b|\bCancelamento\b', re.IGNORECASE)
-
+TROCAR_LOGIN_URL = 'trocarLogin?vid='
+TAMANHO_CHAVE = 22
+TAMANHO_CNPJ = 14
 
 @dataclass
 class DocumentoFiscal:
@@ -27,189 +26,207 @@ class DocumentoFiscal:
   valor_total: str
   dados_brutos: list = field(default_factory=list)
 
+  _soup: BeautifulSoup = field(init=False, repr=False)
+  _texto_limpo: str = field(init=False, repr=False)
+
+  def __post_init__(self):
+    html_completo = " ".join(str(item) for item in (self.dados_brutos or [
+      self.recebimento_quando,
+      self.emitente_html,
+      self.data_emissao_html,
+      self.nota_html,
+      self.valor_total
+    ]))
+    self._soup = BeautifulSoup(html_completo, 'lxml')
+    self._texto_limpo = self._soup.get_text().lower()
+
   def html_completo(self) -> str:
-    if self.dados_brutos:
-      return " ".join(str(item) for item in self.dados_brutos)
-    return " ".join(str(v) for v in self.__dict__.values())
+    return str(self._soup)
+
 
 @dataclass
 class LinhaNFe(DocumentoFiscal):
   @classmethod
   def de_lista(cls, lista: list) -> 'LinhaNFe':
-    if len(lista) < 5:
-      raise ValueError('Malformed raw NFe row')
-    return cls(
-      recebimento_quando=lista[0],
-      emitente_html=lista[1],
-      data_emissao_html=lista[2],
-      nota_html=lista[3],
-      valor_total=lista[4],
-      dados_brutos=lista
-    )
+    validate_nfe_row(lista)
+    return cls(*lista[:5], dados_brutos=lista)
+
 
 @dataclass
 class LinhaCTe(DocumentoFiscal):
-  destinatario_html: str = ""
+  destinatario_html: str = ''
 
   @classmethod
   def de_lista(cls, lista: list) -> 'LinhaCTe':
-    if len(lista) < 6:
-      raise ValueError('Malformed raw CTe row')
+    validate_cte_row(lista)
     return cls(
-      recebimento_quando=lista[0],
-      emitente_html=lista[1],
-      data_emissao_html=lista[3],
-      nota_html=lista[4],
-      valor_total=lista[5],
+      lista[0],
+      lista[1],
+      lista[3],
+      lista[4],
+      lista[5],
       destinatario_html=lista[2],
       dados_brutos=lista
     )
-
-
-def extrair_empresas_href(html_content: str) -> dict[str, str]:
-  soup = BeautifulSoup(html_content, 'lxml')
-  empresas = {}
-
-  for link in soup.find_all('a', href=True):
-
-    href = link.get('href')
-    if not href or 'trocarLogin?vid=' not in href:
-      continue
-
-    texto_apos_link = link.next_sibling
-    if not texto_apos_link:
-      continue
-
-    cnpj_match = RE_CNPJ.search(str(texto_apos_link))
-    if cnpj_match:
-      empresas[cnpj_match.group()] = href
-
-  return empresas
-
-
-def _validar_data_linha(
-  data: str,
-  mes_alvo: int,
-  ano_alvo: int
-) -> bool:
-  data_match = RE_DATA.search(data)
-  if not data_match:
-    return False
-
-  _, mes_str, ano_str = data_match.groups()
-  mes = int(mes_str)
-  ano = int(ano_str)
-
-  if ano < 100:
-    ano += 2000
-
-  return mes == mes_alvo and ano == ano_alvo
-
-
-def _extrair_campo_regex(
-  regex: Pattern[str],
-  texto: str,
-  erro_msg: str
-) -> str:
-  match = regex.search(texto)
-  if not match:
-    raise ValueError(erro_msg)
-
-  for group in match.groups():
-    if group is not None:
-      return group
-
-  raise ValueError(erro_msg)
 
 
 def encontrar_linha(
   linhas: list,
   nota: str,
   mes_atual: int,
-  tipo: str
+  tipo: TipoDocumento
 ) -> list[DocumentoFiscal]:
   if not linhas:
-    raise KeyError('Nenhum dado encontrado')
+    raise RuntimeError('Nenhum dado encontrado')
 
-  fabrica_documento = LinhaCTe if tipo == 'cte' else LinhaNFe
-
+  fabrica = LinhaCTe if tipo == TipoDocumento.CTE else LinhaNFe
   mes_target = int(mes_atual)
   ano_target = ano_referencia(mes_target)
+  matches = []
+  target_nota_digits = _extract_digits(nota)
 
-  linhas_encontradas = []
+  for item in linhas:
+    linha = fabrica.de_lista(item)
 
-  for linha in linhas:
-    objeto_linha = fabrica_documento.de_lista(linha)
-
-    if not _validar_data_linha(objeto_linha.data_emissao_html, mes_target, ano_target):
+    if not _validar_data_linha(
+      linha.data_emissao_html,
+      mes_target,
+      ano_target
+    ):
       continue
 
-    conteudo_html = objeto_linha.html_completo()
-
-    if RE_CARTA_CORRECAO.search(conteudo_html):
-      print('Ignorando Carta de Correção')
+    if any(x in linha._texto_limpo for x in ['c. correção', 'carta de correção']):
+      print('Carta de Correção encontrada')
       continue
 
-    if RE_NOTA_CANCELADA.search(conteudo_html):
-      print('Ignorando Cancelada')
+    if any(x in linha._texto_limpo for x in ['cancelada', 'cancelamento']):
+      print('Nota Cancelada encontrada')
       continue
 
-    nota_match = RE_NOTA.search(objeto_linha.nota_html)
-    if nota_match:
-      id_nota = next((g for g in nota_match.groups() if g is not None), None)
-      if id_nota == str(nota):
-        linhas_encontradas.append(objeto_linha)
+    if _matches_nota(linha.nota_html, target_nota_digits):
+      matches.append(linha)
 
-  if not linhas_encontradas:
-    raise KeyError('Nenhuma foi encontrada')
+  if not matches:
+    raise RuntimeError('Nenhuma foi encontrada')
 
-  return linhas_encontradas
+  return matches
 
 
-def resolve_emitente(emitente_html: str) -> str:
-  if not emitente_html:
-    return ""
+def extrair_dados(linha: DocumentoFiscal) -> dict[str, str]:
+  link_element = linha._soup.select_one('a.linkManifestar[onclick]')
+  onclick_attr = link_element.get('onclick') if link_element else None
 
-  emitente_antes_do_br = (
-    re.split(r'<br', emitente_html, flags=re.IGNORECASE)[0]
-  )
-  emitente_limpo = re.sub(r'<[^>]+>', ' ', emitente_antes_do_br)
+  chave = _extract_chave(str(onclick_attr) if onclick_attr is not None else None)
+  if not chave:
+    raise ValueError('Chave da nota não encontrada')
 
-  emitente = upper_strip(unescape(emitente_limpo))
-  if not emitente:
-    return ""
+  link_xml = linha._soup.select_one('a.iconeXML[href]')
+  url_parts = [p for p in str(link_xml.get('href', '')).split('/') if p] if link_xml else []
+  if len(url_parts) < 2:
+    raise ValueError('ID da empresa não encontrado')
 
-  return " ".join(emitente.split())
-
-
-def extrair_dados(linha: DocumentoFiscal, tipo: str) -> dict[str, str]:
-  html_content = linha.html_completo()
-
-  chave = _extrair_campo_regex(
-    RE_CHAVE_CTE if tipo == 'cte' else RE_CHAVE_NFE,
-    html_content,
-    'Chave da nota não encontrada'
-  )
-  empresa_id = _extrair_campo_regex(
-    RE_EMPRESA_ID,
-    html_content,
-    'ID da empresa não encontrado'
-  )
-  codigo_arquivo = _extrair_campo_regex(
-    RE_CODIGO_ARQUIVO,
-    html_content,
-    'Código setaFlag não encontrado'
-  )
+  div_flag = linha._soup.select_one('div[id^="flagArq"]')
+  if not div_flag or not (id_str := div_flag.get('id', '')):
+    raise ValueError('Código setaFlag não encontrado')
 
   emitente = resolve_emitente(linha.emitente_html)
   if not emitente:
-    raise KeyError('Emitente não encontrado')
+    raise ValueError('Emitente não encontrado')
 
   print('Emitente:', emitente)
   return {
     'chave': chave,
-    'empresa_id': empresa_id,
-    'codigo_arquivo': codigo_arquivo,
+    'empresa_id': url_parts[-2],
+    'codigo_arquivo': str(id_str).replace('flagArq', ''),
     'emitente': emitente
   }
+
+
+def extrair_empresas_href(html_content: str) -> dict[str, str]:
+  soup = BeautifulSoup(html_content, 'lxml')
+  empresas = {}
+  cnpj_validator = CNPJ()
+
+  for link in soup.find_all('a', href=True):
+    href = link.get('href', '')
+    if not href or TROCAR_LOGIN_URL not in href:
+      continue
+
+    vizinho = link.next_sibling
+    if vizinho and hasattr(vizinho, 'get_text'):
+      texto = vizinho.get_text()
+    else:
+      texto = str(vizinho) if vizinho else ''
+
+    numeros = _extract_digits(texto)
+
+    if len(numeros) == TAMANHO_CNPJ:
+      cnpj = cnpj_validator.mask(numeros)
+      empresas[cnpj] = href
+
+  return empresas
+
+
+def resolve_emitente(emitente_html: str) -> str:
+  if not emitente_html:
+    return ''
+
+  soup = BeautifulSoup(emitente_html, 'lxml')
+  for span in soup.find_all('span'):
+    span.decompose()
+
+  emitente_limpo = upper_strip(unescape(soup.get_text(separator=' ')))
+  return " ".join(emitente_limpo.split())
+
+
+def _validar_data_linha(
+  data_html: str,
+  mes_alvo: int,
+  ano_alvo: int
+) -> bool:
+  texto_data = BeautifulSoup(data_html, 'lxml').get_text().strip().split()
+  if not texto_data:
+    return False
+
+  for fmt in ('%d/%m/%y', '%d/%m/%Y'):
+    try:
+      data = datetime.strptime(texto_data[0], fmt)
+      return data.month == mes_alvo and data.year == ano_alvo
+    except ValueError:
+      continue
+
+  return False
+
+
+def _extract_chave(onclick_text: str | None) -> str | None:
+  if not onclick_text:
+    return None
+
+  partes = onclick_text.split(',')
+  if len(partes) < 2:
+    return None
+
+  id_limpo = "".join(c for c in partes[1] if c.isalnum())
+  if len(id_limpo) == TAMANHO_CHAVE:
+    return id_limpo
+
+  return None
+
+
+def _extract_digits(text: str) -> str:
+  return "".join(c for c in text if c.isdigit())
+
+
+def _matches_nota(html: str, target_nota: str) -> bool:
+  texto = BeautifulSoup(html, 'lxml').get_text().strip()
+  partes = [p.strip() for p in texto.split('/') if p.strip()]
+  id_nota = partes[1] if len(partes) > 1 else texto
+
+  id_nota_limpa = _extract_digits(id_nota)
+  target_nota_limpa = _extract_digits(target_nota)
+
+  if id_nota_limpa and target_nota_limpa:
+    return int(id_nota_limpa) == int(target_nota_limpa)
+
+  return False
 

@@ -1,6 +1,10 @@
 import json
 
-from src.utils import obter_caminho_json, upper_strip
+from src.utils import (
+  obter_caminho_json,
+  upper_strip,
+  clean_name,
+)
 
 
 class EmitenteHandler:
@@ -29,13 +33,16 @@ class EmitenteHandler:
 
     print(f"Emitente não reconhecido: {emitente}")
     try:
-      emitente_identificado = upper_strip(input('Digite o nome: ')) or emitente
-      self.emitentes_conhecidos[key] = upper_strip(emitente_identificado)
+      emitente_identificado = upper_strip(input('Digite o nome: ')) or key
+
+      nome_final = clean_name(emitente_identificado)
+
+      self.emitentes_conhecidos[key] = nome_final
       self._dirty = True
     except(EOFError, KeyboardInterrupt):
-      return emitente
+      return clean_name(emitente)
 
-    return emitente_identificado
+    return nome_final
 
   def close(self) -> None:
     if not self._dirty:

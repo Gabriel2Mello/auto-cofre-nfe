@@ -1,6 +1,5 @@
 from urllib.parse import urljoin
 from time import sleep
-import random
 from requests import Session
 
 from src.emitente_handler import EmitenteHandler
@@ -12,8 +11,6 @@ from src.parsers import (
   encontrar_linha,
   extrair_dados,
 )
-
-CHECK_FLAG = 10
 
 
 def processar_nota(
@@ -53,7 +50,7 @@ def processar_nota(
     tipo
   )
   marcar_flag(session, dados['codigo_arquivo'])
-  sleep(random.uniform(0.5, 1.5))
+  sleep(0.3)
 
 
 def ver_arquivos(
@@ -152,7 +149,7 @@ def baixar_arquivos(
 def marcar_flag(
   session: Session,
   codigo_arquivo: str,
-  codigo_flag: int = CHECK_FLAG
+  codigo_flag: int = Config.CHECK_FLAG
 ) -> None:
   session.post(
     f'{Config.URL_BASE}/nfe/seta-flag/{codigo_arquivo}/{codigo_flag}',

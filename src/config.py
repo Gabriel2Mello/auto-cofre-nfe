@@ -23,6 +23,8 @@ class Config:
   TAMANHO_CHAVE: ClassVar[int] = 22
   TAMANHO_CNPJ: ClassVar[int] = 14
 
+  CHECK_FLAG: ClassVar[int] = 10
+
   CNPJ: ClassVar[Dict[Empresa, str]] = {
     Empresa.MATRIZ: '09.034.052/0001-53',
     Empresa.FILIAL: '09.034.052/0002-34'

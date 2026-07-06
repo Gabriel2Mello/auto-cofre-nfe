@@ -14,7 +14,7 @@ T = TypeVar('T')
 
 def exibir_dialogo(titulo: str, texto: str, valores: List[Tuple[T, str]]) -> T:
   escolha = radiolist_dialog(title=titulo, text=texto, values=valores).run()
-  encerrar_programa(escolha)
+  encerrar_programa(str(escolha) if escolha else None)
   return escolha
 
 
@@ -43,7 +43,7 @@ def input_dados() -> tuple[list[str], Empresa, int, int, TipoDocumento]:
 
   notas_input = prompt('Nota: ').strip()
   notas = [n.strip() for n in notas_input.split(',') if n.strip()]
-  encerrar_programa(notas)
+  encerrar_programa(notas[0] if notas else None)
 
   modo_input = prompt('Modo 1(Normal) 2(Manual): ').strip()
   modo = 'MANUAL' if modo_input == '2' else 'NORMAL'
@@ -64,7 +64,7 @@ def input_dados() -> tuple[list[str], Empresa, int, int, TipoDocumento]:
   return notas, empresa, mes_nota, mes_pasta, tipo
 
 
-def escolher_emitente(linhas_validas: list) -> DocumentoFiscal:
+def escolher_emitente(linhas_validas: list[DocumentoFiscal]) -> DocumentoFiscal:
   print('\nMAIS DE UM EMITENTE ENCONTRADO:')
 
   for idx, linha in enumerate(linhas_validas, start=1):

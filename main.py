@@ -34,7 +34,7 @@ def main() -> None:
   emitente_handler = EmitenteHandler()
 
   try:
-    with TimeoutScraper(default_timeout=10) as session:
+    with TimeoutScraper() as session:
       html_login = login(session)
       empresas_href = extrair_empresas_href(html_login)
       trocar_empresa(session, empresa, empresas_href)

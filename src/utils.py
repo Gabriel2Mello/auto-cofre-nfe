@@ -17,10 +17,8 @@ def pause() -> None:
     pass
 
 
-def encerrar_programa(texto: str) -> None:
-  texto_limpo = texto.strip()
-
-  if not texto_limpo:
+def encerrar_programa(texto: str | None) -> None:
+  if not texto:
     print('\nNenhum valor informado...')
     pause()
     sys.exit(0)

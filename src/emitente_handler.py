@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 from src.utils import (
   obter_caminho_json,
@@ -34,7 +35,6 @@ class EmitenteHandler:
     print(f"Emitente não reconhecido: {emitente}")
     try:
       emitente_identificado = upper_strip(input('Digite o nome: ')) or key
-
       nome_final = clean_name(emitente_identificado)
 
       self.emitentes_conhecidos[key] = nome_final
@@ -53,12 +53,25 @@ class EmitenteHandler:
       with open(temp_path, 'w', encoding='utf-8') as f:
         json.dump(self.emitentes_conhecidos, f, indent=4, ensure_ascii=False)
 
-      temp_path.replace(self.caminho_json)
+      if self.caminho_json.exists():
+        self.caminho_json.unlink()
+
+      temp_path.rename(self.caminho_json)
       self._dirty = False
 
+    except OSError as e:
+      print(f"Erro de sistema operacional ao salvar arquivo de emitentes: {e}")
+      self._clear_temp_file(temp_path)
+      raise
     except Exception as e:
-      print(f"Erro ao salvar emitentes_conhecidos.json: {e}")
+      print(f"Erro inesperado ao salvar emitentes_conhecidos.json: {e}")
+      self._clear_temp_file(temp_path)
+      raise
+
+  def _clear_temp_file(self, temp_path: Path) -> None:
+    try:
       if temp_path.exists():
         temp_path.unlink()
-      raise
+    except OSError:
+      pass
 

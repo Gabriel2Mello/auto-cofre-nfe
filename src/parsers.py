@@ -1,21 +1,19 @@
 from dataclasses import dataclass, field
 from html import unescape
-from datetime import datetime
 
-from bs4 import BeautifulSoup
+from dateutil import parser
+from bs4 import BeautifulSoup, Tag
 from validate_docbr import CNPJ
 
 from src.enums import TipoDocumento
+from src.config import Config
 from src.utils import (
   upper_strip,
   ano_referencia,
   validate_nfe_row,
   validate_cte_row,
+  extract_digits,
 )
-
-TROCAR_LOGIN_URL = 'trocarLogin?vid='
-TAMANHO_CHAVE = 22
-TAMANHO_CNPJ = 14
 
 @dataclass
 class DocumentoFiscal:
@@ -83,7 +81,7 @@ def encontrar_linha(
   mes_target = int(mes_atual)
   ano_target = ano_referencia(mes_target)
   matches = []
-  target_nota_digits = _extract_digits(nota)
+  target_nota_digits = extract_digits(nota)
 
   for item in linhas:
     linha = fabrica.de_lista(item)
@@ -114,9 +112,12 @@ def encontrar_linha(
 
 def extrair_dados(linha: DocumentoFiscal) -> dict[str, str]:
   link_element = linha._soup.select_one('a.linkManifestar[onclick]')
+ 
   onclick_attr = link_element.get('onclick') if link_element else None
+  if not onclick_attr:
+    raise ValueError('Atributo onclick não encontrado')
 
-  chave = _extract_chave(str(onclick_attr) if onclick_attr is not None else None)
+  chave = _extract_chave(str(onclick_attr))
   if not chave:
     raise ValueError('Chave da nota não encontrada')
 
@@ -149,18 +150,19 @@ def extrair_empresas_href(html_content: str) -> dict[str, str]:
 
   for link in soup.find_all('a', href=True):
     href = link.get('href', '')
-    if not href or TROCAR_LOGIN_URL not in href:
+    if not href or Config.TROCAR_LOGIN_URL not in href:
       continue
 
     vizinho = link.next_sibling
-    if vizinho and hasattr(vizinho, 'get_text'):
+
+    if isinstance(vizinho, Tag):
       texto = vizinho.get_text()
     else:
       texto = str(vizinho) if vizinho else ''
 
-    numeros = _extract_digits(texto)
+    numeros = extract_digits(texto)
 
-    if len(numeros) == TAMANHO_CNPJ:
+    if len(numeros) == Config.TAMANHO_CNPJ:
       cnpj = cnpj_validator.mask(numeros)
       empresas[cnpj] = href
 
@@ -184,37 +186,29 @@ def _validar_data_linha(
   mes_alvo: int,
   ano_alvo: int
 ) -> bool:
-  texto_data = BeautifulSoup(data_html, 'lxml').get_text().strip().split()
+  soup = BeautifulSoup(data_html, 'lxml')
+  texto_data = soup.get_text().strip().split()
+
   if not texto_data:
     return False
 
-  for fmt in ('%d/%m/%y', '%d/%m/%Y'):
-    try:
-      data = datetime.strptime(texto_data[0], fmt)
-      return data.month == mes_alvo and data.year == ano_alvo
-    except ValueError:
-      continue
-
-  return False
+  try:
+    data = parser.parse(texto_data[0], dayfirst=True)
+    return data.month == mes_alvo and data.year == ano_alvo
+  except (parser.ParserError, ValueError):
+    return False
 
 
-def _extract_chave(onclick_text: str | None) -> str | None:
-  if not onclick_text:
-    return None
-
+def _extract_chave(onclick_text: str) -> str | None:
   partes = onclick_text.split(',')
   if len(partes) < 2:
     return None
 
   id_limpo = "".join(c for c in partes[1] if c.isalnum())
-  if len(id_limpo) == TAMANHO_CHAVE:
+  if len(id_limpo) == Config.TAMANHO_CHAVE:
     return id_limpo
 
   return None
-
-
-def _extract_digits(text: str) -> str:
-  return "".join(c for c in text if c.isdigit())
 
 
 def _matches_nota(html: str, target_nota: str) -> bool:
@@ -222,8 +216,8 @@ def _matches_nota(html: str, target_nota: str) -> bool:
   partes = [p.strip() for p in texto.split('/') if p.strip()]
   id_nota = partes[1] if len(partes) > 1 else texto
 
-  id_nota_limpa = _extract_digits(id_nota)
-  target_nota_limpa = _extract_digits(target_nota)
+  id_nota_limpa = extract_digits(id_nota)
+  target_nota_limpa = extract_digits(target_nota)
 
   if id_nota_limpa and target_nota_limpa:
     return int(id_nota_limpa) == int(target_nota_limpa)

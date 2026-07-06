@@ -25,13 +25,13 @@ def encerrar_programa(value: Any) -> None:
     sys.exit(0)
 
 
-def obter_caminho_json() -> Path:
+def obter_caminho_json(filename = 'emitentes_conhecidos.json') -> Path:
   if hasattr(sys, 'frozen'):
     diretorio_execucao = Path(sys.executable).parent
   else:
     diretorio_execucao = Path(__file__).parent.parent
 
-  return diretorio_execucao / 'emitentes_conhecidos.json'
+  return diretorio_execucao / filename
 
 
 def salvar_arquivos(
@@ -101,6 +101,10 @@ def validate_cte_row(lista: list) -> list:
   if len(lista) < 6:
     raise ValueError('CTe row requires 6+ fields')
   return lista
+
+
+def extract_digits(text: str) -> str:
+  return "".join(c for c in text if c.isdigit())
 
 
 def clean_name(text: str) -> str:

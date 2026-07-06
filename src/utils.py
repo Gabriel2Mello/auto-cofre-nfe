@@ -1,6 +1,6 @@
 import ctypes
 from datetime import datetime
-from typing import Any, Union
+from typing import Any
 from pathlib import Path
 import sys
 from time import sleep
@@ -74,11 +74,14 @@ def upper_strip(value: str | None) -> str:
 
 
 def handle_error(
-  err: Union[str, Exception],
+  err: Exception,
   msg: str = "",
   sleep_time: int = 1
 ) -> None:
-  print(f"{msg or 'Erro inesperado'}: {err}")
+  context = msg or 'Erro inesperado'
+
+  print(f"{context}: {err}", file=sys.stderr)
+
   if sleep_time > 0:
     sleep(sleep_time)
 

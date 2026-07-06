@@ -1,9 +1,7 @@
 from urllib.parse import urljoin
 from time import sleep
-from typing import cast
 import random
-
-from cloudscraper import CloudScraper
+from requests import Session
 
 from src.emitente_handler import EmitenteHandler
 from src.interface import escolher_emitente
@@ -13,14 +11,13 @@ from src.enums import TipoDocumento, Empresa
 from src.parsers import (
   encontrar_linha,
   extrair_dados,
-  DocumentoFiscal,
 )
 
 CHECK_FLAG = 10
 
 
 def processar_nota(
-  session: CloudScraper,
+  session: Session,
   nota: str,
   mes_nota: int,
   tipo: TipoDocumento,
@@ -36,7 +33,7 @@ def processar_nota(
   else:
     linha = escolher_emitente(linhas_validas)
 
-  dados = extrair_dados(cast(DocumentoFiscal, linha))
+  dados = extrair_dados(linha)
 
   xml, pdf = baixar_arquivos(
     session,
@@ -60,7 +57,7 @@ def processar_nota(
 
 
 def ver_arquivos(
-  session: CloudScraper,
+  session: Session,
   tipo: TipoDocumento,
   tentativas: int = 3
 ) -> None:
@@ -81,7 +78,7 @@ def ver_arquivos(
 
 
 def trocar_empresa(
-  session: CloudScraper,
+  session: Session,
   empresa: Empresa,
   empresas_href: dict
 ) -> None:
@@ -99,7 +96,7 @@ def trocar_empresa(
 
 
 def carregar_dados(
-  session: CloudScraper,
+  session: Session,
   nota: str,
   tipo: TipoDocumento
 ) -> list:
@@ -133,7 +130,7 @@ def carregar_dados(
 
 
 def baixar_arquivos(
-  session: CloudScraper,
+  session: Session,
   empresa_id: str,
   chave: str,
   tipo: TipoDocumento
@@ -153,7 +150,7 @@ def baixar_arquivos(
 
 
 def marcar_flag(
-  session: CloudScraper,
+  session: Session,
   codigo_arquivo: str,
   codigo_flag: int = CHECK_FLAG
 ) -> None:

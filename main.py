@@ -56,18 +56,16 @@ def main() -> None:
             emitente_handler
           )
         except Timeout as e:
-          handle_error(e, msg='Site demorou a responder')
+          handle_error(e, 'Site demorou a responder')
         except HTTPError as e:
-          handle_error(e, msg='Erro HTTP')
+          handle_error(e, 'Erro HTTP')
         except RequestException as e:
-          handle_error(e, msg='Erro desconhecido no site')
+          handle_error(e, 'Erro desconhecido no site')
         except (KeyError, ValueError) as e:
-          handle_error(e, msg='Valor faltando/inadequado')
+          handle_error(e, 'Valor faltando/inadequado')
         except Exception as e:
-          handle_error(e, msg=f'Erro na nota {nota}')
+          handle_error(e, f'Erro na nota {nota}')
 
-  except Exception as e:
-    handle_error(e)
   finally:
     emitente_handler.close()
 
@@ -79,8 +77,11 @@ def main() -> None:
 if __name__ == "__main__":
   try:
     main()
+  except (KeyboardInterrupt, EOFError):
+    print('\n\nInterrompido pelo usuário.')
+    sys.exit(0)
   except Exception as e:
-    handle_error(e, msg='\nErro fatal')
+    handle_error(e, '\nErro fatal')
     pause()
     sys.exit(1)
 

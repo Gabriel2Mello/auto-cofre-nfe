@@ -1,6 +1,5 @@
 import ctypes
 from datetime import datetime
-from typing import Any
 from pathlib import Path
 import sys
 from time import sleep
@@ -18,8 +17,10 @@ def pause() -> None:
     pass
 
 
-def encerrar_programa(value: Any) -> None:
-  if not value:
+def encerrar_programa(texto: str) -> None:
+  texto_limpo = texto.strip()
+
+  if not texto_limpo:
     print('\nNenhum valor informado...')
     pause()
     sys.exit(0)

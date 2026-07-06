@@ -13,7 +13,7 @@ class EmitenteHandler:
     self.emitentes_conhecidos = self._carregar_emitentes()
     self._dirty = False
 
-  def _carregar_emitentes(self) -> dict:
+  def _carregar_emitentes(self) -> dict[str, str]:
     if self.caminho_json.exists():
       try:
         with open(self.caminho_json, 'r', encoding='utf-8') as f:

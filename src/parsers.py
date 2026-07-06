@@ -26,20 +26,30 @@ class DocumentoFiscal:
 
   _soup: BeautifulSoup = field(init=False, repr=False)
   _texto_limpo: str = field(init=False, repr=False)
+  _html_completo: str = field(init=False, repr=False)
 
   def __post_init__(self):
-    html_completo = " ".join(str(item) for item in (self.dados_brutos or [
+    self._html_completo = " ".join(str(item) for item in (self.dados_brutos or [
       self.recebimento_quando,
       self.emitente_html,
       self.data_emissao_html,
       self.nota_html,
       self.valor_total
     ]))
-    self._soup = BeautifulSoup(html_completo, 'lxml')
+    self._soup = BeautifulSoup(self._html_completo, 'lxml')
     self._texto_limpo = self._soup.get_text().lower()
 
+  @property
+  def soup(self) -> BeautifulSoup:
+    return self._soup
+
+  @property
   def html_completo(self) -> str:
-    return str(self._soup)
+    return self._html_completo
+
+  @property
+  def texto_limpo(self) -> str:
+    return self._texto_limpo
 
 
 @dataclass
@@ -93,11 +103,11 @@ def encontrar_linha(
     ):
       continue
 
-    if any(x in linha._texto_limpo for x in ['c. correção', 'carta de correção']):
+    if any(x in linha.texto_limpo for x in ['c. correção', 'carta de correção']):
       print('Carta de Correção encontrada')
       continue
 
-    if any(x in linha._texto_limpo for x in ['cancelada', 'cancelamento']):
+    if any(x in linha.texto_limpo for x in ['cancelada', 'cancelamento']):
       print('Nota Cancelada encontrada')
       continue
 
@@ -111,7 +121,7 @@ def encontrar_linha(
 
 
 def extrair_dados(linha: DocumentoFiscal) -> dict[str, str]:
-  link_element = linha._soup.select_one('a.linkManifestar[onclick]')
+  link_element = linha.soup.select_one('a.linkManifestar[onclick]')
  
   onclick_attr = link_element.get('onclick') if link_element else None
   if not onclick_attr:
@@ -121,12 +131,12 @@ def extrair_dados(linha: DocumentoFiscal) -> dict[str, str]:
   if not chave:
     raise ValueError('Chave da nota não encontrada')
 
-  link_xml = linha._soup.select_one('a.iconeXML[href]')
+  link_xml = linha.soup.select_one('a.iconeXML[href]')
   url_parts = [p for p in str(link_xml.get('href', '')).split('/') if p] if link_xml else []
   if len(url_parts) < 2:
     raise ValueError('ID da empresa não encontrado')
 
-  div_flag = linha._soup.select_one('div[id^="flagArq"]')
+  div_flag = linha.soup.select_one('div[id^="flagArq"]')
   if not div_flag or not (id_str := div_flag.get('id', '')):
     raise ValueError('Código setaFlag não encontrado')
 

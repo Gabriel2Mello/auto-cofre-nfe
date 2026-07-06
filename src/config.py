@@ -19,6 +19,10 @@ class Config:
   ACCEPT: ClassVar[str] = 'application/json, text/javascript, */*; q=0.01'
   REQUESTED_WITH: ClassVar[str] = 'XMLHttpRequest'
 
+  TROCAR_LOGIN_URL: ClassVar[str] = 'trocarLogin?vid='
+  TAMANHO_CHAVE: ClassVar[int] = 22
+  TAMANHO_CNPJ: ClassVar[int] = 14
+
   CNPJ: ClassVar[Dict[Empresa, str]] = {
     Empresa.MATRIZ: '09.034.052/0001-53',
     Empresa.FILIAL: '09.034.052/0002-34'

@@ -16,11 +16,13 @@ from src.utils import (
   set_app_id,
   pause,
   handle_error,
+  salvar_arquivos,
 )
 from src.core import (
   ver_arquivos,
   trocar_empresa,
   processar_nota,
+  marcar_flag,
 )
 
 
@@ -60,6 +62,10 @@ def main() -> None:
             emitente_handler,
             config.caminho_documento_entrada,
           )
+          baixar_arquivos()
+          nome_emitente = emitente_handler.get_nome(dados['emitente'])
+          salvar_arquivos()
+          marcar_flag()
         except Timeout as e:
           handle_error(e, 'Site demorou a responder')
         except HTTPError as e:

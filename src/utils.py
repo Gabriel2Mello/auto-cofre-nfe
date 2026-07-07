@@ -86,14 +86,6 @@ def handle_error(
     sleep(sleep_time)
 
 
-def ano_referencia(mes_target: int) -> int:
-  hoje = datetime.today()
-  if (hoje.month == 1 and mes_target == 12):
-    return hoje.year - 1
-
-  return hoje.year
-
-
 def validate_nfe_row(lista: list) -> list:
   if len(lista) < 5:
     raise ValueError('NFe row requires 5+ fields')

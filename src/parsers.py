@@ -10,7 +10,6 @@ from src.enums import TipoDocumento
 from src.config import Config
 from src.utils import (
   upper_strip,
-  ano_referencia,
   validate_nfe_row,
   validate_cte_row,
   extract_digits,
@@ -74,26 +73,21 @@ class LinhaCTe(DocumentoFiscal):
 def encontrar_linha(
   linhas: list,
   nota: str,
-  mes_atual: int,
+  mes_nota: int,
+  ano_nota: int,
   tipo: TipoDocumento
 ) -> list[DocumentoFiscal]:
   if not linhas:
     raise RuntimeError('Nenhum dado encontrado')
 
   fabrica = LinhaCTe if tipo == TipoDocumento.CTE else LinhaNFe
-  mes_target = int(mes_atual)
-  ano_target = ano_referencia(mes_target)
   matches = []
   target_nota_digits = extract_digits(nota)
 
   for item in linhas:
     linha = fabrica.de_lista(item)
 
-    if not _validar_data_linha(
-      linha.data_emissao_html,
-      mes_target,
-      ano_target
-    ):
+    if not _validar_data_linha(linha.data_emissao_html, mes_nota, ano_nota):
       continue
 
     if any(x in linha.texto_limpo for x in ['c. correção', 'carta de correção']):
@@ -186,8 +180,8 @@ def resolve_emitente(emitente_html: str) -> str:
 
 def _validar_data_linha(
   data_html: str,
-  mes_alvo: int,
-  ano_alvo: int
+  mes_nota: int,
+  ano_nota: int,
 ) -> bool:
   soup = BeautifulSoup(data_html, 'lxml')
   texto_data = soup.get_text().strip().split()
@@ -197,7 +191,7 @@ def _validar_data_linha(
 
   try:
     data = parser.parse(texto_data[0], dayfirst=True)
-    return data.month == mes_alvo and data.year == ano_alvo
+    return data.month == mes_nota and data.year == ano_nota
   except (parser.ParserError, ValueError):
     return False
 

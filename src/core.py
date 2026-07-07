@@ -16,15 +16,17 @@ from src.parsers import (
 def processar_nota(
   session: Session,
   nota: str,
-  mes_nota: int,
-  tipo: TipoDocumento,
   empresa: Empresa,
+  tipo: TipoDocumento,
+  mes_nota: int,
   mes_pasta: int,
+  ano_nota: int,
+  ano_pasta: int,
   emitente_handler: EmitenteHandler,
   caminho_documento: str,
 ) -> None:
   linhas = carregar_dados(session, nota, tipo)
-  linhas_validas = encontrar_linha(linhas, nota, mes_nota, tipo)
+  linhas_validas = encontrar_linha(linhas, nota, mes_nota, ano_nota, tipo)
 
   if len(linhas_validas) == 1:
     linha = linhas_validas[0]

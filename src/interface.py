@@ -12,32 +12,20 @@ from src.enums import TipoDocumento, Empresa
 T = TypeVar('T')
 
 
-def exibir_dialogo(titulo: str, texto: str, valores: List[Tuple[T, str]]) -> T:
-  escolha = radiolist_dialog(title=titulo, text=texto, values=valores).run()
-  encerrar_programa(str(escolha) if escolha else None)
-  return escolha
+def escolher_mes_ano(descricao: str) -> tuple[int, int]:
+  while True:
+    try:
+      data_input = prompt(descricao).strip()
+      encerrar_programa(data_input)
+
+      data_validada = datetime.strptime(data_input, '%m/%Y')
+      return data_validada.month, data_validada.year
+
+    except ValueError:
+      print('Formato MM/AAAA.')
 
 
-def selecionar_mes() -> int:
-  meses = [(i, Config.MONTHS[i]) for i in range(1, 13)]
-  return exibir_dialogo('Escolha o mês:', '', meses)
-
-
-def escolher_mes(titulo: str, texto: str) -> int:
-  mes_atual = datetime.today().month
-  valores = [
-    (mes_atual, f'ATUAL ({Config.MONTHS[mes_atual]})'),
-    ('outro', 'OUTRO')
-  ]
-
-  mes = exibir_dialogo(titulo, texto, valores)
-  if mes == 'outro':
-    mes = selecionar_mes()
-
-  return int(mes)
-
-
-def input_dados() -> tuple[list[str], Empresa, int, int, TipoDocumento]:
+def input_dados() -> tuple[list[str], Empresa, int, int, int, int, TipoDocumento]:
   tipo_input = prompt('Tipo 1(NFe) 2(CTe): ').strip()
   tipo = TipoDocumento.CTE if tipo_input == '2' else TipoDocumento.NFE
 
@@ -48,20 +36,19 @@ def input_dados() -> tuple[list[str], Empresa, int, int, TipoDocumento]:
   modo_input = prompt('Modo 1(Normal) 2(Manual): ').strip()
   modo = 'MANUAL' if modo_input == '2' else 'NORMAL'
 
+  empresa_input = prompt('Empresa 1(Matriz) 2(Filial): ').strip()
+  empresa = Empresa.MATRIZ if empresa_input == '1' else Empresa.FILIAL
+
   if modo == 'NORMAL':
-    empresa_input = prompt('Empresa 1(Matriz) 2(Filial): ').strip()
-    empresa = Empresa.MATRIZ if empresa_input == '1' else Empresa.FILIAL
+    data_atual = datetime.today()
 
-    mes_atual = datetime.today().month
-    mes_nota = mes_pasta = mes_atual
+    mes_nota = mes_pasta = data_atual.month
+    ano_nota = ano_pasta = data_atual.year
   else:
-    valores = [(Empresa.MATRIZ, 'MATRIZ'), (Empresa.FILIAL, 'FILIAL')]
-    empresa = exibir_dialogo('Empresa', 'Empresa:', valores)
+    mes_nota, ano_nota = escolher_mes_ano('Data da Nota (ex: 12/2001): ')
+    mes_pasta, ano_pasta = escolher_mes_ano('Data da Pasta (ex: 01/2002): ')
 
-    mes_nota = escolher_mes('Mês da Nota', 'Mês da Nota:')
-    mes_pasta = escolher_mes('Pasta Destino', 'Pasta Destino:')
-
-  return notas, empresa, mes_nota, mes_pasta, tipo
+  return notas, empresa, mes_nota, mes_pasta, ano_nota, ano_pasta, tipo
 
 
 def escolher_emitente(linhas_validas: list[DocumentoFiscal]) -> DocumentoFiscal:

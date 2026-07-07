@@ -30,7 +30,7 @@ def main() -> None:
 
   config = Config()
 
-  notas, empresa, mes_nota, mes_pasta, tipo = input_dados()
+  notas, empresa, mes_nota, mes_pasta, ano_nota, ano_pasta, tipo = input_dados()
   emitente_handler = EmitenteHandler()
   start_time = perf_counter()
 
@@ -47,13 +47,16 @@ def main() -> None:
       for nota in notas:
         print(f'\nProcessando: {nota}')
         try:
+          # TODO: Quebrar essa função em menores
           processar_nota(
             session,
             nota,
-            mes_nota,
-            tipo,
             empresa,
+            tipo,
+            mes_nota,
             mes_pasta,
+            ano_nota,
+            ano_pasta,
             emitente_handler,
             config.caminho_documento_entrada,
           )

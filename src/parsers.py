@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from functools import cached_property
 from html import unescape
 
 from dateutil import parser
@@ -24,11 +25,8 @@ class DocumentoFiscal:
   valor_total: str
   dados_brutos: list = field(default_factory=list, kw_only=True)
 
-  _soup: BeautifulSoup = field(init=False, repr=False)
-  _texto_limpo: str | None = field(default=None, init=False, repr=False)
-  _html_completo: str | None = field(default=None, init=False, repr=False)
-
-  def __post_init__(self):
+  @cached_property
+  def html_completo(self) -> str:
     html_data = self.dados_brutos or [
       self.recebimento_quando,
       self.emitente_html,
@@ -36,30 +34,15 @@ class DocumentoFiscal:
       self.nota_html,
       self.valor_total
     ]
-    self._soup = BeautifulSoup(" ".join(map(str, html_data)), 'lxml')
+    return " ".join(map(str, html_data))
 
-  @property
+  @cached_property
   def soup(self) -> BeautifulSoup:
-    return self._soup
+    return BeautifulSoup(self.html_completo, 'lxml')
 
-  @property
-  def html_completo(self) -> str:
-    if self._html_completo is None:
-      html_data = self.dados_brutos or [
-        self.recebimento_quando,
-        self.emitente_html,
-        self.data_emissao_html,
-        self.nota_html,
-        self.valor_total
-      ]
-      self._html_completo = " ".join(map(str, html_data))
-    return self._html_completo
-
-  @property
+  @cached_property
   def texto_limpo(self) -> str:
-    if self._texto_limpo is None:
-      self._texto_limpo = self._soup.get_text().lower()
-    return self._texto_limpo
+    return self.soup.get_text().lower()
 
 
 @dataclass
@@ -72,7 +55,7 @@ class LinhaNFe(DocumentoFiscal):
 
 @dataclass
 class LinhaCTe(DocumentoFiscal):
-  destinatario_html: str = field(default='', kw_only=True)
+  destinatario_html: str = ''
 
   @classmethod
   def de_lista(cls, lista: list) -> 'LinhaCTe':

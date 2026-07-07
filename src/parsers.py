@@ -22,22 +22,21 @@ class DocumentoFiscal:
   data_emissao_html: str
   nota_html: str
   valor_total: str
-  dados_brutos: list = field(default_factory=list)
+  dados_brutos: list = field(default_factory=list, kw_only=True)
 
   _soup: BeautifulSoup = field(init=False, repr=False)
-  _texto_limpo: str = field(init=False, repr=False)
-  _html_completo: str = field(init=False, repr=False)
+  _texto_limpo: str | None = field(default=None, init=False, repr=False)
+  _html_completo: str | None = field(default=None, init=False, repr=False)
 
   def __post_init__(self):
-    self._html_completo = " ".join(str(item) for item in (self.dados_brutos or [
+    html_data = self.dados_brutos or [
       self.recebimento_quando,
       self.emitente_html,
       self.data_emissao_html,
       self.nota_html,
       self.valor_total
-    ]))
-    self._soup = BeautifulSoup(self._html_completo, 'lxml')
-    self._texto_limpo = self._soup.get_text().lower()
+    ]
+    self._soup = BeautifulSoup(" ".join(map(str, html_data)), 'lxml')
 
   @property
   def soup(self) -> BeautifulSoup:
@@ -45,10 +44,21 @@ class DocumentoFiscal:
 
   @property
   def html_completo(self) -> str:
+    if self._html_completo is None:
+      html_data = self.dados_brutos or [
+        self.recebimento_quando,
+        self.emitente_html,
+        self.data_emissao_html,
+        self.nota_html,
+        self.valor_total
+      ]
+      self._html_completo = " ".join(map(str, html_data))
     return self._html_completo
 
   @property
   def texto_limpo(self) -> str:
+    if self._texto_limpo is None:
+      self._texto_limpo = self._soup.get_text().lower()
     return self._texto_limpo
 
 
@@ -62,7 +72,7 @@ class LinhaNFe(DocumentoFiscal):
 
 @dataclass
 class LinhaCTe(DocumentoFiscal):
-  destinatario_html: str = ''
+  destinatario_html: str = field(default='', kw_only=True)
 
   @classmethod
   def de_lista(cls, lista: list) -> 'LinhaCTe':
@@ -127,7 +137,7 @@ def extrair_dados(linha: DocumentoFiscal) -> dict[str, str]:
   if not onclick_attr:
     raise ValueError('Atributo onclick não encontrado')
 
-  chave = _extract_chave(str(onclick_attr))
+  chave = _extract_chave(str(onclick_attr), Config.TAMANHO_CHAVE)
   if not chave:
     raise ValueError('Chave da nota não encontrada')
 
@@ -209,13 +219,13 @@ def _validar_data_linha(
     return False
 
 
-def _extract_chave(onclick_text: str) -> str | None:
+def _extract_chave(onclick_text: str, tamanho_chave: int) -> str | None:
   partes = onclick_text.split(',')
   if len(partes) < 2:
     return None
 
   id_limpo = "".join(c for c in partes[1] if c.isalnum())
-  if len(id_limpo) == Config.TAMANHO_CHAVE:
+  if len(id_limpo) == tamanho_chave:
     return id_limpo
 
   return None

@@ -2,7 +2,7 @@ from cloudscraper import CloudScraper
 from src.config import Config
 from src.enums import Empresa
 
-def login(session: CloudScraper) -> str:
+def login(session: CloudScraper, senha: str) -> str:
   """Realiza a autenticação no site e retorna o HTML da página inicial."""
   session.headers.update({
     'Origin': Config.URL_BASE,
@@ -13,7 +13,7 @@ def login(session: CloudScraper) -> str:
   payload = {
     's': 'nfe',
     'cpf': Config.CNPJ.get(Empresa.MATRIZ),
-    'senha': Config.SENHA_COFRE
+    'senha': senha
   }
 
   response = session.post(

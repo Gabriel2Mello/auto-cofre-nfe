@@ -8,7 +8,7 @@ from requests import (
 
 from src.auth import login
 from src.http_client import TimeoutScraper
-from src.config import init_config
+from src.config import Config
 from src.interface import input_dados
 from src.parsers import extrair_empresas_href
 from src.emitente_handler import EmitenteHandler
@@ -28,14 +28,15 @@ def main() -> None:
   if sys.platform == 'win32':
     set_app_id()
 
-  init_config()
+  config = Config()
+
   notas, empresa, mes_nota, mes_pasta, tipo = input_dados()
-  start_time = perf_counter()
   emitente_handler = EmitenteHandler()
+  start_time = perf_counter()
 
   try:
     with TimeoutScraper() as session:
-      html_login = login(session)
+      html_login = login(session, config.senha_cofre)
       empresas_href = extrair_empresas_href(html_login)
       trocar_empresa(session, empresa, empresas_href)
 
@@ -53,14 +54,15 @@ def main() -> None:
             tipo,
             empresa,
             mes_pasta,
-            emitente_handler
+            emitente_handler,
+            config.caminho_documento_entrada,
           )
         except Timeout as e:
           handle_error(e, 'Site demorou a responder')
         except HTTPError as e:
           handle_error(e, 'Erro HTTP')
         except RequestException as e:
-          handle_error(e, 'Erro desconhecido no site')
+          handle_error(e, 'Erro no site')
         except (KeyError, ValueError) as e:
           handle_error(e, 'Valor faltando/inadequado')
         except Exception as e:

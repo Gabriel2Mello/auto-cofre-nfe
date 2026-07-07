@@ -1,5 +1,5 @@
 from os import environ
-from typing import ClassVar, Dict, List
+from typing import Dict, List
 from src.enums import TipoDocumento, Empresa
 
 
@@ -11,31 +11,29 @@ def load_env(variable: str, default: str = "") -> str:
 
 
 class Config:
-  SENHA_COFRE: str = ""
-  CAMINHO_DOCUMENTO_ENTRADA: str = ""
+  URL_BASE: str = 'https://painel.cofrenfe.com.br'
+  CONTENT_TYPE: str = 'application/x-www-form-urlencoded; charset=UTF-8'
+  ACCEPT: str = 'application/json, text/javascript, */*; q=0.01'
+  REQUESTED_WITH: str = 'XMLHttpRequest'
+  TROCAR_LOGIN_URL: str = 'trocarLogin?vid='
 
-  URL_BASE: ClassVar[str] = 'https://painel.cofrenfe.com.br'
-  CONTENT_TYPE: ClassVar[str] = 'application/x-www-form-urlencoded; charset=UTF-8'
-  ACCEPT: ClassVar[str] = 'application/json, text/javascript, */*; q=0.01'
-  REQUESTED_WITH: ClassVar[str] = 'XMLHttpRequest'
+  TAMANHO_CHAVE: int = 22
+  TAMANHO_CNPJ: int = 14
+  CHECK_FLAG: int = 10
+  FLAG_CLIENTE: str = '98'
+  FLAG_CONTA: str = '98'
 
-  TROCAR_LOGIN_URL: ClassVar[str] = 'trocarLogin?vid='
-  TAMANHO_CHAVE: ClassVar[int] = 22
-  TAMANHO_CNPJ: ClassVar[int] = 14
-
-  CHECK_FLAG: ClassVar[int] = 10
-
-  CNPJ: ClassVar[Dict[Empresa, str]] = {
+  CNPJ: Dict[Empresa, str] = {
     Empresa.MATRIZ: '09.034.052/0001-53',
     Empresa.FILIAL: '09.034.052/0002-34'
   }
 
-  COLUNAS: ClassVar[Dict[TipoDocumento, str]] = {
+  COLUNAS: Dict[TipoDocumento, str] = {
     TipoDocumento.NFE: 'recebimento_quando,emitente_nome,nfe_data,nro_nota,vlr_total,tipo,',
     TipoDocumento.CTE: 'recebimento_quando,emitente_nome,destinatario_nome,nfe_data,nro_nota,vlr_total,tipo,tipo'
   }
 
-  MONTHS: ClassVar[List[str]] = [
+  MONTHS: List[str] = [
     '',
     'JANEIRO',
     'FEVEREIRO',
@@ -51,7 +49,7 @@ class Config:
     'DEZEMBRO',
   ]
 
-def init_config() -> None:
-  Config.SENHA_COFRE = load_env('SENHA_COFRE')
-  Config.CAMINHO_DOCUMENTO_ENTRADA = load_env('CAMINHO_DOCUMENTO_ENTRADA')
+  def __init__(self) -> None:
+    self.senha_cofre: str = load_env('SENHA_COFRE')
+    self.caminho_documento_entrada: str = load_env('CAMINHO_DOCUMENTO_ENTRADA')
 

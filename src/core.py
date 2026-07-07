@@ -20,7 +20,8 @@ def processar_nota(
   tipo: TipoDocumento,
   empresa: Empresa,
   mes_pasta: int,
-  emitente_handler: EmitenteHandler
+  emitente_handler: EmitenteHandler,
+  caminho_documento: str,
 ) -> None:
   linhas = carregar_dados(session, nota, tipo)
   linhas_validas = encontrar_linha(linhas, nota, mes_nota, tipo)
@@ -36,7 +37,7 @@ def processar_nota(
     session,
     dados['empresa_id'],
     dados['chave'],
-    tipo
+    tipo,
   )
   nome_emitente = emitente_handler.get_nome(dados['emitente'])
 
@@ -47,10 +48,11 @@ def processar_nota(
     nota,
     empresa,
     mes_pasta,
-    tipo
+    tipo,
+    caminho_documento,
   )
   marcar_flag(session, dados['codigo_arquivo'])
-  sleep(0.3)
+  sleep(0.2)
 
 
 def ver_arquivos(
@@ -77,13 +79,13 @@ def ver_arquivos(
 def trocar_empresa(
   session: Session,
   empresa: Empresa,
-  empresas_href: dict
+  empresas_href: dict[str, str],
 ) -> None:
   if not (cnpj_target := Config.CNPJ.get(empresa)):
-    raise KeyError(f"CNPJ '{empresa}' não encontrado")
+    raise ValueError(f"CNPJ '{empresa}' não encontrado")
 
   if not (empresa_link := empresas_href.get(cnpj_target)):
-    raise KeyError(f"Link da empresa '{empresa}' não encontrado")
+    raise ValueError(f"Link da empresa '{empresa}' não encontrado")
 
   session.get(
     url=urljoin(Config.URL_BASE, empresa_link),
@@ -95,7 +97,7 @@ def trocar_empresa(
 def carregar_dados(
   session: Session,
   nota: str,
-  tipo: TipoDocumento
+  tipo: TipoDocumento,
 ) -> list:
   endpoint = f'ver-arquivos-{tipo}'
 
@@ -104,8 +106,8 @@ def carregar_dados(
     'iColumns': '7' if tipo == TipoDocumento.NFE else '8',
     'sColumns': Config.COLUNAS[tipo],
     'nro_nota_de': str(nota),
-    'flag_cliente': '98',
-    'flag_conta': '98',
+    'flag_cliente': Config.FLAG_CLIENTE,
+    'flag_conta': Config.FLAG_CONTA,
     'iDisplayStart': '0',
     'iDisplayLength': '25',
   }
@@ -130,7 +132,7 @@ def baixar_arquivos(
   session: Session,
   empresa_id: str,
   chave: str,
-  tipo: TipoDocumento
+  tipo: TipoDocumento,
 ) -> tuple[bytes, bytes]:
   ver_path = 'danfe' if tipo == TipoDocumento.NFE else 'dacte'
 
@@ -149,10 +151,9 @@ def baixar_arquivos(
 def marcar_flag(
   session: Session,
   codigo_arquivo: str,
-  codigo_flag: int = Config.CHECK_FLAG
 ) -> None:
   session.post(
-    f'{Config.URL_BASE}/nfe/seta-flag/{codigo_arquivo}/{codigo_flag}',
+    f'{Config.URL_BASE}/nfe/seta-flag/{codigo_arquivo}/{Config.CHECK_FLAG}',
     data={},
   ).raise_for_status()
 

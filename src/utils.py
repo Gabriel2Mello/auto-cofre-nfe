@@ -40,11 +40,12 @@ def salvar_arquivos(
   numero_nota: str,
   empresa: Empresa,
   mes: int,
-  tipo: TipoDocumento
+  tipo: TipoDocumento,
+  caminho_pasta: str,
 ) -> None:
   ano = str(ano_referencia(mes))
   nome_limpo = f'{nome_emitente} {numero_nota}'
-  base_path = Path(Config.CAMINHO_DOCUMENTO_ENTRADA)
+  base_path = Path(caminho_pasta)
 
   if not base_path.exists():
     raise RuntimeError('CAMINHO_DOCUMENTO_ENTRADA não configurado.')

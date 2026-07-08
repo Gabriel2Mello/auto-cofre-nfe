@@ -44,7 +44,7 @@ O projeto adota o isolamento de credenciais e caminhos de arquivos através de v
 | Campo | Tipo | Descrição | Exemplo |
 | :--- | :--- | :--- | :--- |
 | `SENHA_COFRE` | `String` | Senha de autenticação. | `MinhaSenhaCofre123` |
-| `CAMINHO_DOCUMENTO_ENTRADA` | `Path (Diretório)` | Caminho absoluto na máquina ou rede onde a estrutura de pastas será criada. | `X:\Empresa\Faturamento\Notas` |
+| `CAMINHO_DOCUMENTO_ENTRADA` | `Path (Diretório)` | Caminho na máquina/rede para as pastas. | `X:\Empresa\Faturamento\Notas` |
 | `CNPJ_FILIAL` | `String` | CNPJ da filial correspondente. | `00000000000100` |
 | `CNPJ_MATRIZ` | `String` | CNPJ da matriz da empresa. | `00000000000100` |
 

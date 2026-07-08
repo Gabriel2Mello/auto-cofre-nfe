@@ -12,6 +12,7 @@ from src.config import Config
 from src.interface import input_dados
 from src.parsers import extrair_empresas_href
 from src.emitente_handler import EmitenteHandler
+from src.enums import Empresa
 from src.utils import (
   set_app_id,
   pause,
@@ -38,9 +39,13 @@ def main() -> None:
   start_time = perf_counter()
 
   with TimeoutScraper() as session:
-    html_login = login(session, config.senha_cofre)
+    html_login = login(
+      session,
+      config.senha_cofre,
+      config.cnpj[Empresa.MATRIZ]
+    )
     empresas_href = extrair_empresas_href(html_login)
-    trocar_empresa(session, empresa, empresas_href)
+    trocar_empresa(session, empresa, empresas_href, config.cnpj[empresa])
 
     print('Sincronizado...')
     sleep(0.2)

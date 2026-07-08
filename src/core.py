@@ -2,6 +2,8 @@ from urllib.parse import urljoin
 from time import sleep
 from requests import Session
 
+from validate_docbr import CNPJ
+
 from src.interface import escolher_emitente
 from src.config import Config
 from src.enums import TipoDocumento, Empresa
@@ -57,11 +59,12 @@ def trocar_empresa(
   session: Session,
   empresa: Empresa,
   empresas_href: dict[str, str],
+  cnpj: str,
 ) -> None:
-  if not (cnpj_target := Config.CNPJ.get(empresa)):
-    raise ValueError(f"CNPJ '{empresa}' não encontrado")
+  cnpj_validator = CNPJ()
 
-  if not (empresa_link := empresas_href.get(cnpj_target)):
+  cnpj_formatado = cnpj_validator.mask(cnpj)
+  if not (empresa_link := empresas_href.get(cnpj_formatado)):
     raise ValueError(f"Link da empresa '{empresa}' não encontrado")
 
   session.get(

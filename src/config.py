@@ -23,11 +23,6 @@ class Config:
   FLAG_CLIENTE: str = '98'
   FLAG_CONTA: str = '98'
 
-  CNPJ: Dict[Empresa, str] = {
-    Empresa.MATRIZ: '09.034.052/0001-53',
-    Empresa.FILIAL: '09.034.052/0002-34'
-  }
-
   COLUNAS: Dict[TipoDocumento, str] = {
     TipoDocumento.NFE: 'recebimento_quando,emitente_nome,nfe_data,nro_nota,vlr_total,tipo,',
     TipoDocumento.CTE: 'recebimento_quando,emitente_nome,destinatario_nome,nfe_data,nro_nota,vlr_total,tipo,tipo'
@@ -52,4 +47,8 @@ class Config:
   def __init__(self) -> None:
     self.senha_cofre: str = load_env('SENHA_COFRE')
     self.caminho_documento_entrada: str = load_env('CAMINHO_DOCUMENTO_ENTRADA')
+    self.cnpj: Dict[Empresa, str] = {
+      Empresa.MATRIZ: load_env('CNPJ_MATRIZ'),
+      Empresa.FILIAL: load_env('CNPJ_FILIAL'),
+    }
 

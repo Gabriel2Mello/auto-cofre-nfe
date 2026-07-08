@@ -63,5 +63,5 @@ Ao processar os documentos com sucesso, o robô gera automaticamente a seguinte 
         └── 📁 [MATRIZ / FILIAL]
             └── 📁 [MÊS_PASTA (Ex: JANEIRO)]
                 └── 📄 [NOME_EMITENTE] [NUMERO_NOTA].xml
-
+```
 💾 emitentes_conhecidos.json: Base que vincula o nome bruto extraído do HTML do portal com o nome limpo e formalizado desejado para a criação das pastas físicas. O salvamento deste arquivo ocorre em modo seguro com escrita em buffer temporário (.tmp) para prevenir corrupção de dados.

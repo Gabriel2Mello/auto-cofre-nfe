@@ -41,15 +41,12 @@ O ambiente de execução precisa das seguintes definições no Windows/Linux:
 
 O projeto adota o isolamento de credenciais e caminhos de arquivos através de variáveis de ambiente do sistema operacional:
 
-### `SENHA_COFRE`
-* **Tipo:** `String`
-* **Descrição:** Senha de autenticação para acesso ao painel web do portal Cofre NFe.
-* **Exemplo:** `MinhaSenhaCofre123`
-
-### `CAMINHO_DOCUMENTO_ENTRADA`
-* **Tipo:** `Path (Diretório)`
-* **Descrição:** Caminho absoluto do diretório raiz na máquina ou rede onde a estrutura de pastas ano/mês/empresa será criada pelo robô.
-* **Exemplo:** `X:\Empresa\Faturamento\Notas`
+| Campo | Tipo | Descrição | Exemplo |
+| :--- | :--- | :--- | :--- |
+| `SENHA_COFRE` | `String` | Senha de autenticação. | `MinhaSenhaCofre123` |
+| `CAMINHO_DOCUMENTO_ENTRADA` | `Path (Diretório)` | Caminho absoluto na máquina ou rede onde a estrutura de pastas será criada. | `X:\Empresa\Faturamento\Notas` |
+| `CNPJ_FILIAL` | `String` | CNPJ da filial correspondente. | `00000000000100` |
+| `CNPJ_MATRIZ` | `String` | CNPJ da matriz da empresa. | `00000000000100` |
 
 ---
 

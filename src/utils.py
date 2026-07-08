@@ -1,5 +1,4 @@
 import ctypes
-from datetime import datetime
 from pathlib import Path
 import sys
 from time import sleep
@@ -36,15 +35,15 @@ def obter_caminho_json(filename = 'emitentes_conhecidos.json') -> Path:
 def salvar_arquivos(
   xml: bytes,
   pdf: bytes,
-  nome_emitente: str,
-  numero_nota: str,
+  emitente: str,
+  nota: str,
   empresa: Empresa,
   mes: int,
+  ano: str,
   tipo: TipoDocumento,
   caminho_pasta: str,
 ) -> None:
-  ano = str(ano_referencia(mes))
-  nome_limpo = f'{nome_emitente} {numero_nota}'
+  nome_limpo = f'{emitente} {nota}'
   base_path = Path(caminho_pasta)
 
   if not base_path.exists():

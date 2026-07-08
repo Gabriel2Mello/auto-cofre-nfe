@@ -1,67 +1,47 @@
 from datetime import datetime
-from typing import List, Tuple, TypeVar
 
-from prompt_toolkit import prompt
-from prompt_toolkit.shortcuts import radiolist_dialog
-
-from src.config import Config
 from src.utils import encerrar_programa
 from src.parsers import resolve_emitente, DocumentoFiscal
-from src.enums import TipoDocumento, Empresa
-
-T = TypeVar('T')
+from src.enums import TipoDocumento, Empresa, ModoData
 
 
-def exibir_dialogo(titulo: str, texto: str, valores: List[Tuple[T, str]]) -> T:
-  escolha = radiolist_dialog(title=titulo, text=texto, values=valores).run()
-  encerrar_programa(str(escolha) if escolha else None)
-  return escolha
+def escolher_mes_ano(descricao: str, tentativas: int = 5) -> tuple[int, int]:
+  for _ in range(tentativas):
+    try:
+      data_input = input(descricao).strip()
+      data = datetime.strptime(data_input, '%m/%Y')
+      return data.month, data.year
+    except ValueError:
+      print('Formato MM/AAAA.')
+
+  encerrar_programa(None)
+  return 1, 1
 
 
-def selecionar_mes() -> int:
-  meses = [(i, Config.MONTHS[i]) for i in range(1, 13)]
-  return exibir_dialogo('Escolha o mês:', '', meses)
-
-
-def escolher_mes(titulo: str, texto: str) -> int:
-  mes_atual = datetime.today().month
-  valores = [
-    (mes_atual, f'ATUAL ({Config.MONTHS[mes_atual]})'),
-    ('outro', 'OUTRO')
-  ]
-
-  mes = exibir_dialogo(titulo, texto, valores)
-  if mes == 'outro':
-    mes = selecionar_mes()
-
-  return int(mes)
-
-
-def input_dados() -> tuple[list[str], Empresa, int, int, TipoDocumento]:
-  tipo_input = prompt('Tipo 1(NFe) 2(CTe): ').strip()
+def input_dados() -> tuple[list[str], Empresa, int, int, int, int, TipoDocumento]:
+  tipo_input = input('Tipo 1(NFe) 2(CTe): ').strip()
   tipo = TipoDocumento.CTE if tipo_input == '2' else TipoDocumento.NFE
 
-  notas_input = prompt('Nota: ').strip()
+  notas_input = input('Nota: ').strip()
   notas = [n.strip() for n in notas_input.split(',') if n.strip()]
   encerrar_programa(notas[0] if notas else None)
 
-  modo_input = prompt('Modo 1(Normal) 2(Manual): ').strip()
-  modo = 'MANUAL' if modo_input == '2' else 'NORMAL'
+  empresa_input = input('Empresa 1(Matriz) 2(Filial): ').strip()
+  empresa = Empresa.MATRIZ if empresa_input == '1' else Empresa.FILIAL
 
-  if modo == 'NORMAL':
-    empresa_input = prompt('Empresa 1(Matriz) 2(Filial): ').strip()
-    empresa = Empresa.MATRIZ if empresa_input == '1' else Empresa.FILIAL
+  modo_input = input('Data 1(Atual) 2(Manual): ').strip()
+  modo = ModoData.MANUAL if modo_input == '2' else ModoData.ATUAL
 
-    mes_atual = datetime.today().month
-    mes_nota = mes_pasta = mes_atual
+  if modo == ModoData.ATUAL:
+    data_atual = datetime.today()
+
+    mes_nota = mes_pasta = data_atual.month
+    ano_nota = ano_pasta = data_atual.year
   else:
-    valores = [(Empresa.MATRIZ, 'MATRIZ'), (Empresa.FILIAL, 'FILIAL')]
-    empresa = exibir_dialogo('Empresa', 'Empresa:', valores)
+    mes_nota,  ano_nota  = escolher_mes_ano('Data da Nota (ex: 12/2001): ')
+    mes_pasta, ano_pasta = escolher_mes_ano('Pasta (ex: 01/2002): ')
 
-    mes_nota = escolher_mes('Mês da Nota', 'Mês da Nota:')
-    mes_pasta = escolher_mes('Pasta Destino', 'Pasta Destino:')
-
-  return notas, empresa, mes_nota, mes_pasta, tipo
+  return notas, empresa, mes_nota, mes_pasta, ano_nota, ano_pasta, tipo
 
 
 def escolher_emitente(linhas_validas: list[DocumentoFiscal]) -> DocumentoFiscal:
@@ -74,7 +54,7 @@ def escolher_emitente(linhas_validas: list[DocumentoFiscal]) -> DocumentoFiscal:
 
   while True:
     try:
-      escolha_input = prompt('Escolha: ').strip()
+      escolha_input = input('Escolha: ').strip()
       encerrar_programa(escolha_input)
 
       opcao = int(escolha_input)

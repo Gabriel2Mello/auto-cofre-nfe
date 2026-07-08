@@ -1,5 +1,4 @@
 import ctypes
-from datetime import datetime
 from pathlib import Path
 import sys
 from time import sleep
@@ -8,6 +7,8 @@ from unidecode import unidecode
 
 from src.config import Config
 from src.enums import TipoDocumento, Empresa
+
+FORBIDDEN_CHARS = r'\/*?:"><|'
 
 
 def pause() -> None:
@@ -36,15 +37,15 @@ def obter_caminho_json(filename = 'emitentes_conhecidos.json') -> Path:
 def salvar_arquivos(
   xml: bytes,
   pdf: bytes,
-  nome_emitente: str,
-  numero_nota: str,
+  emitente: str,
+  nota: str,
   empresa: Empresa,
   mes: int,
+  ano: str,
   tipo: TipoDocumento,
   caminho_pasta: str,
 ) -> None:
-  ano = str(ano_referencia(mes))
-  nome_limpo = f'{nome_emitente} {numero_nota}'
+  nome_limpo = f'{emitente} {nota}'
   base_path = Path(caminho_pasta)
 
   if not base_path.exists():
@@ -86,32 +87,12 @@ def handle_error(
     sleep(sleep_time)
 
 
-def ano_referencia(mes_target: int) -> int:
-  hoje = datetime.today()
-  if (hoje.month == 1 and mes_target == 12):
-    return hoje.year - 1
-
-  return hoje.year
-
-
-def validate_nfe_row(lista: list) -> list:
-  if len(lista) < 5:
-    raise ValueError('NFe row requires 5+ fields')
-  return lista
-
-
-def validate_cte_row(lista: list) -> list:
-  if len(lista) < 6:
-    raise ValueError('CTe row requires 6+ fields')
-  return lista
-
-
 def extract_digits(text: str) -> str:
   return "".join(c for c in text if c.isdigit())
 
 
 def clean_name(text: str) -> str:
-  remocao = str.maketrans('', '', r'\/*?:"><|')
+  remocao = str.maketrans('', '', FORBIDDEN_CHARS)
   nome_limpo = unidecode(text).translate(remocao)
   return " ".join(nome_limpo.split()).strip('.')
 

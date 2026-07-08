@@ -8,13 +8,8 @@ from validate_docbr import CNPJ
 
 from src.enums import TipoDocumento
 from src.config import Config
-from src.utils import (
-  upper_strip,
-  ano_referencia,
-  validate_nfe_row,
-  validate_cte_row,
-  extract_digits,
-)
+from src.utils import upper_strip, extract_digits
+
 
 @dataclass
 class DocumentoFiscal:
@@ -49,7 +44,8 @@ class DocumentoFiscal:
 class LinhaNFe(DocumentoFiscal):
   @classmethod
   def de_lista(cls, lista: list) -> 'LinhaNFe':
-    validate_nfe_row(lista)
+    if len(lista) < 5:
+      raise ValueError('Linha NFe requer 5+ campos')
     return cls(*lista[:5], dados_brutos=lista)
 
 
@@ -59,7 +55,8 @@ class LinhaCTe(DocumentoFiscal):
 
   @classmethod
   def de_lista(cls, lista: list) -> 'LinhaCTe':
-    validate_cte_row(lista)
+    if len(lista) < 6:
+      raise ValueError('Linha CTe requer 6+ campos')
     return cls(
       lista[0],
       lista[1],
@@ -72,28 +69,23 @@ class LinhaCTe(DocumentoFiscal):
 
 
 def encontrar_linha(
-  linhas: list,
+  linhas: list[list[str]],
   nota: str,
-  mes_atual: int,
+  mes_nota: int,
+  ano_nota: int,
   tipo: TipoDocumento
 ) -> list[DocumentoFiscal]:
   if not linhas:
     raise RuntimeError('Nenhum dado encontrado')
 
   fabrica = LinhaCTe if tipo == TipoDocumento.CTE else LinhaNFe
-  mes_target = int(mes_atual)
-  ano_target = ano_referencia(mes_target)
   matches = []
   target_nota_digits = extract_digits(nota)
 
   for item in linhas:
     linha = fabrica.de_lista(item)
 
-    if not _validar_data_linha(
-      linha.data_emissao_html,
-      mes_target,
-      ano_target
-    ):
+    if not _validar_data_linha(linha.data_emissao_html, mes_nota, ano_nota):
       continue
 
     if any(x in linha.texto_limpo for x in ['c. correção', 'carta de correção']):
@@ -186,8 +178,8 @@ def resolve_emitente(emitente_html: str) -> str:
 
 def _validar_data_linha(
   data_html: str,
-  mes_alvo: int,
-  ano_alvo: int
+  mes_nota: int,
+  ano_nota: int,
 ) -> bool:
   soup = BeautifulSoup(data_html, 'lxml')
   texto_data = soup.get_text().strip().split()
@@ -197,7 +189,7 @@ def _validar_data_linha(
 
   try:
     data = parser.parse(texto_data[0], dayfirst=True)
-    return data.month == mes_alvo and data.year == ano_alvo
+    return data.month == mes_nota and data.year == ano_nota
   except (parser.ParserError, ValueError):
     return False
 

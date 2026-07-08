@@ -8,6 +8,8 @@ from unidecode import unidecode
 from src.config import Config
 from src.enums import TipoDocumento, Empresa
 
+FORBIDDEN_CHARS = r'\/*?:"><|'
+
 
 def pause() -> None:
   try:
@@ -85,24 +87,12 @@ def handle_error(
     sleep(sleep_time)
 
 
-def validate_nfe_row(lista: list) -> list:
-  if len(lista) < 5:
-    raise ValueError('NFe row requires 5+ fields')
-  return lista
-
-
-def validate_cte_row(lista: list) -> list:
-  if len(lista) < 6:
-    raise ValueError('CTe row requires 6+ fields')
-  return lista
-
-
 def extract_digits(text: str) -> str:
   return "".join(c for c in text if c.isdigit())
 
 
 def clean_name(text: str) -> str:
-  remocao = str.maketrans('', '', r'\/*?:"><|')
+  remocao = str.maketrans('', '', FORBIDDEN_CHARS)
   nome_limpo = unidecode(text).translate(remocao)
   return " ".join(nome_limpo.split()).strip('.')
 

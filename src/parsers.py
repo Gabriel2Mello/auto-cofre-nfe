@@ -8,12 +8,8 @@ from validate_docbr import CNPJ
 
 from src.enums import TipoDocumento
 from src.config import Config
-from src.utils import (
-  upper_strip,
-  validate_nfe_row,
-  validate_cte_row,
-  extract_digits,
-)
+from src.utils import upper_strip, extract_digits
+
 
 @dataclass
 class DocumentoFiscal:
@@ -48,7 +44,8 @@ class DocumentoFiscal:
 class LinhaNFe(DocumentoFiscal):
   @classmethod
   def de_lista(cls, lista: list) -> 'LinhaNFe':
-    validate_nfe_row(lista)
+    if len(lista) < 5:
+      raise ValueError('Linha NFe requer 5+ campos')
     return cls(*lista[:5], dados_brutos=lista)
 
 
@@ -58,7 +55,8 @@ class LinhaCTe(DocumentoFiscal):
 
   @classmethod
   def de_lista(cls, lista: list) -> 'LinhaCTe':
-    validate_cte_row(lista)
+    if len(lista) < 6:
+      raise ValueError('Linha CTe requer 6+ campos')
     return cls(
       lista[0],
       lista[1],
@@ -71,7 +69,7 @@ class LinhaCTe(DocumentoFiscal):
 
 
 def encontrar_linha(
-  linhas: list,
+  linhas: list[list[str]],
   nota: str,
   mes_nota: int,
   ano_nota: int,

@@ -75,7 +75,7 @@ def carregar_dados(
   session: Session,
   nota: str,
   tipo: TipoDocumento,
-) -> list:
+) -> list[list[str]]:
   endpoint = f'ver-arquivos-{tipo}'
 
   payload = {

@@ -2,59 +2,34 @@ from urllib.parse import urljoin
 from time import sleep
 from requests import Session
 
-from src.emitente_handler import EmitenteHandler
 from src.interface import escolher_emitente
-from src.utils import salvar_arquivos
 from src.config import Config
 from src.enums import TipoDocumento, Empresa
-from src.parsers import (
-  encontrar_linha,
-  extrair_dados,
-)
+from src.parsers import encontrar_linha, extrair_dados
 
 
 def processar_nota(
   session: Session,
   nota: str,
-  empresa: Empresa,
   tipo: TipoDocumento,
   mes_nota: int,
-  mes_pasta: int,
   ano_nota: int,
-  ano_pasta: int,
-  emitente_handler: EmitenteHandler,
-  caminho_documento: str,
-) -> None:
+) -> dict[str, str]:
   linhas = carregar_dados(session, nota, tipo)
-  linhas_validas = encontrar_linha(linhas, nota, mes_nota, ano_nota, tipo)
+  linhas_validas = encontrar_linha(
+    linhas,
+    nota,
+    mes_nota,
+    ano_nota,
+    tipo,
+  )
 
   if len(linhas_validas) == 1:
     linha = linhas_validas[0]
   else:
     linha = escolher_emitente(linhas_validas)
 
-  dados = extrair_dados(linha)
-
-  xml, pdf = baixar_arquivos(
-    session,
-    dados['empresa_id'],
-    dados['chave'],
-    tipo,
-  )
-  nome_emitente = emitente_handler.get_nome(dados['emitente'])
-
-  salvar_arquivos(
-    xml,
-    pdf,
-    nome_emitente,
-    nota,
-    empresa,
-    mes_pasta,
-    tipo,
-    caminho_documento,
-  )
-  marcar_flag(session, dados['codigo_arquivo'])
-  sleep(0.2)
+  return extrair_dados(linha)
 
 
 def ver_arquivos(

@@ -15,16 +15,17 @@ Este é um robô de automação de processos (RPA) desenvolvido em Python para o
 ---
 
 ## 🚀 Fluxo Operacional do Robô
+```
 [Usuário insere Notas/Empresa/Data] ➔ [Login & Extração de Hrefs de Login]
                                                      │
                                         [Troca de Contexto de Empresa]
                                                      │
 [Marcar Flag no Painel] ◀─ [Salvar XML & PDF em Disco] ◀─ [Download de Arquivos]
-
+```
 1. **Entrada de Dados:** O robô solicita o tipo de documento, a lista de notas (com suporte a múltiplas entradas separadas por vírgula), a empresa alvo (Matriz ou Filial) e o modo de competência (data atual ou inserção manual de mês/ano).
 2. **Fase Web & Autenticação:** Efetua o bypass de segurança e realiza o login no Portal Cofre NFe. Analisa a página inicial, extrai dinamicamente os links de acesso baseados nos CNPJs e realiza a troca de contexto da sessão.
 3. **Varredure e Filtragem:** Sincroniza a tabela de arquivos e dispara requisições POST simulando o carregamento dinâmico de dados (DataTables). Aplica filtros para ignorar Cartas de Correção ou Notas Canceladas, validando se a data de emissão condiz com a competência informada.
-4. **Tratamento Dinâmico de Emitentes:** Consulta uma base de dados JSON local (`emitentes_conhecidos.json`). Caso encontre um fornecedor novo, o robô pergunta para que o usuário informe o nome tratado do parceiro em tempo de execução, garantindo a padronização das pastas.
+4. **Tratamento Dinâmico de Emitentes:** Consulta uma base de dados JSON local (`emitentes_conhecidos.json`). Caso encontre um fornecedor novo, o robô pergunta o nome tratado em tempo de execução, garantindo a padronização das pastas.
 5. **Download e Persistência:** Baixa simultaneamente os buffers binários do XML e do PDF (DANFE/DACTE) direto da API do portal. Os arquivos são salvos de forma atômica no diretório configurado, e o robô envia uma requisição de sinalização (seta-flag) para o servidor, registrando o encerramento do processo para aquela nota.
 
 ---

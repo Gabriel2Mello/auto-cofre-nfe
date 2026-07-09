@@ -7,7 +7,7 @@ Este é um robô de automação de processos (RPA) desenvolvido em Python para o
 ## ⚙️ Tecnologias e Bibliotecas Utilizadas
 
 * **Orquestração e Core:** Python 3.13
-* **Web Scraping & Bypass:** `cloudscraper` (com emulação dinâmica de Client Hints do Chrome no Windows) e `BeautifulSoup4` (LXML parsing).
+* **Web Scraping & Bypass:** `cloudscraper` e `BeautifulSoup4` (LXML parsing).
 * **Processamento de Dados e Datas:** `python-dateutil` (parsing de strings de data) e `validate-docbr` (máscara e validação de documentos federais).
 * **Tratamento de Texto e Strings:** `unidecode` (sanitização de caracteres especiais para gravação em disco).
 * **Interface de Console:** Entrada de dados iterativa e CLI tratada nativamente.

@@ -61,10 +61,13 @@ def salvar_arquivos(
   (path_pdf / f'{nome_limpo}.pdf').write_bytes(pdf)
   (path_xml / f'{nome_limpo}.xml').write_bytes(xml)
 
+  if tipo == TipoDocumento.CTE:
+    (path_xml / f'{nome_limpo} copia.xml').write_bytes(xml)
+
 
 def set_app_id() -> None:
   try:
-    my_app_id = 'g2mello.autocofre.versao1'
+    my_app_id = 'g2mello.autocofre.v1'
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(my_app_id)
   except Exception:
     pass

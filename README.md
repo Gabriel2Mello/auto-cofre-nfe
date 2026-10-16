@@ -2,6 +2,18 @@
 
 Este é um robô de automação de processos (RPA) desenvolvido em Python para otimizar o fluxo de gerenciamento interno de documentos fiscais da Empresa Nunes. O sistema realiza a varredura e download automatizado de Notas Fiscais Eletrônicas (NF-e) e Conhecimentos de Transporte Eletrônicos (CT-e) diretamente do portal Cofre NFe, processa metadados e organiza os arquivos em uma estrutura de diretórios locais.
 
+## Interface web local
+
+Abra **Abrir Cofre NFe.cmd** para usar o fluxo completo no navegador, com
+NF-e/CT-e, Matriz/Filial, competência dos documentos e competência da pasta.
+NF-e, Matriz e o mês atual já vêm preenchidos. Escolhas de emitente, nomes de
+arquivos e resultados aparecem no próprio painel, com temas claro e escuro.
+
+Ao fechar a última aba, o programa solicita a parada e encerra após a operação
+em curso. A confirmação de saída usa o aviso nativo do navegador; a tela ociosa
+não faz consultas periódicas de andamento. O modo console permanece em `main.py`.
+Veja [instalação, atalhos, funcionamento e validação](docs/interface-web.md).
+
 ---
 
 ## ⚙️ Tecnologias e Bibliotecas Utilizadas
@@ -26,7 +38,7 @@ Este é um robô de automação de processos (RPA) desenvolvido em Python para o
 2. **Fase Web & Autenticação:** Efetua o bypass de segurança e realiza o login no Portal Cofre NFe. Analisa a página inicial, extrai dinamicamente os links de acesso baseados nos CNPJs e realiza a troca de contexto da sessão.
 3. **Varredure e Filtragem:** Sincroniza a tabela de arquivos e dispara requisições POST simulando o carregamento dinâmico de dados (DataTables). Aplica filtros para ignorar Cartas de Correção ou Notas Canceladas, validando se a data de emissão condiz com a competência informada.
 4. **Tratamento Dinâmico de Emitentes:** Consulta uma base de dados JSON local (`emitentes_conhecidos.json`). Caso encontre um fornecedor novo, o robô pergunta o nome tratado em tempo de execução, garantindo a padronização das pastas.
-5. **Download e Persistência:** Baixa simultaneamente os buffers binários do XML e do PDF (DANFE/DACTE) direto da API do portal. Os arquivos são salvos de forma atômica no diretório configurado, e o robô envia uma requisição de sinalização (seta-flag) para o servidor, registrando o encerramento do processo para aquela nota.
+5. **Download e Persistência:** Baixa os buffers binários do XML e do PDF (DANFE/DACTE) direto da API do portal. Após salvar os arquivos no diretório configurado, o robô envia uma requisição de sinalização (seta-flag) para o servidor. Falhas ao salvar podem deixar arquivos parciais; a gravação do par XML/PDF não é transacional.
 
 ---
 
@@ -68,3 +80,5 @@ Ao processar os documentos com sucesso, o robô gera automaticamente a seguinte 
                 └── 📄 [NOME_EMITENTE] [NUMERO_NOTA].xml
 ```
 💾 `emitentes_conhecidos.json`: Base que vincula o nome bruto extraído do HTML do portal com o nome limpo e formalizado desejado para a criação das pastas físicas. O salvamento deste arquivo ocorre em modo seguro com escrita em buffer temporário (.tmp) para prevenir corrupção de dados.
+
+Criado por Gabriel Mello · [g2mello](https://github.com/Gabriel2Mello)

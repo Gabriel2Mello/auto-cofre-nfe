@@ -1,4 +1,5 @@
 import json
+from collections.abc import Callable
 from pathlib import Path
 
 from src.utils import (
@@ -23,7 +24,7 @@ class EmitenteHandler:
         return {}
     return {}
 
-  def get_nome(self, emitente: str) -> str:
+  def get_nome(self, emitente: str, solicitar_nome: Callable[[str], str] | None = None) -> str:
     key = upper_strip(emitente)
     if not key:
       return ""
@@ -34,7 +35,8 @@ class EmitenteHandler:
 
     print(f"Emitente não reconhecido: {emitente}")
     try:
-      emitente_identificado = upper_strip(input('Digite o nome: ')) or key
+      resposta = solicitar_nome(emitente) if solicitar_nome else input('Digite o nome: ')
+      emitente_identificado = upper_strip(resposta) or key
       nome_final = clean_name(emitente_identificado)
 
       self.emitentes_conhecidos[key] = nome_final

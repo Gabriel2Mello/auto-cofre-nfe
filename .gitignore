@@ -1,1 +1,7 @@
 __pycache__
+.venv/
+*.lnk
+emitentes_conhecidos.json
+emitentes_conhecidos.tmp
+build/
+dist/

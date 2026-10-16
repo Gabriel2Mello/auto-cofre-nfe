@@ -1,5 +1,6 @@
 from urllib.parse import urljoin
 from time import sleep
+from collections.abc import Callable
 from requests import Session
 
 from validate_docbr import CNPJ
@@ -7,7 +8,7 @@ from validate_docbr import CNPJ
 from src.interface import escolher_emitente
 from src.config import Config
 from src.enums import TipoDocumento, Empresa
-from src.parsers import encontrar_linha, extrair_dados
+from src.parsers import DocumentoFiscal, encontrar_linha, extrair_dados
 
 
 def processar_nota(
@@ -16,6 +17,7 @@ def processar_nota(
   tipo: TipoDocumento,
   mes_nota: int,
   ano_nota: int,
+  selecionar_emitente: Callable[[list[DocumentoFiscal]], DocumentoFiscal] = escolher_emitente,
 ) -> dict[str, str]:
   linhas = carregar_dados(session, nota, tipo)
   linhas_validas = encontrar_linha(
@@ -29,7 +31,7 @@ def processar_nota(
   if len(linhas_validas) == 1:
     linha = linhas_validas[0]
   else:
-    linha = escolher_emitente(linhas_validas)
+    linha = selecionar_emitente(linhas_validas)
 
   return extrair_dados(linha)
 

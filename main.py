@@ -101,7 +101,8 @@ def main() -> None:
 
 if __name__ == "__main__":
   try:
-    main()
+    from integracao_hub import executar_console
+    raise SystemExit(executar_console('cofre-nfe', 'Cofre NF-e', main, sisplan=False))
   except (KeyboardInterrupt, EOFError):
     print('\n\nInterrompido pelo usuário.')
     sys.exit(0)

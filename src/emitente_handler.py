@@ -1,12 +1,23 @@
 import json
 from collections.abc import Callable
 from pathlib import Path
+from os import fsync
+from tempfile import NamedTemporaryFile
 
 from src.utils import (
   obter_caminho_json,
   upper_strip,
   clean_name,
 )
+
+
+def _validar_catalogo(conteudo: object) -> dict[str, str]:
+  if not isinstance(conteudo, dict) or any(
+      not isinstance(chave, str) or not chave.strip()
+      or not isinstance(nome, str) or not nome.strip()
+      for chave, nome in conteudo.items()):
+    raise ValueError('Catálogo de emitentes inválido: use um objeto JSON com emitentes e nomes não vazios, ambos em texto. O arquivo não foi alterado.')
+  return conteudo
 
 
 class EmitenteHandler:
@@ -16,13 +27,14 @@ class EmitenteHandler:
     self._dirty = False
 
   def _carregar_emitentes(self) -> dict[str, str]:
-    if self.caminho_json.exists():
-      try:
-        with open(self.caminho_json, 'r', encoding='utf-8') as f:
-          return json.load(f)
-      except json.JSONDecodeError:
-        return {}
-    return {}
+    try:
+      with self.caminho_json.open('r', encoding='utf-8') as arquivo:
+        conteudo = json.load(arquivo)
+    except FileNotFoundError:
+      return {}
+    except (json.JSONDecodeError, UnicodeError) as erro:
+      raise ValueError('Catálogo de emitentes inválido: confira o JSON e a codificação UTF-8. O arquivo não foi alterado.') from erro
+    return _validar_catalogo(conteudo)
 
   def get_nome(self, emitente: str, solicitar_nome: Callable[[str], str] | None = None) -> str:
     key = upper_strip(emitente)
@@ -50,30 +62,22 @@ class EmitenteHandler:
     if not self._dirty:
       return
 
-    temp_path = self.caminho_json.with_suffix('.tmp')
+    conteudo = json.dumps(_validar_catalogo(self.emitentes_conhecidos), indent=4, ensure_ascii=False)
+    temporario: Path | None = None
     try:
-      with open(temp_path, 'w', encoding='utf-8') as f:
-        json.dump(self.emitentes_conhecidos, f, indent=4, ensure_ascii=False)
+      # O mesmo diretório permite substituir sem apagar o catálogo anterior.
+      with NamedTemporaryFile(mode='w', encoding='utf-8', dir=self.caminho_json.parent,
+                             prefix=f'.{self.caminho_json.stem}-', suffix='.tmp', delete=False) as arquivo:
+        temporario = Path(arquivo.name)
+        arquivo.write(conteudo)
+        arquivo.flush()
+        fsync(arquivo.fileno())
 
-      if self.caminho_json.exists():
-        self.caminho_json.unlink()
-
-      temp_path.rename(self.caminho_json)
+      # No Windows, o temporário precisa estar fechado antes da substituição.
+      temporario.replace(self.caminho_json)
       self._dirty = False
-
-    except OSError as e:
-      print(f"Erro de sistema operacional ao salvar arquivo de emitentes: {e}")
-      self._clear_temp_file(temp_path)
-      raise
-    except Exception as e:
-      print(f"Erro inesperado ao salvar emitentes_conhecidos.json: {e}")
-      self._clear_temp_file(temp_path)
-      raise
-
-  def _clear_temp_file(self, temp_path: Path) -> None:
-    try:
-      if temp_path.exists():
-        temp_path.unlink()
-    except OSError:
-      pass
-
+    except OSError as erro:
+      detalhe = (f' Temporário mantido para conferência: {temporario.name}; pode estar incompleto.'
+                 if temporario is not None else '')
+      raise RuntimeError('Não foi possível atualizar o catálogo de emitentes. '
+                         'O catálogo anterior não foi removido.' + detalhe) from erro

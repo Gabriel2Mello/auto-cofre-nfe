@@ -132,7 +132,7 @@ class TestFluxo(unittest.TestCase):
     pedido = Pedido.de_json(entrada(notas='123'))
     estado.dados['resultados'] = [{'nota': '123', 'situacao': 'Aguardando', 'detalhe': ''}]
     config = MagicMock(caminho_documento_entrada='.', cnpj={Empresa.MATRIZ: '00000000000000'})
-    def salvar(*args):
+    def salvar(*args, **kwargs):
       if falha_salvar:
         raise falha_salvar
       if parar_ao_salvar:

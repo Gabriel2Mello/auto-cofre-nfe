@@ -11,6 +11,7 @@ pefile==2024.8.26
 pyinstaller==6.21.0
 pyinstaller-hooks-contrib==2026.6
 pyparsing==3.3.2
+pypdf==6.21.1
 python-dateutil==2.9.0.post0
 pywin32-ctypes==0.2.3
 requests==2.34.2

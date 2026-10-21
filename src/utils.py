@@ -5,7 +5,6 @@ from time import sleep
 
 from unidecode import unidecode
 
-from src.config import Config
 from src.enums import TipoDocumento, Empresa
 
 FORBIDDEN_CHARS = r'\/*?:"><|'
@@ -44,25 +43,16 @@ def salvar_arquivos(
   ano: str,
   tipo: TipoDocumento,
   caminho_pasta: str,
-) -> None:
-  nome_limpo = f'{emitente} {nota}'
-  base_path = Path(caminho_pasta)
+  *,
+  cnpj_empresa: str,
+  mes_nota: int,
+  ano_nota: int,
+) -> str:
+  from src.gravacao_documentos import ContextoGravacao, gravar_conjunto
 
-  if not base_path.exists():
-    raise RuntimeError('CAMINHO_DOCUMENTO_ENTRADA não configurado.')
-
-  tipo_prefix = 'NF-e' if tipo == TipoDocumento.NFE else 'CT-e'
-  path_pdf = base_path / f'PDF {tipo_prefix}' / ano / empresa / Config.MONTHS[mes]
-  path_xml = base_path / f'XML - {tipo_prefix}' / ano / empresa / Config.MONTHS[mes]
-
-  path_pdf.mkdir(parents=True, exist_ok=True)
-  path_xml.mkdir(parents=True, exist_ok=True)
-
-  (path_pdf / f'{nome_limpo}.pdf').write_bytes(pdf)
-  (path_xml / f'{nome_limpo}.xml').write_bytes(xml)
-
-  if tipo == TipoDocumento.CTE:
-    (path_xml / f'{nome_limpo} copia.xml').write_bytes(xml)
+  contexto = ContextoGravacao(emitente, nota, empresa, mes, ano, tipo,
+                              cnpj_empresa, mes_nota, ano_nota)
+  return gravar_conjunto(xml, pdf, contexto, caminho_pasta)
 
 
 def set_app_id() -> None:

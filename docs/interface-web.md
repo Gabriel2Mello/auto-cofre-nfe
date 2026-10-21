@@ -2,7 +2,7 @@
 
 O navegador apresenta o painel; a automação continua neste computador, usando
 as variáveis de ambiente e a pasta de documentos da instalação. Não há hospedagem
-externa nem novas dependências. O modo console continua em `main.py`.
+externa. As dependências estão fixadas em `requirements.txt`, incluindo o leitor de PDF aprovado na E3. O modo console continua em `main.py`.
 
 ## Abrir
 
@@ -14,7 +14,7 @@ Abra `Abrir Cofre NFe.cmd` ou gere o atalho com:
 
 O atalho usa o ícone Nunes e aponta diretamente para `Cofre NFe.exe`, quando
 presente, ou para o `pythonw.exe` de `.venv` ou `..\.venv`, nessa ordem.
-Nesta instalação, o ambiente existente fica na pasta superior. O `.lnk` é
+Nesta instalação em `Projetos/Nunes`, o ambiente fica no `.venv` local. O `.lnk` é
 específico da máquina; gere novamente após mover a aplicação. O CMD também
 respeita essa ordem. Um executável antigo com outro nome não é usado.
 
@@ -40,15 +40,23 @@ armazena senhas e não consulta o portal ao abrir.
    novo, confirme o nome usado nos arquivos; esse nome é salvo na base local.
 4. Confira cada resultado. **Conferir sinalização** significa que XML/PDF foram
    salvos, mas a confirmação da marcação no portal falhou. Uma falha ao salvar
-   pode deixar arquivos parciais; confira a pasta antes de repetir. Não há
-   repetição automática de downloads ou sinalizações.
+   pode deixar uma publicação parcial identificada pelo ID da pendência; use
+   o guia de recuperação antes de repetir. Não há repetição automática de
+   downloads ou sinalizações.
 5. **Baixar resultado** exporta o lote para JSON. O painel mostra apenas a
    execução atual; iniciar outra substitui a lista. Não há histórico persistente
    de lotes nem retomada automática após encerrar.
 
+Desde a E3, downloads passam pela [validação de formato e identidade](../README.md#validação-dos-downloads--e3-20102026) antes do salvamento: conteúdo inválido, divergente ou sem identidade verificável resulta em **Erro**, sem gravação, métrica ou sinalização. PDF protegido, em imagem ou com identidade ambígua exige conferência manual no portal.
+
+Desde a E4, o [catálogo de emitentes](../README.md#catálogo-de-emitentes--e4-20102026) inválido impede o início do lote, com mensagem explícita. Uma falha ao salvar esse catálogo no encerramento preserva a versão anterior e informa o temporário disponível para conferência; os documentos já salvos continuam concluídos.
+
 O salvamento conserva as pastas e o comportamento existentes, incluindo a cópia
-XML de CT-e. Arquivos de mesmo nome podem ser substituídos. A sinalização no
-Cofre ocorre somente após o retorno bem-sucedido do salvamento dos arquivos.
+XML de CT-e. A E5 preserva arquivos existentes: uma colisão usa a chave fiscal
+no nome da nova baixa; conjuntos válidos da mesma chave são reaproveitados.
+O painel informa o nome usado. A sinalização no Cofre ocorre somente após a
+conferência do conjunto completo. Consulte o [guia de recuperação](gravacao-recuperavel.md)
+para listar pendências e concluir publicações interrompidas, com a ferramenta fechada.
 
 ## Parada e fechamento
 

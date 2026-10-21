@@ -1,4 +1,5 @@
 import sys
+from metricas_nunes import registrar_evento
 from time import sleep, perf_counter
 from requests import (
   RequestException,
@@ -66,9 +67,13 @@ def main() -> None:
           dados['empresa_id'],
           dados['chave'],
           tipo,
+          nota=nota,
+          cnpj_empresa=config.cnpj[empresa],
+          mes_nota=mes_nota,
+          ano_nota=ano_nota,
         )
         emitente = emitente_handler.get_nome(dados['emitente'])
-        salvar_arquivos(
+        nome_arquivo = salvar_arquivos(
           xml,
           pdf,
           emitente,
@@ -78,7 +83,13 @@ def main() -> None:
           str(ano_pasta),
           tipo,
           config.caminho_documento_entrada,
+          cnpj_empresa=config.cnpj[empresa],
+          mes_nota=mes_nota,
+          ano_nota=ano_nota,
         )
+        print(f'Arquivos salvos: {nome_arquivo}')
+        registrar_evento('documento_baixado', f"{empresa}:{tipo}:{dados['chave']}",
+                         nota, empresa=str(empresa), tipo=str(tipo))
         marcar_flag(session, dados['codigo_arquivo'])
         sleep(0.2)
 

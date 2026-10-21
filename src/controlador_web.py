@@ -18,6 +18,7 @@ from src.enums import Empresa, TipoDocumento
 from src.http_client import TimeoutScraper
 from src.parsers import DocumentoFiscal, extrair_empresas_href, resolve_emitente
 from src.utils import clean_name, salvar_arquivos
+from metricas_nunes import registrar_evento
 
 
 class ExecucaoInterrompida(Exception):
@@ -95,14 +96,20 @@ def executar_lote(pedido: Pedido, estado: 'EstadoInterface') -> None:
                                 pedido.ano_nota, estado.selecionar_emitente)
           nome = emitentes.get_nome(dados['emitente'], estado.solicitar_nome)
           estado.verificar_parada()
-          xml, pdf = baixar_arquivos(sessao, dados['empresa_id'], dados['chave'], pedido.tipo)
+          xml, pdf = baixar_arquivos(sessao, dados['empresa_id'], dados['chave'], pedido.tipo,
+                                    nota=nota, cnpj_empresa=config.cnpj[pedido.empresa],
+                                    mes_nota=pedido.mes_nota, ano_nota=pedido.ano_nota)
           estado.verificar_parada()
-          salvar_arquivos(xml, pdf, nome, nota, pedido.empresa, pedido.mes_pasta,
-                          str(pedido.ano_pasta), pedido.tipo, config.caminho_documento_entrada)
+          nome_arquivo = salvar_arquivos(xml, pdf, nome, nota, pedido.empresa, pedido.mes_pasta,
+                          str(pedido.ano_pasta), pedido.tipo, config.caminho_documento_entrada,
+                          cnpj_empresa=config.cnpj[pedido.empresa],
+                          mes_nota=pedido.mes_nota, ano_nota=pedido.ano_nota)
           salvo = True
+          registrar_evento('documento_baixado', f"{pedido.empresa}:{pedido.tipo}:{dados['chave']}",
+                           nota, empresa=str(pedido.empresa), tipo=str(pedido.tipo))
           # Concluir a sinalização da nota salva antes de atender uma parada.
           marcar_flag(sessao, dados['codigo_arquivo'])
-          estado.atualizar_nota(indice, 'Concluído', f'XML e PDF salvos · {nome} · sinalizado no portal.')
+          estado.atualizar_nota(indice, 'Concluído', f'XML e PDF salvos · {nome_arquivo} · sinalizado no portal.')
         except ExecucaoInterrompida:
           estado.atualizar_nota(indice, 'Não processado', 'Execução interrompida antes de salvar.')
           raise

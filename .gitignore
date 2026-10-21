@@ -3,5 +3,8 @@ __pycache__
 *.lnk
 emitentes_conhecidos.json
 emitentes_conhecidos.tmp
+.emitentes_conhecidos-*.tmp
+.cofre-gravacoes/
+.cofre-*.tmp
 build/
 dist/

@@ -51,6 +51,7 @@ def criar_servidor(estado: EstadoInterface) -> ServidorInterface:
     '/': (raiz / 'src/cofre.html', 'text/html; charset=utf-8'),
     '/cofre.css': (raiz / 'src/cofre.css', 'text/css; charset=utf-8'),
     '/cofre.js': (raiz / 'src/cofre.js', 'text/javascript; charset=utf-8'),
+    '/nunes-tema.js': (raiz / 'src/nunes-tema.js', 'text/javascript; charset=utf-8'),
     '/icons/icone.svg': (raiz / 'icons/icone.svg', 'image/svg+xml'),
     '/icons/icone-192.png': (raiz / 'icons/icone-192.png', 'image/png'),
     '/favicon.ico': (raiz / 'icons/icone.ico', 'image/x-icon'),

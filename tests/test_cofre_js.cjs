@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const elementos = new Map();
 function elemento() {
-  return {content:'teste', value:'2026-10', checked:true, disabled:false, hidden:false,
+  return {tagName:'BUTTON',setAttribute(){},content:'teste', value:'2026-10', checked:true, disabled:false, hidden:false,
     selectedOptions:[{textContent:'Matriz'}], dataset:{}, children:[], textContent:'',
     addEventListener(){}, append(...nos){this.children.push(...nos);},
     replaceChildren(...nos){this.children=nos;}, focus(){}, click(){}};
@@ -15,7 +15,7 @@ const eventos = new Map(), timers = new Map(), chamadas = [];
 let proximoTimer=0;
 let retorno={ativo:false,parando:false,status:'Pronto',resultados:[],pergunta:null,lote:null};
 const contexto = vm.createContext({
-  document:{documentElement:{dataset:{}},getElementById(id){if(!elementos.has(id))elementos.set(id,elemento());return elementos.get(id);},
+  document:{documentElement:{dataset:{},setAttribute(nome,valor){this.dataset.tema=valor;}},getElementById(id){if(!elementos.has(id))elementos.set(id,elemento());return elementos.get(id);},
     querySelector(){return elemento();},querySelectorAll(){return [];},createElement:elemento,createDocumentFragment:elemento},
   localStorage:{getItem(){return null;},setItem(){}},matchMedia(){return {matches:false,addEventListener(){}};},
   crypto:{randomUUID(){return 'pagina-teste';}},
@@ -30,6 +30,7 @@ const contexto = vm.createContext({
 });
 async function esvaziar(){for(let i=0;i<8;i++)await Promise.resolve();}
 async function testar(){
+  vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'../src/nunes-tema.js'),'utf8'),contexto);
   vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'../src/cofre.js'),'utf8'),contexto);
   await esvaziar();
   assert.equal(chamadas.filter(c=>c==='/api/estado').length,1);

@@ -112,7 +112,7 @@ foi conferido; nenhum documento real foi consultado, salvo ou sinalizado.
 Para empacotar a interface, use `cofre.py` como entrada e inclua os recursos:
 
 ```powershell
-..\.venv\Scripts\python.exe -m PyInstaller --noconfirm --onefile --windowed --name "Cofre NFe" --icon icons/icone.ico --add-data "src/cofre.html;src" --add-data "src/cofre.css;src" --add-data "src/cofre.js;src" --add-data "icons;icons" cofre.py
+..\.venv\Scripts\python.exe -m PyInstaller --noconfirm --onefile --windowed --name "Cofre NFe" --icon icons/icone.ico --add-data "src/cofre.html;src" --add-data "src/cofre.css;src" --add-data "src/cofre.js;src" --add-data "src/nunes-tema.js;src" --add-data "icons;icons" cofre.py
 ```
 
 O executável é produzido em `dist`; para os atalhos acima, coloque-o na pasta da

@@ -210,7 +210,7 @@ class TestHTTP(unittest.TestCase):
     self.assertIsNone(self.estado.worker)
 
   def test_recursos_e_datas_estao_disponiveis(self):
-    for caminho in ['/cofre.css', '/cofre.js', '/icons/icone.svg', '/favicon.ico']:
+    for caminho in ['/cofre.css', '/cofre.js', '/nunes-tema.js', '/icons/icone.svg', '/favicon.ico']:
       self.assertEqual(self.requisicao('GET', caminho)[0], 200)
     _, pagina = self.requisicao('GET', '/')
     self.assertNotIn(b'__TOKEN__', pagina)

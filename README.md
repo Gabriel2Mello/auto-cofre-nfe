@@ -14,6 +14,40 @@ em curso. A confirmação de saída usa o aviso nativo do navegador; a tela ocio
 não faz consultas periódicas de andamento. O modo console permanece em `main.py`.
 Veja [instalação, atalhos, funcionamento e validação](docs/interface-web.md).
 
+## Estatísticas com central local
+
+O cliente opcional `sincronizar_estatisticas.py` acompanha `cofre.py` (web) e
+`main.py` (console), lendo apenas as métricas já persistidas. Sem vínculo em
+`.local/central.json` e sem `NUNES_CENTRAL_CONFIG`, permanece desabilitado.
+O Cofre funciona individualmente, sem Hub ou central em execução.
+
+Um documento conta uma vez após gravar o conjunto XML/PDF; repetir a mesma
+baixa não soma novamente. Falhar a sinalização posterior no portal não desfaz
+a contagem. Se a central estiver indisponível, a automação continua normalmente;
+o envio é retomado a cada cinco segundos enquanto estiver aberta ou na próxima
+abertura. O fechamento tenta um último envio após aguardar o processamento.
+Não repita downloads para recuperar estatísticas.
+
+O vínculo é criado pela central com `central.py vincular --automacao '..\auto-cofre-nfe'`.
+Atualize/reinicie primeiro a central e reabra o Cofre para carregar o cliente.
+Consulte [preparo, consulta e recuperação](../nunes-estatisticas/README.md).
+O envio inclui histórico anterior ao vínculo, sem ler os documentos fiscais.
+Os eventos locais são preservados; confirmações ficam em
+`sincronizacao-cofre-nfe.sqlite3` junto à pasta de métricas existente.
+O Hub mostra totais de NF-e/CT-e e pendências em seção própria de Resultados.
+
+Para consultar ou enviar manualmente, nesta pasta:
+
+```powershell
+.\.venv\Scripts\python.exe sincronizar_estatisticas.py --aplicacao cofre-nfe --resumo
+.\.venv\Scripts\python.exe sincronizar_estatisticas.py --aplicacao cofre-nfe
+```
+
+O cliente tem fonte no Busca e Move; `contrato_estatisticas.py` tem fonte na
+central. As cópias distribuídas no Cofre, Busca e Move e Hub devem ser iguais.
+Não há imports de repositórios irmãos na execução, novas dependências, serviço
+Windows ou implantação no TS01 nesta etapa.
+
 ---
 
 ## ⚙️ Tecnologias e Bibliotecas Utilizadas

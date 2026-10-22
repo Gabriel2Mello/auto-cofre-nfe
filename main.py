@@ -1,5 +1,6 @@
 import sys
 from metricas_nunes import registrar_evento
+from sincronizar_estatisticas import Sincronizador
 from time import sleep, perf_counter
 from requests import (
   RequestException,
@@ -30,6 +31,11 @@ from src.core import (
 
 
 def main() -> None:
+  with Sincronizador(aplicacao='cofre-nfe'):
+    executar()
+
+
+def executar() -> None:
   if sys.platform == 'win32':
     set_app_id()
 

@@ -1,7 +1,9 @@
 """Abre o painel local. main.py continua disponível para uso pelo console."""
 
 import sys
+import logging
 from integracao_hub import IntegracaoLocal, executar_interface
+from sincronizar_estatisticas import Sincronizador
 
 
 def informar_falha(mensagem: str) -> None:
@@ -13,6 +15,11 @@ def informar_falha(mensagem: str) -> None:
 
 
 def main(publicacao: IntegracaoLocal) -> int:
+  with Sincronizador(aplicacao='cofre-nfe', relatar=logging.getLogger(__name__).info):
+    return executar_painel(publicacao)
+
+
+def executar_painel(publicacao: IntegracaoLocal) -> int:
   servidor = None
   estado = None
   try:

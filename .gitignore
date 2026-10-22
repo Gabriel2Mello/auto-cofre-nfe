@@ -1,5 +1,6 @@
 __pycache__
 .venv/
+.local/
 *.lnk
 emitentes_conhecidos.json
 emitentes_conhecidos.tmp

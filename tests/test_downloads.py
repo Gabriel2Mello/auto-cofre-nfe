@@ -19,6 +19,7 @@ class TestDownloads(unittest.TestCase):
   def executar(self, modo='web', xml=None, pdf=None, tipo=TipoDocumento.NFE,
                status_xml=200, status_pdf=200):
     with TemporaryDirectory() as temporario, ExitStack() as pilha:
+      pilha.enter_context(patch('sincronizar_estatisticas.ler_configuracao', return_value=None))
       raiz = Path(temporario)
       prefixo = 'src.controlador_web' if modo == 'web' else 'main'
       config = Mock(caminho_documento_entrada=str(raiz), cnpj={Empresa.MATRIZ: CNPJ_EMPRESA})

@@ -12,6 +12,7 @@ from src.enums import Empresa, TipoDocumento
 
 class TestMetricasIntegracao(unittest.TestCase):
     def setUp(self):
+        self.enterContext(patch('sincronizar_estatisticas.ler_configuracao', return_value=None))
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         ambiente = patch.dict(os.environ, {'NUNES_METRICAS_DADOS': self.temp.name})

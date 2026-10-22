@@ -4,12 +4,19 @@ const token=document.querySelector('meta[name="cofre-token"]').content;
 const headers={Authorization:'Bearer '+token,'Content-Type':'application/json','X-Cofre-Pagina':crypto.randomUUID()};
 let estado=null, encerrado=false, saindo=false, presenca=null, ciclo=0, timer=null, assinatura='', perguntaId='';
 
-function temaAtual(){return document.documentElement.dataset.tema||(matchMedia('(prefers-color-scheme:dark)').matches?'escuro':'claro');}
+function temaAtual(){return document.documentElement.dataset.tema||'escuro';}
 function rotuloTema(){el('tema').textContent=temaAtual()==='escuro'?'Tema claro':'Tema escuro';}
-try{const tema=localStorage.getItem('cofre-tema');if(['claro','escuro'].includes(tema))document.documentElement.dataset.tema=tema;}catch{}
+function salvarTema(tema){
+  try{document.cookie=`cofre-tema=${tema}; Max-Age=31536000; Path=/; SameSite=Strict`;}catch{}
+  try{localStorage.setItem('cofre-tema',tema);}catch{}
+}
+let temaSalvo=null;
+try{const salvo=document.cookie.split(';').map(item=>item.trim()).find(item=>item.startsWith('cofre-tema='))?.slice('cofre-tema='.length);if(['claro','escuro'].includes(salvo))temaSalvo=salvo;}catch{}
+try{if(!temaSalvo){const salvo=localStorage.getItem('cofre-tema');if(['claro','escuro'].includes(salvo))temaSalvo=salvo;}}catch{}
+document.documentElement.dataset.tema=temaSalvo||'escuro';
+if(temaSalvo)salvarTema(temaSalvo);
 rotuloTema();
-el('tema').onclick=()=>{const tema=temaAtual()==='escuro'?'claro':'escuro';document.documentElement.dataset.tema=tema;try{localStorage.setItem('cofre-tema',tema);}catch{}rotuloTema();};
-matchMedia('(prefers-color-scheme:dark)').addEventListener('change',rotuloTema);
+el('tema').onclick=()=>{const tema=temaAtual()==='escuro'?'claro':'escuro';document.documentElement.dataset.tema=tema;salvarTema(tema);rotuloTema();};
 
 async function api(caminho,dados){
   const r=await fetch(caminho,{method:dados===undefined?'GET':'POST',headers,body:dados===undefined?undefined:JSON.stringify(dados)});

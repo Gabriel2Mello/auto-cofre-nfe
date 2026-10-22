@@ -21,6 +21,9 @@ class TestGravacaoDocumentos(unittest.TestCase):
     self.temporario = Path(self.enterContext(TemporaryDirectory()))
     self.base = self.temporario / 'documentos'
     self.base.mkdir()
+    self.projeto = self.temporario / 'projeto'
+    self.projeto.mkdir()
+    self.enterContext(patch.object(gravacao, 'RAIZ_PROJETO', self.projeto))
     self.contexto = gravacao.ContextoGravacao('SINTETICO', '123', Empresa.MATRIZ, 10, '2026',
                                             TipoDocumento.NFE, CNPJ_EMPRESA, 10, 2026)
     self.enterContext(patch('builtins.print'))
@@ -59,7 +62,77 @@ class TestGravacaoDocumentos(unittest.TestCase):
     return gravacao.gravar_conjunto(xml, pdf, replace(self.contexto, tipo=tipo), base or self.base)
 
   def manifesto(self, base, identificador):
-    return base / '.cofre-gravacoes' / identificador / 'manifesto.json'
+    return gravacao._pasta_registro(base.resolve(), identificador) / 'manifesto.json'
+
+  def test_registros_ficam_no_projeto_independente_do_diretorio_atual(self):
+    anterior = Path.cwd()
+    try:
+      os.chdir(self.base)
+      self.salvar()
+    finally:
+      os.chdir(anterior)
+    registros = list((self.projeto / '.cofre-gravacoes').rglob('manifesto.json'))
+    self.assertEqual(len(registros), 1)
+    self.assertFalse((self.base / '.cofre-gravacoes').exists())
+    self.assertEqual(gravacao.listar_gravacoes(self.base)[0]['estado'], 'concluido')
+
+  def test_pendencias_de_destinos_distintos_nao_se_misturam(self):
+    identificador = self.pendencia()
+    outra_base = self.temporario / 'outros-documentos'
+    outra_base.mkdir()
+    self.assertEqual(gravacao.listar_gravacoes(outra_base), [])
+    with self.assertRaises(ValueError):
+      gravacao.recuperar_gravacao(outra_base, identificador)
+    self.salvar(outra_base)
+    with self.assertRaises(gravacao.GravacaoPendente):
+      self.salvar()
+
+  def registro_legado(self):
+    identificador = self.pendencia()
+    local = self.manifesto(self.base, identificador).parent
+    legado = self.base / '.cofre-gravacoes' / identificador
+    legado.parent.mkdir()
+    local.rename(legado)
+    return identificador, legado / 'manifesto.json'
+
+  def test_recupera_legado_gravando_estado_somente_no_projeto(self):
+    identificador, legado = self.registro_legado()
+    antes = legado.read_bytes()
+    self.assertEqual(gravacao.listar_gravacoes(self.base)[0]['estado'], 'pronto')
+    self.assertEqual(legado.read_bytes(), antes)
+    with self.assertRaises(gravacao.GravacaoPendente):
+      self.salvar()
+    self.assertEqual(gravacao.recuperar_gravacao(self.base, identificador), 'SINTETICO 123')
+    self.assertEqual(legado.read_bytes(), antes)
+    self.assertEqual(json.loads(self.manifesto(self.base, identificador).read_text())['estado'], 'concluido')
+    self.assertEqual([r['estado'] for r in gravacao.listar_gravacoes(self.base)], ['concluido'])
+    self.assertEqual(gravacao.recuperar_gravacao(self.base, identificador), 'SINTETICO 123')
+
+  def test_abandona_legado_sem_alterar_registro_no_compartilhamento(self):
+    identificador, legado = self.registro_legado()
+    antes = legado.read_bytes()
+    gravacao.abandonar_preparacao(self.base, identificador)
+    self.assertEqual(legado.read_bytes(), antes)
+    self.assertEqual([r['estado'] for r in gravacao.listar_gravacoes(self.base)], ['abandonado'])
+    self.assertEqual(self.salvar(), 'SINTETICO 123')
+
+  def test_falha_no_registro_local_nao_cria_registro_no_compartilhamento(self):
+    (self.projeto / '.cofre-gravacoes').write_bytes(b'OCUPADO')
+    with self.assertRaises(gravacao.GravacaoPendente):
+      self.salvar()
+    self.assertFalse((self.base / '.cofre-gravacoes').exists())
+    self.assertFalse(any(p.exists() for p in self.destinos()))
+
+  def test_registro_local_corrompido_nao_e_ocultado_pelo_legado(self):
+    identificador, legado = self.registro_legado()
+    gravacao.recuperar_gravacao(self.base, identificador)
+    local = self.manifesto(self.base, identificador)
+    local.write_bytes(b'{')
+    self.assertEqual(gravacao.listar_gravacoes(self.base)[0]['estado'], 'invalido')
+    with self.assertRaises(ValueError):
+      self.salvar()
+    self.assertTrue(legado.exists())
+    self.assertEqual(local.read_bytes(), b'{')
 
   def test_publica_conjunto_completo_e_copia_cte(self):
     for tipo in TipoDocumento:

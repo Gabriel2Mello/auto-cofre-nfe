@@ -13,6 +13,9 @@ from src.enums import Empresa, TipoDocumento
 from src.validacao_documentos import DocumentoInvalido, validar_pdf, validar_xml
 
 
+RAIZ_PROJETO = Path(__file__).resolve().parents[1]
+
+
 @dataclass(frozen=True)
 class ContextoGravacao:
   emitente: str
@@ -59,7 +62,7 @@ def _base(caminho: str | Path) -> Path:
 def _seguro(base: Path, caminho: Path) -> Path:
   resolvido = caminho.resolve()
   if not resolvido.is_relative_to(base):
-    raise ValueError('Caminho de gravação fora da pasta de documentos.')
+    raise ValueError('Caminho de gravação fora da pasta permitida.')
   return resolvido
 
 
@@ -94,6 +97,7 @@ def _gravar_bytes(caminho: Path, conteudo: bytes) -> None:
 
 
 def _salvar_registro(pasta: Path, registro: dict) -> None:
+  pasta.mkdir(parents=True, exist_ok=True)
   temporario = pasta / f'manifesto-{uuid4().hex}.tmp'
   _gravar_bytes(temporario, json.dumps(registro, ensure_ascii=False, indent=2).encode('utf-8'))
   temporario.replace(pasta / 'manifesto.json')
@@ -104,15 +108,26 @@ def _id(identificador: str) -> None:
     raise ValueError('Identificador de gravação inválido.')
 
 
+def _pasta_registros(base: Path) -> Path:
+  # Separa destinos fiscais sem depender da pasta de trabalho do iniciador.
+  raiz = RAIZ_PROJETO.resolve()
+  destino = sha256(os.path.normcase(str(base)).encode('utf-8')).hexdigest()
+  return _seguro(raiz, raiz / '.cofre-gravacoes' / destino)
+
+
 def _pasta_registro(base: Path, identificador: str) -> Path:
   _id(identificador)
-  return _seguro(base, base / '.cofre-gravacoes' / identificador)
+  pasta = _pasta_registros(base)
+  return _seguro(pasta, pasta / identificador)
 
 
 def _carregar(base: Path, identificador: str) -> tuple[dict, ContextoGravacao]:
   pasta = _pasta_registro(base, identificador)
   try:
-    registro = json.loads(_seguro(base, pasta / 'manifesto.json').read_text(encoding='utf-8'))
+    if not pasta.exists():
+      # Compatibilidade somente de leitura com registros anteriores no OneDrive.
+      pasta = _seguro(base, base / '.cofre-gravacoes' / identificador)
+    registro = json.loads(_seguro(pasta, pasta / 'manifesto.json').read_text(encoding='utf-8'))
     if (not isinstance(registro, dict) or registro.get('versao') != 1 or registro.get('id') != identificador
         or registro.get('estado') not in ('preparando', 'pronto', 'concluido', 'abandonado')
         or not isinstance(registro.get('contexto'), dict)):
@@ -138,19 +153,19 @@ def _carregar(base: Path, identificador: str) -> tuple[dict, ContextoGravacao]:
 
 def listar_gravacoes(caminho: str | Path) -> list[dict]:
   base = _base(caminho)
-  pasta = _seguro(base, base / '.cofre-gravacoes')
-  if not pasta.exists():
-    return []
+  pastas = (_pasta_registros(base), _seguro(base, base / '.cofre-gravacoes'))
+  identificadores = set()
+  for pasta in pastas:
+    if pasta.exists():
+      identificadores.update(entrada.name for entrada in pasta.iterdir() if entrada.is_dir())
   resultados = []
-  for entrada in sorted(pasta.iterdir()):
-    if not entrada.is_dir():
-      continue
+  for identificador in sorted(identificadores):
     try:
-      registro, contexto = _carregar(base, entrada.name)
-      resultados.append({'id': entrada.name, 'estado': registro['estado'], 'nome': registro['nome'],
+      registro, contexto = _carregar(base, identificador)
+      resultados.append({'id': identificador, 'estado': registro['estado'], 'nome': registro['nome'],
                          'empresa': str(contexto.empresa), 'tipo': str(contexto.tipo)})
     except ValueError as erro:
-      resultados.append({'id': entrada.name, 'estado': 'invalido', 'detalhe': str(erro)})
+      resultados.append({'id': identificador, 'estado': 'invalido', 'detalhe': str(erro)})
   return resultados
 
 

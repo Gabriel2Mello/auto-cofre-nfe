@@ -21,6 +21,7 @@ class TestDownloads(unittest.TestCase):
     with TemporaryDirectory() as temporario, ExitStack() as pilha:
       pilha.enter_context(patch('sincronizar_estatisticas.ler_configuracao', return_value=None))
       raiz = Path(temporario)
+      pilha.enter_context(patch('src.gravacao_documentos.RAIZ_PROJETO', raiz / 'projeto'))
       prefixo = 'src.controlador_web' if modo == 'web' else 'main'
       config = Mock(caminho_documento_entrada=str(raiz), cnpj={Empresa.MATRIZ: CNPJ_EMPRESA})
       pilha.enter_context(patch(prefixo + '.Config', return_value=config))

@@ -23,10 +23,23 @@ continua baseada em empresa, tipo e identificador do portal, conforme a E3.
 
 ## Preparação e publicação
 
-Cada gravação recebe um ID e um registro em
-`CAMINHO_BASE/.cofre-gravacoes/ID/manifesto.json`. O registro contém contexto
+Desde 21/10/2026, cada gravação recebe um ID e um registro na raiz do projeto:
+`auto-cofre-nfe/.cofre-gravacoes/DESTINO/ID/manifesto.json`. `DESTINO` é o hash
+do caminho absoluto normalizado da pasta de documentos, separando pendências
+de bases distintas. A localização independe da pasta atual do terminal ou Hub.
+Não é criada uma pasta `.cofre-gravacoes` na área compartilhada dos documentos.
+O registro contém contexto
 fiscal, chave, nomes e hashes SHA-256; não contém senha ou sessão do portal.
-Inclua essa pasta e os temporários no backup da área de documentos.
+Inclua a pasta local `.cofre-gravacoes` no backup, além da área de documentos
+com seus temporários. Ao mudar o caminho absoluto da base, o hash muda; preserve
+a associação da subpasta de registros com a base original antes de recuperar.
+
+Registros antigos em `CAMINHO_BASE/.cofre-gravacoes` continuam disponíveis para
+listagem e recuperação, sem criação ou atualização de registros nesse local.
+Ao concluir ou abandonar uma pendência antiga, o estado atualizado fica somente
+no projeto e passa a prevalecer na listagem. Os registros antigos são preservados;
+não há remoção ou movimentação automática na pasta compartilhada. Mantenha o
+Cofre anterior encerrado e reabra a ferramenta para carregar esta alteração.
 
 Os arquivos completos são preparados como `.cofre-ID-pdf.tmp`, `-xml.tmp` e
 `-copia.tmp` nos próprios diretórios de destino. Escritas usam criação exclusiva,
@@ -54,7 +67,8 @@ configurada para os documentos e `ID` pelo identificador da pendência.
 .\.venv\Scripts\python.exe recuperar_documentos.py --pasta "CAMINHO_BASE" --concluir ID
 ```
 
-A listagem é somente leitura dos registros. Os estados são:
+A listagem é somente leitura dos registros locais e antigos. `--pasta` continua
+indicando a base dos documentos, não a pasta local de registros. Os estados são:
 
 | Estado | Significado e ação |
 |---|---|
@@ -86,6 +100,14 @@ download, reaproveita o conjunto íntegro e executa a métrica/sinalização usu
 Falha somente na sinalização continua aparecendo como **Conferir sinalização**.
 
 ## Validação e limites
+
+Na mudança de localização de 21/10/2026, passaram os **55 testes Python** do
+Cofre, com presença/métricas isoladas e documentos sintéticos. As seis novas
+regressões cobrem gravação na raiz do projeto a partir de outro diretório,
+separação de bases, recuperação/abandono de registros antigos sem alterá-los,
+falha no armazenamento local sem criar registro compartilhado e corrupção
+local sem recorrer silenciosamente ao registro antigo. Nenhum registro real
+foi movido ou removido.
 
 Passaram **49 testes Python e um JavaScript**, incluindo **17 novos testes**
 da E5. Cobrem colisões, falhas na preparação e antes/depois da publicação de

@@ -14,6 +14,21 @@ em curso. A confirmação de saída usa o aviso nativo do navegador; a tela ocio
 não faz consultas periódicas de andamento. O modo console permanece em `main.py`.
 Veja [instalação, atalhos, funcionamento e validação](docs/interface-web.md).
 
+## Diagnóstico de abertura
+
+A abertura registra importações internas, identidade no Windows, estado,
+servidor, sincronizador e publicação em `logs/cofre-nfe-abertura.log`, na
+pasta de presença da sessão Nunes. Reabra a aplicação para carregar a mudança.
+Resultados, localização e limites: [Tempos por etapa](../nunes-hub/TEMPOS_ABERTURA.md).
+
+O painel carrega as bibliotecas de download e validação somente ao iniciar
+a primeira operação. Isso reduz o tempo para mostrar a interface e transfere
+parte da espera para esse primeiro lote. As dependências de `requirements.txt`
+continuam necessárias para operar; sua ausência interrompe antes do download.
+O executor web fica em `src/execucao_web.py`, chamado pelo controlador quando
+um lote é iniciado. Feche e reabra para carregar a mudança; executáveis antigos
+precisam ser reconstruídos.
+
 ## Estatísticas com central local
 
 O cliente opcional `sincronizar_estatisticas.py` acompanha `cofre.py` (web) e
@@ -98,6 +113,13 @@ Validação: **21 testes Python e um JavaScript aprovados**, com 70 cenários no
 Nomes livres conservam o padrão atual. Conjuntos válidos da mesma chave são reaproveitados; colisões preservam os arquivos anteriores e acrescentam a chave fiscal aos nomes da nova baixa. XML, PDF e cópia CT-e são preparados e conferidos antes da publicação. Falhas deixam uma pendência identificada, sem métrica ou sinalização.
 
 O [guia de gravação e recuperação](docs/gravacao-recuperavel.md) explica os estados e o comando `recuperar_documentos.py` para listar, concluir ou abandonar preparações sem arquivos publicados. A recuperação atua somente no disco; uma nova baixa normal reaproveita o conjunto recuperado e executa métrica/sinalização.
+
+Desde 21/10/2026, os registros ficam em `.cofre-gravacoes` na raiz deste projeto,
+separados por destino fiscal, sem criar essa pasta no OneDrive/área compartilhada.
+Pendências antigas continuam legíveis; sua recuperação grava o novo estado somente
+no projeto e preserva o registro antigo. Os temporários `.cofre-*.tmp` continuam
+nos diretórios dos documentos para publicação segura. Inclua registros locais e
+documentos no backup e reabra o Cofre para carregar a mudança.
 
 **49 testes Python e um JavaScript aprovados**, incluindo 17 novos testes da E5 e recuperação CT-e em outro processo. Código alterado e testes novos/download passaram na tipagem; permanecem 11 pendências globais anteriores. Sem novos pacotes e sem acesso a documentos, catálogo ou portal reais. Reabra a ferramenta Python para carregar a E5; executáveis precisam ser reconstruídos.
 

@@ -22,7 +22,7 @@ class TestDownloads(unittest.TestCase):
       pilha.enter_context(patch('sincronizar_estatisticas.ler_configuracao', return_value=None))
       raiz = Path(temporario)
       pilha.enter_context(patch('src.gravacao_documentos.RAIZ_PROJETO', raiz / 'projeto'))
-      prefixo = 'src.controlador_web' if modo == 'web' else 'main'
+      prefixo = 'src.execucao_web' if modo == 'web' else 'main'
       config = Mock(caminho_documento_entrada=str(raiz), cnpj={Empresa.MATRIZ: CNPJ_EMPRESA})
       pilha.enter_context(patch(prefixo + '.Config', return_value=config))
       for nome in ('login', 'extrair_empresas_href', 'trocar_empresa', 'ver_arquivos'):

@@ -101,15 +101,15 @@ class TestFluxo(unittest.TestCase):
 
     with tempfile.TemporaryDirectory() as pasta:
       config.caminho_documento_entrada = pasta
-      with patch('src.controlador_web.Config', return_value=config), \
-           patch('src.controlador_web.TimeoutScraper'), patch('src.controlador_web.login', return_value=''), \
-           patch('src.controlador_web.extrair_empresas_href', return_value={}), \
-           patch('src.controlador_web.trocar_empresa'), patch('src.controlador_web.ver_arquivos'), \
-           patch('src.controlador_web.processar_nota', side_effect=consultar), \
-           patch('src.controlador_web.baixar_arquivos', return_value=(b'<xml/>', b'%PDF')), \
-           patch('src.controlador_web.EmitenteHandler') as handler, \
-           patch('src.controlador_web.salvar_arquivos') as salvar, \
-           patch('src.controlador_web.marcar_flag') as flag:
+      with patch('src.execucao_web.Config', return_value=config), \
+           patch('src.execucao_web.TimeoutScraper'), patch('src.execucao_web.login', return_value=''), \
+           patch('src.execucao_web.extrair_empresas_href', return_value={}), \
+           patch('src.execucao_web.trocar_empresa'), patch('src.execucao_web.ver_arquivos'), \
+           patch('src.execucao_web.processar_nota', side_effect=consultar), \
+           patch('src.execucao_web.baixar_arquivos', return_value=(b'<xml/>', b'%PDF')), \
+           patch('src.execucao_web.EmitenteHandler') as handler, \
+           patch('src.execucao_web.salvar_arquivos') as salvar, \
+           patch('src.execucao_web.marcar_flag') as flag:
         handler.return_value.get_nome.side_effect = lambda emitente, perguntar: perguntar(emitente)
         estado = EstadoInterface()
         estado.iniciar(entrada(notas='00123'))
@@ -137,16 +137,16 @@ class TestFluxo(unittest.TestCase):
         raise falha_salvar
       if parar_ao_salvar:
         estado.parada.set()
-    with patch('src.controlador_web.Config', return_value=config), \
-         patch('src.controlador_web.TimeoutScraper'), patch('src.controlador_web.login', return_value=''), \
-         patch('src.controlador_web.extrair_empresas_href', return_value={}), \
-         patch('src.controlador_web.trocar_empresa'), patch('src.controlador_web.ver_arquivos'), \
-         patch('src.controlador_web.processar_nota', return_value={
+    with patch('src.execucao_web.Config', return_value=config), \
+         patch('src.execucao_web.TimeoutScraper'), patch('src.execucao_web.login', return_value=''), \
+         patch('src.execucao_web.extrair_empresas_href', return_value={}), \
+         patch('src.execucao_web.trocar_empresa'), patch('src.execucao_web.ver_arquivos'), \
+         patch('src.execucao_web.processar_nota', return_value={
            'emitente': 'TESTE', 'empresa_id': '1', 'chave': 'teste', 'codigo_arquivo': '1'}), \
-         patch('src.controlador_web.baixar_arquivos', return_value=(b'<xml/>', b'%PDF')), \
-         patch('src.controlador_web.EmitenteHandler'), \
-         patch('src.controlador_web.salvar_arquivos', side_effect=salvar), \
-         patch('src.controlador_web.marcar_flag', side_effect=falha_flag) as flag:
+         patch('src.execucao_web.baixar_arquivos', return_value=(b'<xml/>', b'%PDF')), \
+         patch('src.execucao_web.EmitenteHandler'), \
+         patch('src.execucao_web.salvar_arquivos', side_effect=salvar), \
+         patch('src.execucao_web.marcar_flag', side_effect=falha_flag) as flag:
       executar_lote(pedido, estado)
     return estado.snapshot()['resultados'][0], flag
 

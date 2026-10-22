@@ -2,7 +2,8 @@
 
 import sys
 import logging
-from integracao_hub import IntegracaoLocal, executar_interface
+from contextlib import ExitStack
+from integracao_hub import IntegracaoLocal, MedidorAbertura, executar_interface
 from sincronizar_estatisticas import Sincronizador
 
 
@@ -15,23 +16,31 @@ def informar_falha(mensagem: str) -> None:
 
 
 def main(publicacao: IntegracaoLocal) -> int:
-  with Sincronizador(aplicacao='cofre-nfe', relatar=logging.getLogger(__name__).info):
-    return executar_painel(publicacao)
+  with MedidorAbertura('cofre-nfe') as medidor, ExitStack() as recursos:
+    with medidor.etapa('sincronizacao'):
+      recursos.enter_context(Sincronizador(aplicacao='cofre-nfe', relatar=logging.getLogger(__name__).info))
+    return executar_painel(publicacao, medidor)
 
 
-def executar_painel(publicacao: IntegracaoLocal) -> int:
+def executar_painel(publicacao: IntegracaoLocal, medidor: MedidorAbertura | None = None) -> int:
+  medidor = medidor or MedidorAbertura('cofre-nfe')
   servidor = None
   estado = None
   try:
-    from src.controlador_web import EstadoInterface
-    from src.interface_web import criar_servidor
-    from src.utils import set_app_id
-    set_app_id()
-    estado = EstadoInterface()
-    servidor = criar_servidor(estado)
+    with medidor.etapa('importacoes'):
+      from src.controlador_web import EstadoInterface
+      from src.interface_web import criar_servidor
+      from src.utils import set_app_id
+    with medidor.etapa('identidade_windows'):
+      set_app_id()
+    with medidor.etapa('estado'):
+      estado = EstadoInterface()
+    with medidor.etapa('servidor_local'):
+      servidor = criar_servidor(estado)
     servidor_ativo, estado_ativo = servidor, estado
-    publicacao.publicar(servidor, estado.encerrar,
-      lambda: {'encerrando': estado_ativo.encerrando, 'paginas': len(servidor_ativo.paginas)})
+    with medidor.etapa('publicacao'):
+      publicacao.publicar(servidor, estado.encerrar,
+        lambda: {'encerrando': estado_ativo.encerrando, 'paginas': len(servidor_ativo.paginas)})
     servidor.serve_forever()
   except KeyboardInterrupt:
     pass

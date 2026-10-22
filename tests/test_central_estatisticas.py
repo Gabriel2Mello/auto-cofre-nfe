@@ -93,7 +93,7 @@ class TestEstatisticasCofre(unittest.TestCase):
             encerrar_original()
             concluir.set()
         with ExitStack() as pilha:
-            self.simular('src.controlador_web', pilha, falha_salvar=salvar)
+            self.simular('src.execucao_web', pilha, falha_salvar=salvar)
             pilha.enter_context(patch('src.utils.set_app_id'))
             pilha.enter_context(patch('src.controlador_web.EstadoInterface', return_value=estado))
             pilha.enter_context(patch.object(estado, 'encerrar', side_effect=encerrar))

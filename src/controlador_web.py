@@ -1,24 +1,19 @@
 """Execução local com decisões explícitas do operador, sem entrada de console."""
+from __future__ import annotations
 
 from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import dataclass
 from datetime import date
-from pathlib import Path
 from threading import Condition, Event, Thread
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
-from bs4 import BeautifulSoup
-
-from src.auth import login
-from src.config import Config
-from src.core import baixar_arquivos, marcar_flag, processar_nota, trocar_empresa, ver_arquivos
-from src.emitente_handler import EmitenteHandler
 from src.enums import Empresa, TipoDocumento
-from src.http_client import TimeoutScraper
-from src.parsers import DocumentoFiscal, extrair_empresas_href, resolve_emitente
-from src.utils import clean_name, salvar_arquivos
-from metricas_nunes import registrar_evento
+from src.utils import clean_name
+
+if TYPE_CHECKING:
+  from src.parsers import DocumentoFiscal
 
 
 class ExecucaoInterrompida(Exception):
@@ -76,54 +71,14 @@ class Pedido:
 
 
 def executar_lote(pedido: Pedido, estado: 'EstadoInterface') -> None:
-  config = Config()
-  if not Path(config.caminho_documento_entrada).is_dir():
-    raise ValueError('A pasta CAMINHO_DOCUMENTO_ENTRADA está indisponível. Confira o acesso à rede.')
-  emitentes = EmitenteHandler()
-  try:
-    with TimeoutScraper() as sessao:
-      estado.verificar_parada()
-      estado.informar('Conectando ao Cofre NF-e…')
-      html = login(sessao, config.senha_cofre, config.cnpj[Empresa.MATRIZ])
-      trocar_empresa(sessao, pedido.empresa, extrair_empresas_href(html), config.cnpj[pedido.empresa])
-      ver_arquivos(sessao, pedido.tipo)
-      for indice, nota in enumerate(pedido.notas):
-        estado.verificar_parada()
-        estado.atualizar_nota(indice, 'Processando', 'Consultando o documento no portal.')
-        salvo = False
-        try:
-          dados = processar_nota(sessao, nota, pedido.tipo, pedido.mes_nota,
-                                pedido.ano_nota, estado.selecionar_emitente)
-          nome = emitentes.get_nome(dados['emitente'], estado.solicitar_nome)
-          estado.verificar_parada()
-          xml, pdf = baixar_arquivos(sessao, dados['empresa_id'], dados['chave'], pedido.tipo,
-                                    nota=nota, cnpj_empresa=config.cnpj[pedido.empresa],
-                                    mes_nota=pedido.mes_nota, ano_nota=pedido.ano_nota)
-          estado.verificar_parada()
-          nome_arquivo = salvar_arquivos(xml, pdf, nome, nota, pedido.empresa, pedido.mes_pasta,
-                          str(pedido.ano_pasta), pedido.tipo, config.caminho_documento_entrada,
-                          cnpj_empresa=config.cnpj[pedido.empresa],
-                          mes_nota=pedido.mes_nota, ano_nota=pedido.ano_nota)
-          salvo = True
-          registrar_evento('documento_baixado', f"{pedido.empresa}:{pedido.tipo}:{dados['chave']}",
-                           nota, empresa=str(pedido.empresa), tipo=str(pedido.tipo))
-          # Concluir a sinalização da nota salva antes de atender uma parada.
-          marcar_flag(sessao, dados['codigo_arquivo'])
-          estado.atualizar_nota(indice, 'Concluído', f'XML e PDF salvos · {nome_arquivo} · sinalizado no portal.')
-        except ExecucaoInterrompida:
-          estado.atualizar_nota(indice, 'Não processado', 'Execução interrompida antes de salvar.')
-          raise
-        except Exception as erro:
-          situacao = 'Conferir sinalização' if salvo else 'Erro'
-          detalhe = ('XML e PDF salvos; não foi possível confirmar a sinalização no portal. '
-                     if salvo else 'O documento não foi concluído. Confira os arquivos antes de repetir. ')
-          estado.atualizar_nota(indice, situacao, detalhe + mensagem_erro(erro))
-  finally:
-    emitentes.close()
+  from src.execucao_web import executar_lote as executar
+  executar(pedido, estado)
 
 
 def mensagem_erro(erro: Exception) -> str:
   # Exceções HTTP podem carregar URL com identificadores; não expor resposta ou credenciais.
+  if isinstance(erro, ImportError):
+    return 'Faltam dependências para executar. Confira a instalação de requirements.txt e reabra a aplicação.'
   from requests import RequestException, Timeout
   if isinstance(erro, Timeout):
     return 'O portal demorou a responder. Confira a conexão antes de tentar novamente.'
@@ -243,6 +198,8 @@ class EstadoInterface:
       self.condicao.notify_all()
 
   def selecionar_emitente(self, linhas: list[DocumentoFiscal]) -> DocumentoFiscal:
+    from bs4 import BeautifulSoup
+    from src.parsers import resolve_emitente
     opcoes = [{'nome': resolve_emitente(l.emitente_html),
                'data': BeautifulSoup(l.data_emissao_html, 'lxml').get_text(' ', strip=True),
                'valor': BeautifulSoup(l.valor_total, 'lxml').get_text(' ', strip=True)} for l in linhas]

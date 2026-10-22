@@ -37,7 +37,7 @@ class TestMetricasIntegracao(unittest.TestCase):
                                   'competencia': '2026-10', 'pasta': '2026-10'})
         for falha_salvar, falha_flag, esperado in [(OSError('sintetico'), None, 0), (None, RuntimeError('sintetico'), 1), (None, None, 1)]:
             with self.subTest(esperado=esperado), ExitStack() as pilha:
-                self.simular('src.controlador_web', pilha, falha_salvar, falha_flag)
+                self.simular('src.execucao_web', pilha, falha_salvar, falha_flag)
                 estado = EstadoInterface()
                 estado.dados['resultados'] = [{'nota': '123', 'situacao': 'Aguardando', 'detalhe': ''}]
                 executar_lote(pedido, estado)

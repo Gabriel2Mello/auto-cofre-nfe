@@ -53,3 +53,21 @@ class TestMetricasIntegracao(unittest.TestCase):
             main.main()
             main.main()
         self.assertEqual(self.total(), 1)
+
+    def test_console_retorna_falha_inclusive_quando_arquivos_foram_salvos(self):
+        for falha_salvar, falha_flag in ((OSError('disco sintético'), None),
+                                       (None, RuntimeError('sinalização sintética'))):
+            with self.subTest(falha_salvar=falha_salvar), ExitStack() as pilha:
+                self.simular('main', pilha, falha_salvar, falha_flag)
+                for nome in ('set_app_id', 'sleep', 'pause', 'handle_error'):
+                    pilha.enter_context(patch('main.' + nome))
+                pilha.enter_context(patch('main.input_dados', return_value=(['123', '456'], Empresa.MATRIZ, 10, 10, 2026, 2026, TipoDocumento.NFE)))
+                self.assertEqual(main.main(), 1)
+
+    def test_console_sem_falhas_retorna_zero(self):
+        with ExitStack() as pilha:
+            self.simular('main', pilha)
+            for nome in ('set_app_id', 'sleep', 'pause'):
+                pilha.enter_context(patch('main.' + nome))
+            pilha.enter_context(patch('main.input_dados', return_value=(['123'], Empresa.MATRIZ, 10, 10, 2026, 2026, TipoDocumento.NFE)))
+            self.assertEqual(main.main(), 0)

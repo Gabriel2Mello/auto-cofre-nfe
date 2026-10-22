@@ -155,6 +155,13 @@ Criado por Gabriel Mello · [g2mello](https://github.com/Gabriel2Mello)
 
 ## Estatísticas no Hub Nunes
 
+No console, o resumo separa notas sem falha e notas com falha. Qualquer falha
+no lote retorna código 1, inclusive falha de sinalização após salvar os
+arquivos; estes permanecem concluídos e sua métrica é preservada. Código 0
+indica lote sem falhas, e interrupção/EOF tratado retorna 130. Confira a
+mensagem da nota antes de decidir uma nova tentativa; o código de saída não
+desfaz arquivos nem repete o processamento automaticamente.
+
 Cada documento fiscal é contado após confirmar o conjunto completo de arquivos (XML, PDF e cópia CT-e quando aplicável), antes da sinalização no portal. Pendências de publicação e ações do comando de recuperação não geram métricas. Uma falha apenas na sinalização não desfaz a baixa. Empresa, tipo e identificador do documento fornecido pelo portal identificam a entrega, com esse identificador armazenado como hash. A chave fiscal de 44 dígitos é conferida no XML/PDF, sem substituir a identidade histórica da métrica. Baixar novamente o mesmo documento não aumenta o total. Pendências não entram nas métricas.
 
 O registro funciona na interface web e no console, mesmo com o hub fechado. O módulo `metricas_nunes.py` é distribuído a partir do Hub Nunes; seu README documenta armazenamento, recuperação, filtros e exportação. Feche e reabra esta ferramenta após atualizar. O histórico começa com esta versão e não importa operações anteriores. Falhas na estatística não repetem nem interrompem operações concluídas; uma fila local recupera gravações transitórias e falhas de persistência são registradas no log. Antes de rodar a suíte completa, use um terminal exclusivo de testes e configure NUNES_METRICAS_DADOS para uma pasta temporária; o README do Hub Nunes contém o comando de isolamento.

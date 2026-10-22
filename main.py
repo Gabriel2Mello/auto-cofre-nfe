@@ -30,12 +30,12 @@ from src.core import (
 )
 
 
-def main() -> None:
+def main() -> int:
   with Sincronizador(aplicacao='cofre-nfe'):
-    executar()
+    return executar()
 
 
-def executar() -> None:
+def executar() -> int:
   if sys.platform == 'win32':
     set_app_id()
 
@@ -44,6 +44,7 @@ def executar() -> None:
   notas, empresa, mes_nota, mes_pasta, ano_nota, ano_pasta, tipo = input_dados()
   emitente_handler = EmitenteHandler()
   start_time = perf_counter()
+  falhas = 0
 
   with TimeoutScraper() as session:
     html_login = login(
@@ -100,20 +101,27 @@ def executar() -> None:
         sleep(0.2)
 
       except Timeout as e:
+        falhas += 1
         handle_error(e, 'Site demorou a responder')
       except HTTPError as e:
+        falhas += 1
         handle_error(e, 'Erro HTTP')
       except RequestException as e:
+        falhas += 1
         handle_error(e, 'Erro no site')
       except (KeyError, ValueError) as e:
+        falhas += 1
         handle_error(e, 'Valor faltando/inadequado')
       except Exception as e:
+        falhas += 1
         handle_error(e, f'Erro na nota {nota}')
 
     emitente_handler.close()
   elapsed_time = perf_counter() - start_time
+  print(f'\nNotas sem falha: {len(notas) - falhas} · Notas com falha: {falhas}')
   print(f'\nTerminado em {elapsed_time:0.2f} segundos')
   pause()
+  return 1 if falhas else 0
 
 
 if __name__ == "__main__":
@@ -122,7 +130,7 @@ if __name__ == "__main__":
     raise SystemExit(executar_console('cofre-nfe', 'Cofre NF-e', main, sisplan=False))
   except (KeyboardInterrupt, EOFError):
     print('\n\nInterrompido pelo usuário.')
-    sys.exit(0)
+    sys.exit(130)
   except Exception as e:
     handle_error(e, '\nErro fatal')
     pause()

@@ -50,7 +50,7 @@ input:is([type=radio],[type=checkbox]) { width:17px; height:17px; margin:0; acce
 textarea { display:block; width:100%; min-height:60px; margin-top:7px; padding:9px 10px; resize:vertical; line-height:1.5; }
 textarea::placeholder { color:var(--muted); }
 #notas { border-color:#39ff14; transition:border-color 180ms ease-in-out; }
-#notas:focus { border-color:var(--borda); outline:none; }
+#notas:focus, #notas:not(:placeholder-shown) { border-color:var(--borda); outline:none; }
 @media (prefers-reduced-motion:reduce) {
   #notas { transition:none; }
 }
@@ -68,13 +68,13 @@ textarea::placeholder { color:var(--muted); }
 .base-destino { overflow-wrap:anywhere; font-size:13px; }
 #configuracao-status:empty { display:none; }
 
-/* Notas acima; parâmetros à esquerda e lista à direita. */
+/* Notas, parâmetros e ação à esquerda; resultados alinhados ao início das notas. */
 .area-trabalho { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:0 28px; align-items:start; }
 #titulo-entrada { grid-column:1 / -1; margin-bottom:14px; font-size:23px; }
-#formulario,#campos { display:contents; }
-.documentos { grid-column:1 / -1; grid-row:2; margin-bottom:20px; }
+#formulario { grid-column:1; grid-row:2; min-width:0; }
+.documentos { margin-bottom:20px; }
 .documentos .dica { margin-top:5px; }
-.painel-parametros { grid-column:1; grid-row:3; min-width:0; }
+.painel-parametros { min-width:0; }
 .parametros { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:18px 14px; }
 .segmentado { display:grid; grid-template-columns:1fr 1fr; }
 .segmentado label { display:flex; align-items:center; justify-content:center; gap:6px; min-height:42px; padding:8px; border:1px solid var(--borda); background:var(--cartao); cursor:pointer; }
@@ -92,7 +92,7 @@ textarea::placeholder { color:var(--muted); }
 .mensagem:empty,#exportacao:empty { display:none; }
 
 /* Estados e resultados são linhas, sem mostradores nem rolagem interna. */
-.resultados { grid-column:2; grid-row:3; min-width:0; padding-left:24px; border-left:1px solid var(--borda); }
+.resultados { grid-column:2; grid-row:2; min-width:0; padding-left:24px; border-left:1px solid var(--borda); }
 .titulo-secao { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; }
 #exportar { border:0; padding:4px 0; color:var(--marca); background:transparent; font-size:12px; }
 .andamento { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
@@ -136,7 +136,7 @@ textarea::placeholder { color:var(--muted); }
 @media (max-width:760px) {
   main,.rodape { padding:14px 18px; }
   .area-trabalho { grid-template-columns:minmax(0,1fr); }
-  .documentos,.painel-parametros,.resultados { grid-column:1; grid-row:auto; }
+  #formulario,.resultados { grid-column:1; grid-row:auto; }
   .resultados { margin-top:20px; padding:16px 0 0; border-left:0; border-top:1px solid var(--borda); }
 }
 @media (max-width:430px) {

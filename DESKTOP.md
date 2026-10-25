@@ -92,8 +92,9 @@ Catálogos do Hub empacotado precisam ser ajustados à localização da instala�
 
 ## Interface e manutenção
 
-Layout **Lista ao lado**: Notas diretamente abaixo de Baixar documentos;
-parâmetros e ação à esquerda, resultados por nota à direita. Tipo usa NF-e/CT-e
+Layout **Lista ao lado**: notas, parâmetros e ação compõem uma única coluna à
+esquerda, abaixo de Baixar documentos. Resultados por nota ficam à direita,
+alinhados ao início do campo de notas. Tipo usa NF-e/CT-e
 e Empresa usa Filial/Matriz, com NF-e e Filial selecionadas inicialmente.
 Competência dos documentos e competência da pasta permanecem alinhadas e
 visíveis; a pasta fica bloqueada e acompanha os documentos enquanto a opção
@@ -103,6 +104,12 @@ Andamento e contagens são discretos na lista, sem mostrador grande. Na janela
 compacta, os resultados passam para baixo dos parâmetros. Há somente a rolagem
 da página. Listas extensas não afastam a ação dos campos. Erros e conferências
 usam texto além de cor.
+O neon orientativo do campo de notas só acende vazio e sem foco; com conteúdo,
+mantém a borda normal. O botão de pasta usa **Alterar**, conforme o
+[padrão compartilhado](../estrutura-nunes/identidade-visual/interfaces/README.md).
+Em 25/10/2026, o ensaio `tests.verificar_janela_desktop` passou com 80 resultados
+sintéticos, ação visível, ausência de rolagem interna e adaptação compacta.
+O CSS do pacote foi atualizado e conferido por SHA-256; não houve operação fiscal.
 Envio duplicado é bloqueado enquanto o pedido está pendente; perder a resposta
 mantém o início bloqueado até uma leitura válida, sem reenvio automático.
 Falha na leitura agenda nova consulta mesmo quando o último estado observado
@@ -127,7 +134,7 @@ execução. Ícones aprovados existentes foram preservados. A referência das AP
 
 ### Pasta de documentos
 
-Em **Configurações → Escolher pasta…**, escolha a própria pasta DOCUMENTOS DE
+Em **Configurações → Alterar**, escolha a própria pasta DOCUMENTOS DE
 ENTRADA no diálogo nativo do Windows. O caminho completo fica recolhido nesse
 menu. Cancelar mantém a escolha anterior; escolher uma nova pasta não move
 arquivos ou catálogos já existentes. A alteração é permitida somente ociosa;

@@ -99,6 +99,7 @@ class EstadoInterface:
     self.worker: Thread | None = None
     self.resposta: str | None = None
     self.encerrando = False
+    self.configurando = False
     self.dados = {
       'ativo': False, 'parando': False, 'status': 'Pronto para baixar os documentos.',
       'resultados': [], 'pergunta': None, 'lote': None,
@@ -106,7 +107,7 @@ class EstadoInterface:
 
   def snapshot(self) -> dict:
     with self.condicao:
-      return deepcopy(self.dados)
+      return deepcopy(self.dados) | {'encerrando': self.encerrando, 'configurando': self.configurando}
 
   def iniciar(self, dados: dict) -> None:
     pedido = Pedido.de_json(dados)
@@ -115,6 +116,8 @@ class EstadoInterface:
         raise ValueError('O programa está encerrando. Abra o atalho novamente.')
       if self.dados['ativo']:
         raise ValueError('Já existe uma execução em andamento.')
+      if self.configurando:
+        raise ValueError('Aguarde concluir a escolha da pasta antes de iniciar.')
       self.parada.clear()
       self.dados = {
         'ativo': True, 'parando': False, 'status': 'Preparando a execução…', 'pergunta': None,

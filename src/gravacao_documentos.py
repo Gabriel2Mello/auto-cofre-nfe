@@ -13,7 +13,9 @@ from src.enums import Empresa, TipoDocumento
 from src.validacao_documentos import DocumentoInvalido, validar_pdf, validar_xml
 
 
-RAIZ_PROJETO = Path(__file__).resolve().parents[1]
+from src.caminhos import pasta_dados
+
+RAIZ_PROJETO = pasta_dados()
 
 
 @dataclass(frozen=True)

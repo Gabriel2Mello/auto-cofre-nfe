@@ -94,7 +94,7 @@ class TestEstatisticasCofre(unittest.TestCase):
             concluir.set()
         with ExitStack() as pilha:
             self.simular('src.execucao_web', pilha, falha_salvar=salvar)
-            pilha.enter_context(patch('src.utils.set_app_id'))
+            pilha.enter_context(patch('desktop_windows.identidade_processo'))
             pilha.enter_context(patch('src.controlador_web.EstadoInterface', return_value=estado))
             pilha.enter_context(patch.object(estado, 'encerrar', side_effect=encerrar))
             servidor = Mock()
@@ -102,9 +102,10 @@ class TestEstatisticasCofre(unittest.TestCase):
                 estado.iniciar({'notas': '123', 'empresa': 'MATRIZ', 'tipo': 'nfe',
                                 'competencia': '2026-10', 'pasta': '2026-10'})
                 self.assertTrue(gravando.wait(3))
-            servidor.serve_forever.side_effect = executar
+            pilha.enter_context(patch('desktop_cofre.executar', side_effect=lambda servidor: executar()))
             pilha.enter_context(patch('src.interface_web.criar_servidor', return_value=servidor))
-            self.assertEqual(cofre.main(Mock()), 0)
+            pilha.enter_context(patch('cofre.informar_falha', side_effect=AssertionError))
+            self.assertEqual(cofre.main(Mock(registro={})), 0)
         self.assertFalse(estado.worker.is_alive())
         self.assertEqual(self.cliente().pendentes(), [])
         self.assertEqual(self.armazem.resumo('cofre-nfe')['tipos'], {'nfe': 1, 'cte': 0})

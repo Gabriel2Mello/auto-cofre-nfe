@@ -3,6 +3,7 @@
 from integracao_hub import atender_integracao
 
 import json
+from html import escape
 import sys
 from datetime import date
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -12,6 +13,7 @@ from threading import Event, Thread
 from time import monotonic
 
 from src.controlador_web import EstadoInterface
+from src.caminhos import documentos_entrada
 
 
 class ServidorInterface(ThreadingHTTPServer):
@@ -25,6 +27,8 @@ class ServidorInterface(ThreadingHTTPServer):
     self.sem_paginas_desde = monotonic()
     self.finalizando = Event()
     self.fechando = False
+    self.desktop = None
+    self.modo_desktop = False
 
   def finish_request(self, request, client_address) -> None:
     request.settimeout(10)
@@ -32,7 +36,7 @@ class ServidorInterface(ThreadingHTTPServer):
 
   def service_actions(self) -> None:
     with self.estado.condicao:
-      if not self.paginas and monotonic() - self.sem_paginas_desde >= (4 if self.teve_pagina else 120):
+      if not self.modo_desktop and not self.paginas and monotonic() - self.sem_paginas_desde >= (4 if self.teve_pagina else 120):
         self.estado.encerrar()
       if self.estado.encerrando and not self.estado.dados['ativo'] and not self.fechando:
         self.fechando = True
@@ -125,6 +129,9 @@ def criar_servidor(estado: EstadoInterface) -> ServidorInterface:
             estado.condicao.notify_all()
 
     def do_GET(self) -> None:
+      from desktop_cofre import atender_ativacao, ler_tema
+      if atender_ativacao(self):
+        return
       if atender_integracao(self):
         return
       if not self.host_valido():
@@ -136,6 +143,13 @@ def criar_servidor(estado: EstadoInterface) -> ServidorInterface:
           if self.path == '/':
             conteudo = conteudo.replace(b'__TOKEN__', token.encode('ascii')).replace(
               b'__MES__', date.today().strftime('%Y-%m').encode('ascii'))
+            conteudo = conteudo.replace(b'__DESKTOP__', b'1' if servidor.modo_desktop else b'0')
+            conteudo = conteudo.replace(b'__TEMA__', ler_tema().encode('ascii'))
+            try:
+              pasta = documentos_entrada() or 'Pasta não configurada. Escolha DOCUMENTOS DE ENTRADA abaixo.'
+            except ValueError as erro:
+              pasta = str(erro)
+            conteudo = conteudo.replace(b'__DESTINO_BASE__', escape(pasta).encode('utf-8'))
           self.responder(200, conteudo, tipo)
         except OSError:
           self.json(500, {'erro': 'Recurso da interface ausente. Confira a instalação.'})
@@ -150,9 +164,19 @@ def criar_servidor(estado: EstadoInterface) -> ServidorInterface:
         self.json(404, {'erro': 'Endereço não encontrado.'})
 
     def do_POST(self) -> None:
+      from desktop_cofre import atender_ativacao, salvar_tema
+      if atender_ativacao(self):
+        return
       if atender_integracao(self):
         return
       if not self.autorizado():
+        # Consumir somente corpo pequeno e delimitado evita RST no Windows
+        # ao recusar Origin/token com bytes ainda pendentes no socket.
+        tamanhos = self.headers.get_all('Content-Length') or []
+        if len(tamanhos) == 1 and tamanhos[0].isascii() and tamanhos[0].isdigit() and len(tamanhos[0]) <= 5:
+          tamanho = int(tamanhos[0])
+          if tamanho <= 65536:
+            self.rfile.read(tamanho)
         self.json(403, {'erro': 'Acesso não autorizado.'})
         return
       try:
@@ -175,6 +199,32 @@ def criar_servidor(estado: EstadoInterface) -> ServidorInterface:
           estado.parar()
         elif self.path == '/api/fechar':
           estado.encerrar()
+        elif self.path == '/api/tema' and servidor.modo_desktop:
+          try:
+            salvar_tema(dados.get('tema'))
+          except OSError:
+            self.json(500, {'erro': 'O tema mudou nesta janela, mas não foi salvo. Confira a pasta de preferências.'})
+            return
+        elif self.path == '/api/pasta' and servidor.modo_desktop and servidor.desktop is not None:
+          if dados:
+            raise ValueError('A pasta deve ser escolhida no diálogo nativo; não envie caminhos pela página.')
+          try:
+            resultado = servidor.desktop.escolher_pasta()
+          except OSError:
+            self.json(500, {'erro': 'Não foi possível salvar a configuração. Confira o acesso à pasta de preferências.'})
+            return
+          self.json(200, resultado)
+          return
+        elif self.path == '/api/exportar' and servidor.desktop is not None:
+          if dados:
+            raise ValueError('A exportação não recebe caminhos nem conteúdo da página.')
+          try:
+            salvo = servidor.desktop.exportar()
+          except OSError:
+            self.json(500, {'erro': 'Não foi possível salvar o resultado. Confira a pasta e tente exportar novamente.'})
+            return
+          self.json(200, {'salvo': salvo})
+          return
         else:
           self.json(404, {'erro': 'Ação não encontrada.'})
           return

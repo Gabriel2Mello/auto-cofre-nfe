@@ -19,13 +19,14 @@ if (Test-Path -LiteralPath $executavelCofre -PathType Leaf) {
     if (-not (Test-Path -LiteralPath $scriptCofre -PathType Leaf)) { throw 'cofre.py não encontrado.' }
 }
 if (-not (Test-Path -LiteralPath $iconeCofre -PathType Leaf)) { throw 'Ícone da aplicação não encontrado.' }
-$shellCofre = New-Object -ComObject WScript.Shell
-$atalhoCofre = $shellCofre.CreateShortcut((Join-Path $PSScriptRoot 'Abrir Cofre NFe.lnk'))
-$atalhoCofre.TargetPath = $destinoCofre
-$atalhoCofre.Arguments = $argumentosCofre
-$atalhoCofre.WorkingDirectory = $PSScriptRoot
-$atalhoCofre.IconLocation = $iconeCofre + ',0'
-$atalhoCofre.Description = 'Baixar e organizar XML e PDF do Cofre NF-e'
-$atalhoCofre.WindowStyle = 1
-$atalhoCofre.Save()
-Write-Output 'Atalho Cofre NF-e criado com o ícone Nunes.'
+$caminhoAtalhoCofre = Join-Path $PSScriptRoot 'Abrir Cofre NFe.lnk'
+if ($argumentosCofre) {
+    $argumentosAtalhoCofre = '"' + $scriptCofre + '" --criar-atalho "' + $caminhoAtalhoCofre + '"'
+} else {
+    $argumentosAtalhoCofre = '--criar-atalho "' + $caminhoAtalhoCofre + '"'
+}
+$processoAtalhoCofre = Start-Process -FilePath $destinoCofre -ArgumentList $argumentosAtalhoCofre -WindowStyle Hidden -Wait -PassThru
+if ($processoAtalhoCofre.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $caminhoAtalhoCofre -PathType Leaf)) {
+    throw 'O iniciador não confirmou a criação do atalho Cofre NF-e.'
+}
+Write-Output 'Atalho Cofre NF-e criado com identidade desktop Nunes.'

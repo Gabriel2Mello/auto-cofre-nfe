@@ -44,9 +44,10 @@ class Config:
     'DEZEMBRO',
   ]
 
-  def __init__(self) -> None:
+  def __init__(self, *, caminho_documento_entrada: str | None = None) -> None:
     self.senha_cofre: str = load_env('SENHA_COFRE')
-    self.caminho_documento_entrada: str = load_env('CAMINHO_DOCUMENTO_ENTRADA')
+    self.caminho_documento_entrada: str = (load_env('CAMINHO_DOCUMENTO_ENTRADA')
+      if caminho_documento_entrada is None else caminho_documento_entrada)
     self.cnpj: Dict[Empresa, str] = {
       Empresa.MATRIZ: load_env('CNPJ_MATRIZ'),
       Empresa.FILIAL: load_env('CNPJ_FILIAL'),

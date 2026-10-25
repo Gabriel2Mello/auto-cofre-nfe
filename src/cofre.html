@@ -1,65 +1,64 @@
 <!doctype html>
-<html lang="pt-BR" data-tema="escuro">
+<html lang="pt-BR" data-tema="__TEMA__">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="cofre-token" content="__TOKEN__">
+  <meta name="cofre-desktop" content="__DESKTOP__">
+  <meta name="cofre-tema" content="__TEMA__">
   <title>Cofre NF-e · Nunes</title>
   <link rel="icon" href="/icons/icone.svg" type="image/svg+xml">
   <link rel="alternate icon" href="/favicon.ico">
   <link rel="apple-touch-icon" href="/icons/icone-192.png">
   <link rel="stylesheet" href="/cofre.css">
   <script src="/nunes-tema.js"></script>
-<script src="/cofre.js" defer></script>
+  <script src="/cofre.js" defer></script>
 </head>
 <body>
 <main>
   <header class="cabecalho">
-    <div class="marca"><img src="/icons/icone.svg" width="48" height="48" alt=""><div><p class="sobretitulo">NUNES · AUTOMAÇÕES</p><h1>Cofre NF-e</h1><p class="muted">Documentos fiscais organizados, do portal à sua pasta.</p></div></div>
-    <div class="acoes"><button id="tema" type="button">Tema escuro</button><button id="encerrar" type="button">Encerrar</button></div>
+    <div class="marca"><img src="/icons/icone.svg" width="32" height="32" alt=""><h1>Cofre NF-e <span>· Nunes</span></h1></div>
+    <details class="configuracoes" id="configuracoes"><summary>Configurações</summary><div class="menu-configuracoes">
+      <button id="tema" type="button">Tema escuro</button>
+      <p><strong>DOCUMENTOS DE ENTRADA</strong></p><p id="pasta-base" class="base-destino">__DESTINO_BASE__</p>
+      <p class="dica">Selecione a própria pasta DOCUMENTOS DE ENTRADA. A escolha ficará salva nesta instalação.</p>
+      <button id="escolher-pasta" type="button" disabled>Escolher pasta…</button><p id="configuracao-status" class="dica" role="status"></p>
+    </div></details>
   </header>
-
-  <div class="principal">
-    <section class="cartao" aria-labelledby="titulo-entrada">
-      <div class="titulo-secao"><h2 id="titulo-entrada">Baixar documentos</h2><span class="etiqueta">XML + PDF</span></div>
-      <form id="formulario">
-        <fieldset id="campos">
-          <div class="campos"><label>Tipo de documento<select id="tipo"><option value="nfe">NF-e · Nota fiscal</option><option value="cte">CT-e · Conhecimento de transporte</option></select></label><label>Empresa<select id="empresa"><option value="MATRIZ">Matriz</option><option value="FILIAL">Filial</option></select></label></div>
-          <label for="notas">Números dos documentos</label>
-          <textarea id="notas" rows="3" maxlength="12000" placeholder="12345, 12346&#10;12347" aria-describedby="dica-notas" required></textarea>
-          <p id="dica-notas" class="dica">Separe por vírgula ou coloque um número por linha. Repetidos entram uma única vez.</p>
-          <div class="campos datas"><label>Competência dos documentos<input id="competencia" type="month" value="__MES__" min="0001-01" max="9999-12" required></label><div><label for="mesma-pasta" class="opcao"><input id="mesma-pasta" type="checkbox" checked><span>Salvar na mesma competência</span></label><label id="campo-pasta" hidden>Competência da pasta<input id="pasta" type="month" value="__MES__" min="0001-01" max="9999-12"></label></div></div>
-          <div class="destino"><p class="sobretitulo">ORGANIZAÇÃO DOS ARQUIVOS</p><p id="destino">PDF NF-e e XML - NF-e · Matriz · competência atual</p><p class="dica">Dentro da pasta de documentos configurada nesta instalação.</p></div>
-          <p class="dica efeito">Ao iniciar, os arquivos serão salvos e os documentos concluídos serão sinalizados no Cofre NF-e. Arquivos de mesmo nome serão substituídos.</p>
-          <button type="submit" id="iniciar" class="botao-principal" disabled>Baixar e organizar</button>
-        </fieldset>
-      </form>
-      <p id="mensagem" class="mensagem" role="alert"></p>
+  <section class="area-trabalho" aria-labelledby="titulo-entrada">
+    <h2 id="titulo-entrada">Baixar documentos</h2>
+    <form id="formulario"><fieldset id="campos">
+      <div class="documentos"><label for="notas">Notas</label><textarea id="notas" rows="2" maxlength="12000" placeholder="12345, 12346, 12347" aria-describedby="dica-notas" required></textarea><p id="dica-notas" class="dica">Separe por vírgula ou linha. Repetidas entram uma vez.</p></div>
+      <div class="painel-parametros"><div class="parametros">
+        <fieldset id="tipo"><legend>Tipo</legend><div class="segmentado"><label><input type="radio" name="tipo" value="nfe" checked>NF-e</label><label><input type="radio" name="tipo" value="cte">CT-e</label></div></fieldset>
+        <fieldset id="empresa"><legend>Empresa</legend><div class="segmentado"><label><input type="radio" name="empresa" value="FILIAL" checked>Filial</label><label><input type="radio" name="empresa" value="MATRIZ">Matriz</label></div></fieldset>
+        <div class="competencias">
+          <label>Competência<input id="competencia" type="month" value="__MES__" min="0001-01" max="9999-12" required></label>
+          <label id="campo-pasta">Competência da pasta<input id="pasta" type="month" value="__MES__" min="0001-01" max="9999-12" disabled></label>
+          <label class="opcao" for="mesma-pasta"><input id="mesma-pasta" type="checkbox" checked><span>Pasta na mesma competência</span></label>
+        </div>
+      </div>
+      <div class="rodape-entrada"><p id="destino" class="dica destino">PDF NF-e e XML - NF-e · Filial · competência atual</p><button type="submit" id="iniciar" class="botao-principal" disabled>Baixar e organizar</button></div>
+      <p class="dica efeito">Salva XML/PDF e sinaliza os concluídos no portal. Preserva arquivos anteriores.</p></div>
+    </fieldset></form>
+    <section class="resultados" aria-labelledby="titulo-resultados">
+      <div class="titulo-secao"><h2 id="titulo-resultados">Resultados</h2><button id="exportar" type="button" disabled>Salvar resultado</button></div>
+      <div class="andamento" aria-label="Andamento"><span id="fase" class="sr-only">Aguardando</span><p id="status" role="status">Pronto</p><button id="parar" type="button" hidden>Parar processamento</button></div>
+      <p id="lote" class="dica lote" hidden></p>
+      <div id="resumo" class="contagens" aria-label="Resumo do lote" hidden><span><strong id="concluidos">0</strong> concluídas</span><span><strong id="pendentes">0</strong> pendentes</span><span><strong id="erros">0</strong> para conferir</span></div>
+      <progress id="progresso" class="sr-only" value="0" max="1" aria-label="Progresso do lote"></progress>
+      <p id="conexao" class="conexao" role="alert" hidden></p>
+      <section id="decisao" class="aviso" aria-labelledby="titulo-decisao" hidden>
+        <h3 id="titulo-decisao" tabindex="-1">Confira o emitente</h3><p id="ajuda-decisao"></p>
+        <form id="form-decisao"><div id="opcoes"></div><div id="campo-nome" hidden><label for="nome">Nome para os arquivos</label><input id="nome" type="text" maxlength="120" autocomplete="off"><p class="dica">Acentos e caracteres incompatíveis serão removidos. O nome ficará salvo para próximas execuções.</p></div><div class="acoes"><button id="responder" class="botao-principal" type="submit">Confirmar e continuar</button><button id="cancelar-decisao" type="button">Parar execução</button></div></form>
+        <p id="erro-decisao" class="mensagem" role="alert"></p>
+      </section>
+      <p id="exportacao" class="dica" role="status"></p>
+      <ul id="linhas" class="lista-resultados" aria-label="Resultado por nota"><li class="vazio">O resultado das notas aparecerá aqui.</li></ul>
     </section>
-
-    <section class="cartao andamento" aria-labelledby="titulo-andamento">
-      <div class="titulo-secao"><h2 id="titulo-andamento">Andamento</h2><span id="fase" class="etiqueta">Aguardando</span></div>
-      <p id="status" class="status" role="status">Pronto para baixar os documentos.</p>
-      <p id="lote" class="muted">Informe os números e confira os campos ao lado.</p>
-      <progress id="progresso" value="0" max="1" aria-label="Progresso do lote"></progress>
-      <div class="metricas"><div><strong id="concluidos">0</strong><span>Concluídos</span></div><div><strong id="pendentes">0</strong><span>Pendentes</span></div><div><strong id="erros">0</strong><span>Para conferir</span></div></div>
-      <p id="orientacao" class="dica">Se for preciso escolher um emitente ou informar seu nome, a decisão aparecerá aqui.</p>
-      <button id="parar" type="button" hidden>Parar processamento</button>
-    </section>
-  </div>
-
-  <section id="decisao" class="aviso" aria-labelledby="titulo-decisao" hidden>
-    <p class="sobretitulo">SUA CONFERÊNCIA</p><h2 id="titulo-decisao" tabindex="-1">Confira o emitente</h2><p id="ajuda-decisao"></p>
-    <form id="form-decisao"><div id="opcoes"></div><div id="campo-nome" hidden><label for="nome">Nome para os arquivos</label><input id="nome" type="text" maxlength="120" autocomplete="off"><p class="dica">Acentos e caracteres incompatíveis com nomes de arquivo serão removidos. O nome ficará salvo para as próximas execuções.</p></div><div class="acoes"><button id="responder" class="botao-principal" type="submit">Confirmar e continuar</button><button id="cancelar-decisao" type="button">Parar execução</button></div></form>
-    <p id="erro-decisao" class="mensagem" role="alert"></p>
+    <p id="mensagem" class="mensagem" role="alert"></p>
   </section>
-
-  <section class="cartao resultados" aria-labelledby="titulo-resultados">
-    <div class="titulo-secao"><div><h2 id="titulo-resultados">Documentos desta execução</h2><p class="dica">Confira o salvamento e a sinalização de cada documento.</p></div><button id="exportar" type="button" disabled>Baixar resultado</button></div>
-    <div class="tabela"><table><thead><tr><th scope="col">Documento</th><th scope="col">Situação</th><th scope="col">Resultado</th></tr></thead><tbody id="linhas"><tr><td colspan="3" class="vazio">Os documentos aparecerão aqui ao iniciar uma execução.</td></tr></tbody></table></div>
-  </section>
-  <p id="conexao" class="conexao" role="alert" hidden></p>
 </main>
-<footer class="assinatura">Desenvolvido por <a href="https://github.com/Gabriel2Mello" target="_blank" rel="noopener noreferrer" aria-label="g2mello — perfil no GitHub"><span aria-hidden="true">g2me<span class="assinatura-ll"><span>l</span><span>l</span></span>o</span></a></footer>
+<footer class="rodape"><p class="assinatura">Desenvolvido por <a href="https://github.com/Gabriel2Mello" target="_blank" rel="noopener noreferrer" aria-label="g2mello — perfil no GitHub"><span aria-hidden="true">g2me<span class="assinatura-ll"><span>l</span><span>l</span></span>o</span></a></p><button id="encerrar" type="button">Encerrar</button></footer>
 </body>
 </html>

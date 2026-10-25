@@ -2,17 +2,21 @@
 
 Este é um robô de automação de processos (RPA) desenvolvido em Python para otimizar o fluxo de gerenciamento interno de documentos fiscais da Empresa Nunes. O sistema realiza a varredura e download automatizado de Notas Fiscais Eletrônicas (NF-e) e Conhecimentos de Transporte Eletrônicos (CT-e) diretamente do portal Cofre NFe, processa metadados e organiza os arquivos em uma estrutura de diretórios locais.
 
-## Interface web local
+## Interface desktop local
 
-Abra **Abrir Cofre NFe.cmd** para usar o fluxo completo no navegador, com
+Abra **Abrir Cofre NFe.cmd** para usar o fluxo completo em janela própria, com
 NF-e/CT-e, Matriz/Filial, competência dos documentos e competência da pasta.
-NF-e, Matriz e o mês atual já vêm preenchidos. Escolhas de emitente, nomes de
+NF-e, Filial e o mês atual já vêm preenchidos. Escolhas de emitente, nomes de
 arquivos e resultados aparecem no próprio painel, com temas claro e escuro.
+Notas ficam no topo e os resultados ao lado dos parâmetros. Em
+**Configurações → Escolher pasta…**, selecione DOCUMENTOS DE ENTRADA;
+a escolha é preservada nas próximas aberturas, sem alterar o ambiente do console.
 
-Ao fechar a última aba, o programa solicita a parada e encerra após a operação
-em curso. A confirmação de saída usa o aviso nativo do navegador; a tela ociosa
-não faz consultas periódicas de andamento. O modo console permanece em `main.py`.
-Veja [instalação, atalhos, funcionamento e validação](docs/interface-web.md).
+Uma segunda abertura restaura a mesma janela, preservando campos, resultados
+e decisões. X durante processamento confirma e aguarda a operação em curso;
+queda de presença não encerra o desktop. O Hub também abre/restaura a janela.
+O modo console permanece em `main.py`. Veja [desktop, instalação, dados,
+empacotamento e validação](DESKTOP.md) e o [fluxo operacional](docs/interface-web.md).
 
 ## Diagnóstico de abertura
 

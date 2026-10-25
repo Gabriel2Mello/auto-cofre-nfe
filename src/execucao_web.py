@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from src.auth import login
 from src.config import Config
+from src.caminhos import documentos_entrada
 from src.core import baixar_arquivos, marcar_flag, processar_nota, trocar_empresa, ver_arquivos
 from src.emitente_handler import EmitenteHandler
 from src.enums import Empresa
@@ -20,7 +21,7 @@ if TYPE_CHECKING:
 
 
 def executar_lote(pedido: Pedido, estado: 'EstadoInterface') -> None:
-  config = Config()
+  config = Config(caminho_documento_entrada=documentos_entrada() or None)
   if not Path(config.caminho_documento_entrada).is_dir():
     raise ValueError('A pasta CAMINHO_DOCUMENTO_ENTRADA está indisponível. Confira o acesso à rede.')
   emitentes = EmitenteHandler()

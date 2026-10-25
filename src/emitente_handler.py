@@ -65,6 +65,7 @@ class EmitenteHandler:
     conteudo = json.dumps(_validar_catalogo(self.emitentes_conhecidos), indent=4, ensure_ascii=False)
     temporario: Path | None = None
     try:
+      self.caminho_json.parent.mkdir(parents=True, exist_ok=True)
       # O mesmo diretório permite substituir sem apagar o catálogo anterior.
       with NamedTemporaryFile(mode='w', encoding='utf-8', dir=self.caminho_json.parent,
                              prefix=f'.{self.caminho_json.stem}-', suffix='.tmp', delete=False) as arquivo:

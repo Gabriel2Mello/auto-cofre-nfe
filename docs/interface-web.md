@@ -1,8 +1,11 @@
 # Interface local do Cofre NF-e
 
-O navegador apresenta o painel; a automação continua neste computador, usando
+O desktop WebView2 apresenta o painel; a automação continua neste computador, usando
 as variáveis de ambiente e a pasta de documentos da instalação. Não há hospedagem
-externa. As dependências estão fixadas em `requirements.txt`, incluindo o leitor de PDF aprovado na E3. O modo console continua em `main.py`.
+externa. As dependências fiscais estão fixadas em `requirements.txt`, incluindo o leitor de PDF aprovado na E3. O modo console continua em `main.py`.
+O guia [DESKTOP.md](../DESKTOP.md) documenta o runtime da janela, instância única,
+atalhos, persistência, integração com o Hub e pacote. Esse guia substitui as
+orientações antigas de abertura/empacotamento pelo navegador.
 
 ## Abrir
 
@@ -22,19 +25,21 @@ Para preparar uma instalação nova com Python 3.13:
 
 ```powershell
 python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install -r requirements-build.txt
 .\.venv\Scripts\python.exe cofre.py
 ```
 
-Configure `SENHA_COFRE`, `CNPJ_MATRIZ`, `CNPJ_FILIAL` e
-`CAMINHO_DOCUMENTO_ENTRADA` conforme o README. A interface não exibe nem
+Configure `SENHA_COFRE`, `CNPJ_MATRIZ` e `CNPJ_FILIAL` conforme o README.
+Escolha a própria pasta DOCUMENTOS DE ENTRADA em **Configurações → Escolher pasta…**.
+Sem escolha salva, a interface usa `CAMINHO_DOCUMENTO_ENTRADA` como antes.
+A interface não exibe nem
 armazena senhas e não consulta o portal ao abrir.
 
 ## Uso
 
-1. Informe os documentos separados por vírgula ou linha. NF-e, Matriz e o mês
-   atual já vêm selecionados; CT-e, Filial e outras competências estão disponíveis.
-2. Para organizar em outro mês/ano, desmarque **Salvar na mesma competência**.
+1. Informe as **Notas** separadas por vírgula ou linha. NF-e, Filial e o mês
+   atual já vêm selecionados; Tipo e Empresa usam escolhas diretas, sem dropdown.
+2. Para organizar em outro mês/ano, desmarque **Pasta na mesma competência**.
    Confira a prévia de destino e clique em **Baixar e organizar**.
 3. Se houver mais de um emitente, selecione o resultado correto. Para emitente
    novo, confirme o nome usado nos arquivos; esse nome é salvo na base local.
@@ -43,7 +48,7 @@ armazena senhas e não consulta o portal ao abrir.
    pode deixar uma publicação parcial identificada pelo ID da pendência; use
    o guia de recuperação antes de repetir. Não há repetição automática de
    downloads ou sinalizações.
-5. **Baixar resultado** exporta o lote para JSON. O painel mostra apenas a
+5. **Salvar resultado** exporta o lote para JSON. O painel mostra apenas a
    execução atual; iniciar outra substitui a lista. Não há histórico persistente
    de lotes nem retomada automática após encerrar.
 
@@ -65,18 +70,22 @@ pendente. Uma operação de gravação já iniciada conclui o salvamento e a ten
 de sinalização antes de parar. Requisições de rede respeitam os timeouts existentes;
 parar não significa matar o processo imediatamente.
 
-Fechar ou sair da aba solicita a confirmação nativa do navegador. O navegador
-controla o texto e pode dispensar esse aviso se ainda não houve interação do
-usuário. **Encerrar** apresenta a pergunta explícita da aplicação e solicita a
-mesma parada cuidadosa. O servidor encerra após a execução terminar.
+No desktop, fechar pelo X durante processamento pede confirmação e mantém a
+janela até a operação segura terminar. **Encerrar** e o monitor do Hub confirmam
+em suas próprias telas e solicitam a mesma parada cuidadosa, sem outro diálogo.
+O servidor encerra após a execução terminar.
 
-Uma conexão de presença detecta quando a última aba é fechada. Após a desconexão,
+No modo web usado pelas prévias, uma conexão de presença detecta quando a última aba é fechada. Após a desconexão,
 há uma margem de quatro segundos para recarregar ou reconectar, antes de solicitar
 o encerramento. Outra aba ainda conectada mantém o programa aberto. A conexão de
 presença não consulta os documentos nem altera a tela. A interface consulta o
 estado uma vez ao abrir e após ações do operador; consultas periódicas e
-alterações do andamento ocorrem somente durante uma execução. Estados iguais
-não reconstroem a tela.
+alterações do andamento ocorrem durante uma execução ou enquanto falta confirmar
+o estado após uma falha de conexão. A recuperação repete somente a leitura,
+sem reenviar o início. Uma leitura válida ociosa encerra as consultas periódicas.
+Estados iguais não reconstroem a tela; os controles ainda são reabilitados ao
+recuperar a confirmação.
+No desktop, a janela controla o ciclo de vida: queda dessa conexão não solicita saída.
 
 O servidor aceita somente `127.0.0.1`, valida Host, token por execução e Origin
 nas ações, e serve uma lista fixa de recursos. Ele não foi preparado para acesso
@@ -109,20 +118,22 @@ no navegador, com decisões de emitente e nome, temas claro/escuro e largura de
 390 px sem rolagem horizontal da página. O encerramento do servidor também
 foi conferido; nenhum documento real foi consultado, salvo ou sinalizado.
 
-Para empacotar a interface, use `cofre.py` como entrada e inclua os recursos:
+Para empacotar a interface desktop com seus recursos e DLLs:
 
 ```powershell
-..\.venv\Scripts\python.exe -m PyInstaller --noconfirm --onefile --windowed --name "Cofre NFe" --icon icons/icone.ico --add-data "src/cofre.html;src" --add-data "src/cofre.css;src" --add-data "src/cofre.js;src" --add-data "src/nunes-tema.js;src" --add-data "icons;icons" cofre.py
+& '.\Build Desktop.ps1'
 ```
 
-O executável é produzido em `dist`; para os atalhos acima, coloque-o na pasta da
-aplicação. Nenhum executável novo é necessário para rodar a versão Python.
+A pasta inteira é produzida em `dist/Cofre NFe`; não mova somente o exe.
+Dados mutáveis usam pasta persistente documentada em [DESKTOP.md](../DESKTOP.md).
+Nenhum executável novo é necessário para rodar a versão Python.
 
 ## Integração com o Hub Nunes
 
 O contrato local `integracao_hub.py`, mantido no Hub Nunes, permite reconhecer
 interfaces abertas pelo atalho próprio, conferir sua saúde e solicitar a parada
 segura pelo monitor. Cofre pode permanecer aberto junto de uma ferramenta
-Sisplan. Fechar a última aba continua seguindo a parada segura da aplicação.
+Sisplan. O desktop permanece aberto quando a conexão de presença cai e pode
+continuar funcionando após fechar o Hub.
 Executáveis anteriores precisam ser reconstruídos para incluir a integração;
 os atalhos Python usam os fontes atualizados.

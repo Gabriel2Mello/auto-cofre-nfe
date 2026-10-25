@@ -25,12 +25,8 @@ def encerrar_programa(texto: str | None) -> None:
 
 
 def obter_caminho_json(filename = 'emitentes_conhecidos.json') -> Path:
-  if hasattr(sys, 'frozen'):
-    diretorio_execucao = Path(sys.executable).parent
-  else:
-    diretorio_execucao = Path(__file__).parent.parent
-
-  return diretorio_execucao / filename
+  from src.caminhos import pasta_dados
+  return pasta_dados() / filename
 
 
 def salvar_arquivos(

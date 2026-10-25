@@ -44,6 +44,23 @@ async function testar(){
   await esvaziar();
   assert.equal(chamadas.filter(c=>c==='/api/estado').length,1);
   assert.equal(timers.size,0,'Tela ociosa não deve agendar consultas.');
+  const menu=contexto.document.getElementById('configuracoes');
+  const controleInterno=elemento(), controleExterno=elemento();
+  menu.contains=alvo=>alvo===menu||alvo===controleInterno;
+  for(const nome of ['pointerdown','focusin']){
+    menu.open=true;
+    eventos.get(nome)({target:controleInterno});
+    assert.equal(menu.open,true,`${nome} interno deve preservar o menu aberto.`);
+    eventos.get(nome)({target:menu});
+    assert.equal(menu.open,true,'Interagir no próprio menu deve preservá-lo.');
+    eventos.get(nome)({target:controleExterno});
+    assert.equal(menu.open,false,`${nome} externo deve fechar o menu.`);
+    eventos.get(nome)({target:controleExterno});
+    assert.equal(menu.open,false,'Interação externa não deve reabrir o menu.');
+  }
+  menu.open=true;
+  eventos.get('keydown')({key:'Escape'});
+  assert.equal(menu.open,false,'Escape deve continuar fechando o menu.');
   assert.match(elementos.get('destino').textContent,/Filial/);
   assert.equal(elementos.get('pasta').disabled,true,'Pasta vinculada permanece visível e bloqueada.');
   elementos.get('mesma-pasta').checked=false;

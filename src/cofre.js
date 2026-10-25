@@ -93,6 +93,12 @@ el('escolher-pasta').onclick=async()=>{
   finally{configurandoPasta=false;await atualizar();}
 };
 window.addEventListener('keydown',e=>{if(e.key==='Escape')el('configuracoes').open=false;});
+function fecharConfiguracoesFora(e){
+  const menu=el('configuracoes');
+  if(menu.open&&!menu.contains(e.target))menu.open=false;
+}
+window.addEventListener('pointerdown',fecharConfiguracoesFora,true);
+window.addEventListener('focusin',fecharConfiguracoesFora);
 el('parar').onclick=()=>acao('/api/parar');el('cancelar-decisao').onclick=()=>acao('/api/parar');
 el('form-decisao').onsubmit=async e=>{e.preventDefault();if(!estado?.pergunta||el('responder').disabled)return;const p=estado.pergunta;const valor=p.tipo==='nome'?el('nome').value:document.querySelector('input[name="emitente"]:checked')?.value;if(valor===undefined)return;el('responder').disabled=true;try{await api('/api/responder',{id:p.id,valor});await atualizar();}catch(erro){el('erro-decisao').textContent=erro.message;}finally{el('responder').disabled=false;}};
 el('exportar').onclick=async()=>{

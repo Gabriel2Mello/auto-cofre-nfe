@@ -133,7 +133,7 @@ class EstadoInterface:
     try:
       self.executor(pedido, self)
       self.informar('Execução interrompida. Confira os documentos pendentes.' if self.parada.is_set()
-                    else 'Execução finalizada. Confira o resultado de cada documento.')
+                    else 'Execução finalizada.')
     except ExecucaoInterrompida:
       self.informar('Execução interrompida. Os documentos já concluídos foram preservados.')
     except Exception as erro:
@@ -176,7 +176,7 @@ class EstadoInterface:
       self.verificar_parada()
       self.resposta = None
       self.dados['pergunta'] = {'id': uuid4().hex, 'tipo': tipo, **campos}
-      self.dados['status'] = 'Aguardando sua resposta para continuar.'
+      self.dados['status'] = 'Aguardando resposta.'
       self.condicao.notify_all()
       self.condicao.wait_for(lambda: self.resposta is not None or self.parada.is_set())
       self.verificar_parada()

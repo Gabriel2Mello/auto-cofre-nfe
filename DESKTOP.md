@@ -92,18 +92,20 @@ Catálogos do Hub empacotado precisam ser ajustados à localização da instala�
 
 ## Interface e manutenção
 
-Layout **Lista ao lado**: notas, parâmetros e ação compõem uma única coluna à
-esquerda, abaixo de Baixar documentos. Resultados por nota ficam à direita,
-alinhados ao início do campo de notas. Tipo usa NF-e/CT-e
+Layout **Lista ao lado**: parâmetros, notas e ação compõem uma única coluna à
+esquerda. Resultados por nota ficam à direita,
+alinhados ao início dos parâmetros. Tipo usa NF-e/CT-e
 e Empresa usa Filial/Matriz, com NF-e e Filial selecionadas inicialmente.
 Competência dos documentos e competência da pasta permanecem alinhadas e
 visíveis; a pasta fica bloqueada e acompanha os documentos enquanto a opção
-Pasta na mesma competência estiver marcada. O resumo do destino mantém tipo,
-empresa e mês fáceis de conferir. Arquivos anteriores continuam preservados pela E5.
+Pasta na mesma competência estiver marcada. Notas ficam abaixo dos parâmetros,
+com a dica e o botão **Baixar** logo abaixo do campo; o botão fica à direita.
+Arquivos anteriores continuam preservados pela E5.
 Andamento e contagens são discretos na lista, sem mostrador grande. Na janela
-compacta, os resultados passam para baixo dos parâmetros. Há somente a rolagem
+compacta, os resultados passam para baixo do formulário. Há somente a rolagem
 da página. Listas extensas não afastam a ação dos campos. Erros e conferências
-usam texto além de cor.
+usam texto além de cor. O rodapé ocupa o fim da janela quando há pouco conteúdo
+e acompanha o fim da página nas listas extensas, sem sobrepor os resultados.
 O neon orientativo do campo de notas só acende vazio e sem foco; com conteúdo,
 mantém a borda normal. O botão de pasta usa **Alterar**, conforme o
 [padrão compartilhado](../estrutura-nunes/identidade-visual/interfaces/README.md).

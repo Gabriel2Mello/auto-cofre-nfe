@@ -24,10 +24,6 @@ function destino(){
   el('pasta').disabled=el('mesma-pasta').checked;
   el('pasta').required=!el('mesma-pasta').checked;
   if(el('mesma-pasta').checked)el('pasta').value=el('competencia').value;
-  const mes=el('mesma-pasta').checked?el('competencia').value:el('pasta').value;
-  const tipo=selecionado('tipo')==='nfe'?'NF-e':'CT-e';
-  const data=mes?mes.slice(5)+'/'+mes.slice(0,4):'selecione a competência';
-  el('destino').textContent=`PDF ${tipo} e XML - ${tipo} · ${selecionado('empresa')==='FILIAL'?'Filial':'Matriz'} · ${data}`;
 }
 for(const id of ['tipo','empresa','competencia','pasta','mesma-pasta'])el(id).addEventListener('change',destino);
 destino();
@@ -63,7 +59,8 @@ function renderizarPergunta(p){
   if(!p){perguntaId='';return;}if(p.id===perguntaId)return;perguntaId=p.id;
   el('erro-decisao').textContent='';el('responder').disabled=false;el('opcoes').replaceChildren();
   el('campo-nome').hidden=p.tipo!=='nome';el('nome').required=p.tipo==='nome';
-  el('titulo-decisao').textContent=p.tipo==='nome'?'Como salvar os arquivos deste emitente?':'Qual emitente corresponde ao documento?';
+  el('titulo-decisao').textContent=p.tipo==='nome'?'Apelido':'Qual emitente corresponde ao documento?';
+  el('titulo-decisao').className=p.tipo==='nome'?'sr-only':'';
   el('ajuda-decisao').textContent=p.tipo==='nome'?`Emitente novo: ${p.emitente}`:'Há mais de um resultado para este número e competência. Selecione o documento correto.';
   if(p.tipo==='nome'){el('nome').value=p.sugestao;el('nome').focus();}
   else{p.opcoes.forEach((opcao,i)=>{const label=document.createElement('label');label.className='escolha';const radio=document.createElement('input');radio.type='radio';radio.name='emitente';radio.value=String(i);radio.required=true;const conteudo=document.createElement('span');conteudo.append(texto('strong',opcao.nome),texto('small',`${opcao.data} · ${opcao.valor}`));label.append(radio,conteudo);el('opcoes').append(label);});el('titulo-decisao').focus();}

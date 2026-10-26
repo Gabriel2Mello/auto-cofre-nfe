@@ -29,11 +29,11 @@ def main():
   def sonda():
     return ler_registro(pasta / 'sonda.json')
 
-  def comando(acao):
+  def comando(acao, **dados):
     nonlocal contador
     contador += 1
     temp = pasta / 'comando.tmp'
-    temp.write_text(json.dumps({'id': contador, 'acao': acao}), encoding='utf-8')
+    temp.write_text(json.dumps({'id': contador, 'acao': acao, **dados}), encoding='utf-8')
     temp.replace(pasta / 'comando.json')
     esperar(lambda: sonda().get('comando') == contador)
 
@@ -48,6 +48,11 @@ def main():
     atual = ler_registro(caminho)
     assert consultar_instancia(atual)['respondendo']
     assert sonda()['empresa'] == 'FILIAL' and sonda()['tipo'] == 'nfe' and sonda()['pastaBloqueada']
+    assert sonda()['parametrosAntesNotas'] and sonda()['acaoAbaixoNotas'] and sonda()['acaoADireita']
+    assert sonda()['rodapeNoFim'] and sonda()['rodapeAposConteudo']
+    comando('escuro')
+    comando('capturar', nome='layout-inicial')
+    resultado['parametros_notas_acao_e_rodape_conforme_referencia'] = True
     comando('configurar-pasta')
     esperar(lambda: sonda().get('configuracaoStatus', '').startswith('Pasta salva'))
     pasta_escolhida = sonda()['pastaBase']
@@ -73,11 +78,15 @@ def main():
     comando('resultados')
     esperar(lambda: sonda().get('linhas') == 80)
     assert sonda()['primeiraLinhaVisivel'] and sonda()['acaoVisivel'] and sonda()['resultadosAoLado'] and sonda()['rolagensInternas'] == 0
+    assert sonda()['rodapeAposConteudo']
     resultado['primeiras_linhas_no_tamanho_padrao_sem_scroll_interno'] = True
     comando('escuro')
     comando('compacto')
     esperar(lambda: sonda().get('largura', 1000) < 800)
     assert not sonda()['excesso']
+    assert sonda()['parametrosAntesNotas'] and sonda()['acaoAbaixoNotas'] and sonda()['acaoADireita']
+    assert sonda()['rodapeAposConteudo']
+    comando('capturar', nome='layout-compacto')
     comando('minimizar')
     esperar(lambda: sonda().get('estado_janela') == 'Minimized')
     reabrir()

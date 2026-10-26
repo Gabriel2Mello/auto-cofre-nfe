@@ -25,21 +25,21 @@
       <button id="escolher-pasta" type="button" aria-label="Alterar pasta de documentos" disabled>Alterar</button><p id="configuracao-status" class="dica" role="status"></p>
     </div></details>
   </header>
-  <section class="area-trabalho" aria-labelledby="titulo-entrada">
-    <h2 id="titulo-entrada">Baixar documentos</h2>
+  <section class="area-trabalho" aria-label="Documentos">
     <form id="formulario"><fieldset id="campos">
-      <div class="documentos"><label for="notas">Notas</label><textarea id="notas" rows="2" maxlength="12000" placeholder="12345, 12346, 12347" aria-describedby="dica-notas" required></textarea><p id="dica-notas" class="dica">Separe por vírgula ou linha. Repetidas entram uma vez.</p></div>
-      <div class="painel-parametros"><div class="parametros">
+      <div class="parametros">
         <fieldset id="tipo"><legend>Tipo</legend><div class="segmentado"><label><input type="radio" name="tipo" value="nfe" checked>NF-e</label><label><input type="radio" name="tipo" value="cte">CT-e</label></div></fieldset>
         <fieldset id="empresa"><legend>Empresa</legend><div class="segmentado"><label><input type="radio" name="empresa" value="FILIAL" checked>Filial</label><label><input type="radio" name="empresa" value="MATRIZ">Matriz</label></div></fieldset>
         <div class="competencias">
           <label>Competência<input id="competencia" type="month" value="__MES__" min="0001-01" max="9999-12" required></label>
-          <label id="campo-pasta">Competência da pasta<input id="pasta" type="month" value="__MES__" min="0001-01" max="9999-12" disabled></label>
+          <label id="campo-pasta">Pasta<input id="pasta" type="month" value="__MES__" min="0001-01" max="9999-12" disabled></label>
           <label class="opcao" for="mesma-pasta"><input id="mesma-pasta" type="checkbox" checked><span>Pasta na mesma competência</span></label>
         </div>
       </div>
-      <div class="rodape-entrada"><p id="destino" class="dica destino">PDF NF-e e XML - NF-e · Filial · competência atual</p><button type="submit" id="iniciar" class="botao-principal" disabled>Baixar e organizar</button></div>
-      <p class="dica efeito">Salva XML/PDF e sinaliza os concluídos no portal. Preserva arquivos anteriores.</p></div>
+      <div class="documentos">
+        <label for="notas">Notas</label><textarea id="notas" rows="2" maxlength="12000" placeholder="12345, 12346, 12347" aria-describedby="dica-notas" required></textarea>
+        <div class="rodape-entrada"><p id="dica-notas" class="dica">Separe por vírgula ou linha.</p><button type="submit" id="iniciar" class="botao-principal" disabled>Baixar</button></div>
+      </div>
     </fieldset></form>
     <section class="resultados" aria-labelledby="titulo-resultados">
       <div class="titulo-secao"><h2 id="titulo-resultados">Resultados</h2><button id="exportar" type="button" disabled>Salvar resultado</button></div>
@@ -50,7 +50,7 @@
       <p id="conexao" class="conexao" role="alert" hidden></p>
       <section id="decisao" class="aviso" aria-labelledby="titulo-decisao" hidden>
         <h3 id="titulo-decisao" tabindex="-1">Confira o emitente</h3><p id="ajuda-decisao"></p>
-        <form id="form-decisao"><div id="opcoes"></div><div id="campo-nome" hidden><label for="nome">Nome para os arquivos</label><input id="nome" type="text" maxlength="120" autocomplete="off"><p class="dica">Acentos e caracteres incompatíveis serão removidos. O nome ficará salvo para próximas execuções.</p></div><div class="acoes"><button id="responder" class="botao-principal" type="submit">Confirmar e continuar</button><button id="cancelar-decisao" type="button">Parar execução</button></div></form>
+        <form id="form-decisao"><div id="opcoes"></div><div id="campo-nome" hidden><label for="nome">Apelido</label><input id="nome" type="text" maxlength="120" autocomplete="off"></div><div class="acoes"><button id="responder" class="botao-principal" type="submit">Confirmar</button><button id="cancelar-decisao" type="button">Parar execução</button></div></form>
         <p id="erro-decisao" class="mensagem" role="alert"></p>
       </section>
       <p id="exportacao" class="dica" role="status"></p>

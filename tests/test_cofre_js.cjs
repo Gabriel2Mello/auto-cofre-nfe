@@ -61,14 +61,16 @@ async function testar(){
   menu.open=true;
   eventos.get('keydown')({key:'Escape'});
   assert.equal(menu.open,false,'Escape deve continuar fechando o menu.');
-  assert.match(elementos.get('destino').textContent,/Filial/);
   assert.equal(elementos.get('pasta').disabled,true,'Pasta vinculada permanece visível e bloqueada.');
+  assert.equal(elementos.get('pasta').required,false);
+  assert.equal(elementos.get('pasta').value,elementos.get('competencia').value);
   elementos.get('mesma-pasta').checked=false;
   elementos.get('pasta').value='2026-11';
   elementos.get('tipo').value='cte';elementos.get('empresa').value='MATRIZ';
   vm.runInContext('destino()',contexto);
   assert.equal(elementos.get('pasta').disabled,false);
-  assert.match(elementos.get('destino').textContent,/CT-e.*Matriz.*11\/2026/);
+  assert.equal(elementos.get('pasta').required,true);
+  assert.equal(elementos.get('pasta').value,'2026-11','Pasta independente conserva o mês escolhido.');
   elementos.get('mesma-pasta').checked=true;
   elementos.get('tipo').value='nfe';elementos.get('empresa').value='FILIAL';
   vm.runInContext('destino()',contexto);

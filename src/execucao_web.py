@@ -54,7 +54,7 @@ def executar_lote(pedido: Pedido, estado: 'EstadoInterface') -> None:
                            nota, empresa=str(pedido.empresa), tipo=str(pedido.tipo))
           # Concluir a sinalização da nota salva antes de atender uma parada.
           marcar_flag(sessao, dados['codigo_arquivo'])
-          estado.atualizar_nota(indice, 'Concluído', f'XML e PDF salvos · {nome_arquivo} · sinalizado no portal.')
+          estado.atualizar_nota(indice, 'Concluído', f'XML e PDF salvos · {nome_arquivo}')
         except ExecucaoInterrompida:
           estado.atualizar_nota(indice, 'Não processado', 'Execução interrompida antes de salvar.')
           raise

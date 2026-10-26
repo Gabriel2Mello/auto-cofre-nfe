@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from functools import cached_property
 from html import unescape
+import re
 
 from dateutil import parser
 from bs4 import BeautifulSoup, Tag
@@ -166,6 +167,29 @@ def extrair_empresas_href(html_content: str) -> dict[str, str]:
       empresas[cnpj] = href
 
   return empresas
+
+
+def confirmar_empresa_ativa(html: str, cnpj: str) -> None:
+  # Contrato observado no portal: o cabeçalho identifica o contexto ativo;
+  # a lista de vínculos do login não comprova que a troca aconteceu.
+  soup = BeautifulSoup(html, 'lxml')
+  cabecalhos = soup.select('#mws-header-container > span')
+  esperado = extract_digits(cnpj)
+  if len(cabecalhos) != 1 or len(esperado) != 14 or not esperado.isascii():
+    raise ValueError('Não foi possível confirmar a empresa ativa no portal. O lote não foi iniciado.')
+  encontrados = re.findall(r'\(\s*(\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2})\s*\)',
+                            cabecalhos[0].get_text(' ', strip=True))
+  if len(encontrados) != 1 or extract_digits(encontrados[0]) != esperado:
+    raise ValueError('A empresa ativa no portal não corresponde à solicitada ou não pôde ser confirmada. O lote não foi iniciado.')
+
+
+def confirmar_flag(linhas: list[list[str]], codigo_arquivo: str, flag: int) -> None:
+  marcacoes = []
+  for linha in linhas:
+    soup = BeautifulSoup(' '.join(linha), 'lxml')
+    marcacoes.extend(soup.find_all('div', id='flagArq' + codigo_arquivo))
+  if len(marcacoes) != 1 or f'flag{flag}' not in marcacoes[0].get('class', []):
+    raise RuntimeError('Não foi possível confirmar a marcação do documento na consulta ao portal.')
 
 
 def resolve_emitente(emitente_html: str) -> str:

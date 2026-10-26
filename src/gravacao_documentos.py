@@ -98,10 +98,23 @@ def _gravar_bytes(caminho: Path, conteudo: bytes) -> None:
 
 
 def _salvar_registro(pasta: Path, registro: dict) -> None:
-  pasta.mkdir(parents=True, exist_ok=True)
+  if not pasta.exists():
+    _iniciar_registro(pasta, registro)
+    return
   temporario = pasta / f'manifesto-{uuid4().hex}.tmp'
   _gravar_bytes(temporario, json.dumps(registro, ensure_ascii=False, indent=2).encode('utf-8'))
   temporario.replace(pasta / 'manifesto.json')
+
+
+def _iniciar_registro(pasta: Path, registro: dict) -> None:
+  # A listagem só vê registros publicados. Uma interrupção nesta área nunca
+  # pode ter publicado documentos, pois a preparação fiscal começa depois.
+  preparacao = _seguro(RAIZ_PROJETO.resolve(),
+    pasta.parent.parent / '.iniciando' / pasta.parent.name / f'{pasta.name}-{uuid4().hex}')
+  preparacao.mkdir(parents=True)
+  _salvar_registro(preparacao, registro)
+  pasta.parent.mkdir(parents=True, exist_ok=True)
+  preparacao.rename(pasta)
 
 
 def _id(identificador: str) -> None:
@@ -271,15 +284,18 @@ def gravar_conjunto(xml: bytes, pdf: bytes, contexto: ContextoGravacao, caminho:
         return nome
       raise ValueError('Já existe destino com a chave fiscal, mas o conjunto está incompleto ou divergente. Confira a recuperação; os arquivos não foram substituídos.')
   identificador = uuid4().hex
-  pasta = _pasta_registro(base, identificador)
   conteudos = {'pdf': pdf, 'xml': xml}
   if contexto.tipo == TipoDocumento.CTE:
     conteudos['copia'] = xml
   registro = {'versao': 1, 'id': identificador, 'contexto': asdict(contexto), 'chave': chave, 'nome': nome,
               'estado': 'preparando', 'sha256': {papel: sha256(conteudo).hexdigest() for papel, conteudo in conteudos.items()}}
   try:
-    pasta.mkdir(parents=True)
-    _salvar_registro(pasta, registro)
+    _iniciar_registro(_pasta_registro(base, identificador), registro)
+  except (OSError, ValueError) as erro:
+    raise RuntimeError('Não foi possível iniciar o registro de gravação. Nenhum documento foi publicado. '
+                       'Confira o armazenamento local antes de tentar novamente; '
+                       f'preparação {identificador} preservada quando disponível.') from erro
+  try:
     for papel, temporario in _temporarios(destinos, identificador).items():
       temporario.parent.mkdir(parents=True, exist_ok=True)
       _gravar_bytes(temporario, conteudos[papel])

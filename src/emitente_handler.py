@@ -46,15 +46,12 @@ class EmitenteHandler:
       return nome_emitente
 
     print(f"Emitente não reconhecido: {emitente}")
-    try:
-      resposta = solicitar_nome(emitente) if solicitar_nome else input('Digite o nome: ')
-      emitente_identificado = upper_strip(resposta) or key
-      nome_final = clean_name(emitente_identificado)
+    resposta = solicitar_nome(emitente) if solicitar_nome else input('Digite o nome: ')
+    emitente_identificado = upper_strip(resposta) or key
+    nome_final = clean_name(emitente_identificado)
 
-      self.emitentes_conhecidos[key] = nome_final
-      self._dirty = True
-    except(EOFError, KeyboardInterrupt):
-      return clean_name(emitente)
+    self.emitentes_conhecidos[key] = nome_final
+    self._dirty = True
 
     return nome_final
 

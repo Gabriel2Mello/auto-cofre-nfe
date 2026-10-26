@@ -93,6 +93,24 @@ Windows ou implantação no TS01 nesta etapa.
 4. **Tratamento Dinâmico de Emitentes:** Consulta uma base de dados JSON local (`emitentes_conhecidos.json`). Caso encontre um fornecedor novo, o robô pergunta o nome tratado em tempo de execução, garantindo a padronização das pastas.
 5. **Download e Organização:** Baixa XML e PDF e confere sua integridade básica antes de organizar nas pastas escolhidas. A seleção de nota, empresa e competência ocorre na consulta ao portal; incongruências fiscais ficam para o operador. Respostas inválidas geram erro por documento, sem substituir os arquivos anteriores, contar entrega ou sinalizar o portal. A E5 prepara e confere o conjunto completo, preserva arquivos anteriores e registra pendências de publicação para recuperação. Somente depois de confirmar todos os arquivos registra a entrega e tenta a sinalização (seta-flag). A publicação entre pastas distintas continua sem transação única; consulte o guia de recuperação abaixo.
 
+## Correções da revisão técnica — 26/10/2026
+
+A troca de empresa agora exige o CNPJ correto no cabeçalho ativo do portal.
+A consulta percorre as páginas antes de selecionar o documento e recusa respostas
+incompletas ou inconsistentes. Depois de solicitar a flag uma única vez, o cliente
+relê seu estado; HTTP 200 sozinho não produz confirmação. Arquivos e métricas
+permanecem preservados quando essa confirmação falha.
+
+A primeira gravação do manifesto usa uma área inicial separada, para que falhas
+antes de publicar o registro não bloqueiem novas baixas. No console, Ctrl+C/EOF
+na pergunta do emitente interrompe o lote; nomes já aprovados são salvos no
+encerramento, sem continuar o documento cancelado.
+
+Veja o [contrato observado e as amostras sanitizadas](docs/contrato-portal.md)
+e o [procedimento de gravação e recuperação](docs/gravacao-recuperavel.md).
+Reabra o programa Python para carregar as mudanças; executáveis precisam ser
+reconstruídos. A operação completa no portal real não foi homologada nesta etapa.
+
 ---
 
 ## Validação dos downloads — E3 (20/10/2026)

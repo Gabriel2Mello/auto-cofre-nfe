@@ -1,4 +1,5 @@
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlsplit
+import json
 from time import sleep
 from collections.abc import Callable
 from requests import Session
@@ -8,7 +9,8 @@ from validate_docbr import CNPJ
 from src.interface import escolher_emitente
 from src.config import Config
 from src.enums import TipoDocumento, Empresa
-from src.parsers import DocumentoFiscal, encontrar_linha, extrair_dados
+from src.parsers import (DocumentoFiscal, encontrar_linha, extrair_dados,
+                         confirmar_empresa_ativa, confirmar_flag)
 from src.validacao_documentos import DocumentoInvalido, validar_xml, validar_pdf
 
 
@@ -70,11 +72,20 @@ def trocar_empresa(
   if not (empresa_link := empresas_href.get(cnpj_formatado)):
     raise ValueError(f"Link da empresa '{empresa}' não encontrado")
 
-  session.get(
-    url=urljoin(Config.URL_BASE, empresa_link),
+  destino = urljoin(Config.URL_BASE, empresa_link)
+  origem = urlsplit(Config.URL_BASE)
+  if (urlsplit(destino).scheme, urlsplit(destino).netloc) != (origem.scheme, origem.netloc):
+    raise ValueError('Link de troca de empresa fora do portal. O lote não foi iniciado.')
+  response = session.get(
+    url=destino,
     headers={'Referer': f'{Config.URL_BASE}/login/enviar'},
     allow_redirects=True,
-  ).raise_for_status()
+  )
+  response.raise_for_status()
+  if (response.status_code != 200
+      or (urlsplit(response.url).scheme, urlsplit(response.url).netloc) != (origem.scheme, origem.netloc)):
+    raise ValueError('Não foi possível confirmar a troca de empresa. O lote não foi iniciado.')
+  confirmar_empresa_ativa(response.text, cnpj)
 
 
 def carregar_dados(
@@ -89,6 +100,7 @@ def carregar_dados(
     'iColumns': '7' if tipo == TipoDocumento.NFE else '8',
     'sColumns': Config.COLUNAS[tipo],
     'nro_nota_de': str(nota),
+    'nro_nota_ate': str(nota),
     'flag_cliente': Config.FLAG_CLIENTE,
     'flag_conta': Config.FLAG_CONTA,
     'iDisplayStart': '0',
@@ -101,14 +113,52 @@ def carregar_dados(
     'Accept': Config.ACCEPT,
   }
 
-  response = session.post(
-    url=f'{Config.URL_BASE}/nfe/empresa/{endpoint}/load',
-    headers=headers,
-    data=payload,
-  )
-  response.raise_for_status()
-
-  return response.json().get('aaData', [])
+  linhas: list[list[str]] = []
+  paginas = set()
+  total_esperado = None
+  while True:
+    payload['iDisplayStart'] = str(len(linhas))
+    response = session.post(
+      url=f'{Config.URL_BASE}/nfe/empresa/{endpoint}/load',
+      headers=headers,
+      data=dict(payload),
+      allow_redirects=False,
+    )
+    response.raise_for_status()
+    if response.status_code != 200:
+      raise ValueError('Consulta não concluída. Confira a sessão no portal.')
+    try:
+      dados = response.json()
+    except ValueError:
+      raise ValueError('O portal não retornou uma consulta de documentos válida.') from None
+    if not isinstance(dados, dict) or not isinstance(dados.get('aaData'), list):
+      raise ValueError('O portal não retornou uma consulta de documentos válida.')
+    pagina = dados['aaData']
+    if (len(pagina) > 25 or any(not isinstance(linha, list)
+        or any(not isinstance(campo, str) for campo in linha) for linha in pagina)):
+      raise ValueError('Página de documentos inválida. A seleção não foi concluída.')
+    total = dados.get('iTotalDisplayRecords')
+    if isinstance(total, str) and total.isascii() and total.isdigit():
+      total = int(total)
+    if total is not None and (type(total) is not int or total < 0):
+      raise ValueError('Total de documentos inválido. A seleção não foi concluída.')
+    if not linhas:
+      total_esperado = total
+    if total != total_esperado or (total is not None and len(linhas) + len(pagina) > total):
+      raise ValueError('A consulta mudou durante a paginação. Confira e consulte novamente.')
+    if not pagina:
+      if total is not None and len(linhas) != total:
+        raise ValueError('A consulta ficou incompleta. Nenhum documento foi selecionado.')
+      return linhas
+    assinatura = json.dumps(pagina, ensure_ascii=False)
+    if assinatura in paginas:
+      raise ValueError('O portal repetiu uma página. A seleção não foi concluída.')
+    paginas.add(assinatura)
+    linhas.extend(pagina)
+    if total is not None and len(linhas) == total:
+      return linhas
+    if total is None and len(pagina) < 25:
+      return linhas
 
 
 def baixar_arquivos(
@@ -145,9 +195,19 @@ def baixar_arquivos(
 def marcar_flag(
   session: Session,
   codigo_arquivo: str,
+  *,
+  nota: str,
+  tipo: TipoDocumento,
 ) -> None:
-  session.post(
+  response = session.post(
     f'{Config.URL_BASE}/nfe/seta-flag/{codigo_arquivo}/{Config.CHECK_FLAG}',
     data={},
-  ).raise_for_status()
+    allow_redirects=False,
+  )
+  response.raise_for_status()
+  if response.status_code != 200:
+    raise RuntimeError('O portal não confirmou a solicitação de marcação. Confira a sessão e a sinalização.')
+  # O indicador relido no servidor é a confirmação, inclusive quando a ação
+  # retorna corpo vazio. Nunca repetir a escrita para conferir a resposta.
+  confirmar_flag(carregar_dados(session, nota, tipo), codigo_arquivo, Config.CHECK_FLAG)
 

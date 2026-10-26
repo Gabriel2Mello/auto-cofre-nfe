@@ -118,10 +118,69 @@ class TestGravacaoDocumentos(unittest.TestCase):
 
   def test_falha_no_registro_local_nao_cria_registro_no_compartilhamento(self):
     (self.projeto / '.cofre-gravacoes').write_bytes(b'OCUPADO')
-    with self.assertRaises(gravacao.GravacaoPendente):
+    with self.assertRaisesRegex(RuntimeError, 'Nenhum documento foi publicado'):
       self.salvar()
     self.assertFalse((self.base / '.cofre-gravacoes').exists())
     self.assertFalse(any(p.exists() for p in self.destinos()))
+
+  def test_falha_no_manifesto_inicial_nao_bloqueia_outra_baixa(self):
+    gravar = gravacao._gravar_bytes
+    for parcial in (False, True):
+      with self.subTest(parcial=parcial):
+        base = self.base / str(parcial)
+        base.mkdir()
+        def interromper(caminho, conteudo):
+          if parcial:
+            gravar(caminho, conteudo[:5])
+          raise OSError('Falha sintética na escrita inicial')
+        with patch.object(gravacao, '_gravar_bytes', side_effect=interromper):
+          with self.assertRaisesRegex(RuntimeError, 'Nenhum documento foi publicado'):
+            self.salvar(base)
+        self.assertEqual(gravacao.listar_gravacoes(base), [])
+        self.assertEqual(list(base.rglob('*')), [])
+        self.assertEqual(self.salvar(base), 'SINTETICO 123')
+        self.assertEqual(gravacao.listar_gravacoes(base)[0]['estado'], 'concluido')
+
+  def test_falha_ao_publicar_registro_inicial_preserva_preparacao_sem_bloquear(self):
+    renomear = Path.rename
+    def falhar(origem, destino):
+      if '.iniciando' in origem.parts:
+        raise OSError('Falha sintética ao publicar registro')
+      return renomear(origem, destino)
+    with patch.object(Path, 'rename', falhar):
+      with self.assertRaisesRegex(RuntimeError, 'Nenhum documento foi publicado'):
+        self.salvar()
+    self.assertEqual(gravacao.listar_gravacoes(self.base), [])
+    self.assertEqual(list(self.base.rglob('*')), [])
+    manifestos = list((self.projeto / '.cofre-gravacoes' / '.iniciando').rglob('manifesto.json'))
+    self.assertEqual(len(manifestos), 1)
+    self.assertEqual(json.loads(manifestos[0].read_text(encoding='utf-8'))['estado'], 'preparando')
+    self.assertEqual(self.salvar(), 'SINTETICO 123')
+
+  def test_falha_na_primeira_atualizacao_local_do_legado_nao_oculta_registro_antigo(self):
+    identificador, legado = self.registro_legado()
+    original = legado.read_bytes()
+    gravar = gravacao._gravar_bytes
+    def interromper(caminho, conteudo):
+      gravar(caminho, conteudo[:5])
+      raise OSError('Falha sintética ao preparar registro local do legado')
+    with patch.object(gravacao, '_gravar_bytes', side_effect=interromper):
+      with self.assertRaises(gravacao.GravacaoPendente):
+        gravacao.recuperar_gravacao(self.base, identificador)
+    self.assertEqual(legado.read_bytes(), original)
+    self.assertFalse(self.manifesto(self.base, identificador).parent.exists())
+    self.assertEqual(gravacao.listar_gravacoes(self.base)[0]['estado'], 'pronto')
+    self.assertEqual(gravacao.recuperar_gravacao(self.base, identificador), 'SINTETICO 123')
+    self.assertEqual(legado.read_bytes(), original)
+    self.assertEqual(gravacao.listar_gravacoes(self.base)[0]['estado'], 'concluido')
+
+  def test_falha_inicial_nao_conta_nem_sinaliza_nos_dois_fluxos(self):
+    for modo in ('web', 'console'):
+      with self.subTest(modo=modo), patch.object(gravacao, '_salvar_registro', side_effect=OSError('Falha inicial sintética')):
+        resultado, _, flags, metricas, _ = test_downloads.TestDownloads().executar(modo=modo)
+      self.assertEqual(resultado['situacao'], 'Erro')
+      self.assertEqual((flags, metricas), (0, 0))
+      self.assertIn('Nenhum documento foi publicado', resultado['detalhe'])
 
   def test_registro_local_corrompido_nao_e_ocultado_pelo_legado(self):
     identificador, legado = self.registro_legado()

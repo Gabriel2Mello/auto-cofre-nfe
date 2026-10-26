@@ -1,4 +1,5 @@
 import sys
+from contextlib import closing
 from metricas_nunes import registrar_evento
 from sincronizar_estatisticas import Sincronizador
 from time import sleep, perf_counter
@@ -46,7 +47,7 @@ def executar() -> int:
   start_time = perf_counter()
   falhas = 0
 
-  with TimeoutScraper() as session:
+  with closing(emitente_handler), TimeoutScraper() as session:
     html_login = login(
       session,
       config.senha_cofre,
@@ -97,9 +98,11 @@ def executar() -> int:
         print(f'Arquivos salvos: {nome_arquivo}')
         registrar_evento('documento_baixado', f"{empresa}:{tipo}:{dados['chave']}",
                          nota, empresa=str(empresa), tipo=str(tipo))
-        marcar_flag(session, dados['codigo_arquivo'])
+        marcar_flag(session, dados['codigo_arquivo'], nota=nota, tipo=tipo)
         sleep(0.2)
 
+      except (KeyboardInterrupt, EOFError):
+        raise
       except Timeout as e:
         falhas += 1
         handle_error(e, 'Site demorou a responder')
@@ -116,7 +119,6 @@ def executar() -> int:
         falhas += 1
         handle_error(e, f'Erro na nota {nota}')
 
-    emitente_handler.close()
   elapsed_time = perf_counter() - start_time
   print(f'\nNotas sem falha: {len(notas) - falhas} · Notas com falha: {falhas}')
   print(f'\nTerminado em {elapsed_time:0.2f} segundos')

@@ -24,6 +24,16 @@ class TestCatalogoEmitentes(unittest.TestCase):
     self.assertEqual(handler.get_nome('NOVO', lambda _: 'Nome Novo'), 'NOME NOVO')
     return handler
 
+  def test_interrupcao_na_pergunta_nao_cria_nome_nem_altera_catalogo(self):
+    for interrupcao in (KeyboardInterrupt, EOFError):
+      with self.subTest(interrupcao=interrupcao):
+        handler = EmitenteHandler()
+        with patch('builtins.input', side_effect=interrupcao), self.assertRaises(interrupcao):
+          handler.get_nome('NOVO')
+        handler.close()
+        self.assertEqual(handler.emitentes_conhecidos, {'ANTIGO': 'NOME APROVADO'})
+        self.assertEqual(self.catalogo.read_bytes(), self.anterior)
+
   def test_promocao_com_falha_preserva_original_e_temporario_recuperavel(self):
     handler = self.adicionar()
     falha = PermissionError('Falha sintética de promoção')

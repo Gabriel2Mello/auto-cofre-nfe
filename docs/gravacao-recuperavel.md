@@ -34,6 +34,17 @@ Inclua a pasta local `.cofre-gravacoes` no backup, além da área de documentos
 com seus temporários. Ao mudar o caminho absoluto da base, o hash muda; preserve
 a associação da subpasta de registros com a base original antes de recuperar.
 
+Desde 26/10/2026, o primeiro manifesto é escrito e sincronizado em
+`.cofre-gravacoes/.iniciando/DESTINO/ID-TENTATIVA`, antes de publicar o diretório
+definitivo do registro. A preparação dos documentos só começa após essa
+publicação. Falhar antes dela não cria uma pendência inválida na listagem nem
+bloqueia uma nova baixa depois de corrigir o armazenamento. Restos dessa área
+são preservados e não representam documentos publicados; não os promova
+manualmente. A mesma proteção vale para a primeira atualização local de um
+registro antigo, sem ocultar o registro original em caso de falha.
+Registros definitivos inválidos anteriores continuam exigindo conferência;
+não há reparo ou remoção automática de dados existentes.
+
 Registros antigos em `CAMINHO_BASE/.cofre-gravacoes` continuam disponíveis para
 listagem e recuperação, sem criação ou atualização de registros nesse local.
 Ao concluir ou abandonar uma pendência antiga, o estado atualizado fica somente

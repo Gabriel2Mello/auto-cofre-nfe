@@ -53,7 +53,7 @@ def executar_lote(pedido: Pedido, estado: 'EstadoInterface') -> None:
           registrar_evento('documento_baixado', f"{pedido.empresa}:{pedido.tipo}:{dados['chave']}",
                            nota, empresa=str(pedido.empresa), tipo=str(pedido.tipo))
           # Concluir a sinalização da nota salva antes de atender uma parada.
-          marcar_flag(sessao, dados['codigo_arquivo'])
+          marcar_flag(sessao, dados['codigo_arquivo'], nota=nota, tipo=pedido.tipo)
           estado.atualizar_nota(indice, 'Concluído', f'XML e PDF salvos · {nome_arquivo}')
         except ExecucaoInterrompida:
           estado.atualizar_nota(indice, 'Não processado', 'Execução interrompida antes de salvar.')

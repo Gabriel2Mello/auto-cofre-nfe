@@ -1,5 +1,7 @@
 from contextlib import ExitStack
+import json
 import os
+from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import Mock, patch
@@ -71,3 +73,42 @@ class TestMetricasIntegracao(unittest.TestCase):
                 pilha.enter_context(patch('main.' + nome))
             pilha.enter_context(patch('main.input_dados', return_value=(['123'], Empresa.MATRIZ, 10, 10, 2026, 2026, TipoDocumento.NFE)))
             self.assertEqual(main.main(), 0)
+
+    def test_interrupcao_no_nome_nao_salva_conta_sinaliza_nem_avanca_lote(self):
+        for interrupcao in (KeyboardInterrupt, EOFError):
+            with self.subTest(interrupcao=interrupcao), ExitStack() as pilha:
+                self.simular('main', pilha)
+                for nome in ('set_app_id', 'sleep', 'pause', 'handle_error'):
+                    pilha.enter_context(patch('main.' + nome))
+                pilha.enter_context(patch('main.input_dados', return_value=(
+                    ['123', '124'], Empresa.MATRIZ, 10, 10, 2026, 2026, TipoDocumento.NFE)))
+                main.EmitenteHandler.return_value.get_nome.side_effect = interrupcao
+                with self.assertRaises(interrupcao):
+                    main.main()
+                main.processar_nota.assert_called_once()
+                main.salvar_arquivos.assert_not_called()
+                main.marcar_flag.assert_not_called()
+                main.EmitenteHandler.return_value.close.assert_called_once()
+                self.assertEqual(self.total(), 0)
+
+    def test_interrupcao_preserva_nomes_ja_aprovados_e_documento_anterior(self):
+        from src.emitente_handler import EmitenteHandler
+        catalogo = Path(self.temp.name) / 'emitentes.json'
+        with ExitStack() as pilha:
+            self.simular('main', pilha)
+            pilha.enter_context(patch('src.emitente_handler.obter_caminho_json', return_value=catalogo))
+            main.EmitenteHandler.return_value = EmitenteHandler()
+            main.processar_nota.side_effect = [
+                {'emitente': emitente, 'empresa_id': '1', 'chave': emitente, 'codigo_arquivo': '1'}
+                for emitente in ('PRIMEIRO', 'SEGUNDO')]
+            for nome in ('set_app_id', 'sleep', 'pause', 'handle_error'):
+                pilha.enter_context(patch('main.' + nome))
+            pilha.enter_context(patch('main.input_dados', return_value=(
+                ['123', '124'], Empresa.MATRIZ, 10, 10, 2026, 2026, TipoDocumento.NFE)))
+            pilha.enter_context(patch('builtins.input', side_effect=['NOME APROVADO', KeyboardInterrupt]))
+            with self.assertRaises(KeyboardInterrupt):
+                main.main()
+            main.salvar_arquivos.assert_called_once()
+            main.marcar_flag.assert_called_once()
+        self.assertEqual(json.loads(catalogo.read_text(encoding='utf-8')), {'PRIMEIRO': 'NOME APROVADO'})
+        self.assertEqual(self.total(), 1)

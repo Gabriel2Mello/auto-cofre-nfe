@@ -48,8 +48,8 @@ armazena senhas e não consulta o portal ao abrir.
    pode deixar uma publicação parcial identificada pelo ID da pendência; use
    o guia de recuperação antes de repetir. Não há repetição automática de
    downloads ou sinalizações.
-5. **Salvar resultado** exporta o lote para JSON. O painel mostra apenas a
-   execução atual; iniciar outra substitui a lista. Não há histórico persistente
+5. O painel mostra apenas a execução atual; iniciar outra substitui a lista.
+   Não há exportação da lista pela interface, histórico persistente
    de lotes nem retomada automática após encerrar.
 
 Desde a E3, downloads passam pela [validação de formato e identidade](../README.md#validação-dos-downloads--e3-20102026) antes do salvamento: conteúdo inválido, divergente ou sem identidade verificável resulta em **Erro**, sem gravação, métrica ou sinalização. PDF protegido, em imagem ou com identidade ambígua exige conferência manual no portal.

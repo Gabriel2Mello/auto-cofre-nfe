@@ -3,10 +3,11 @@ const el=id=>document.getElementById(id);
 const token=document.querySelector('meta[name="cofre-token"]').content;
 const headers={Authorization:'Bearer '+token,'Content-Type':'application/json','X-Cofre-Pagina':crypto.randomUUID()};
 let estado=null, encerrado=false, saindo=false, presenca=null, ciclo=0, timer=null, assinatura='', perguntaId='';
-let enviando=false, confirmacaoPendente=true, configurandoPasta=false;
+let enviando=false, confirmacaoPendente=true, configurandoPasta=false, abrindoPasta=false;
 const desktop=document.querySelector('meta[name="cofre-desktop"]')?.content==='1';
 const selecionado=id=>document.querySelector(`#${id} input:checked`).value;
 el('escolher-pasta').hidden=!desktop;
+el('abrir-pasta').hidden=!desktop;
 
 const tema=window.NunesTema.iniciar({controle:el('tema'),chave:'cofre-tema',cookie:!desktop});
 if(desktop){
@@ -35,7 +36,7 @@ function renderizar(dados){
   el('campos').disabled=dados.ativo||dados.encerrando||dados.configurando||configurandoPasta||enviando||confirmacaoPendente;
   el('iniciar').disabled=el('campos').disabled;
   el('escolher-pasta').disabled=el('campos').disabled||!desktop;
-  el('exportar').disabled=el('campos').disabled||!dados.resultados.length;
+  el('abrir-pasta').disabled=!desktop||dados.encerrando||dados.configurando||configurandoPasta||abrindoPasta||confirmacaoPendente;
   const chave=JSON.stringify(dados);if(chave===assinatura)return;assinatura=chave;
   el('parar').hidden=!dados.ativo;el('parar').disabled=dados.parando;
   el('fase').textContent=dados.encerrando?'Encerrando':dados.parando?'Parando':dados.pergunta?'Sua conferência':dados.ativo?'Processando':dados.resultados.length?'Finalizado':'Aguardando';
@@ -50,7 +51,14 @@ function renderizar(dados){
   el('lote').hidden=!dados.lote;
   if(dados.lote){const l=dados.lote;el('lote').textContent=`${l.tipo==='nfe'?'NF-e':'CT-e'} · ${l.empresa==='MATRIZ'?'Matriz':'Filial'} · documentos ${l.competencia.slice(5)}/${l.competencia.slice(0,4)} · pasta ${l.pasta.slice(5)}/${l.pasta.slice(0,4)}`;}
   const fragmento=document.createDocumentFragment();
-  for(const r of dados.resultados){const item=document.createElement('li');item.className='resultado-nota';const cabecalho=document.createElement('div');cabecalho.className='cabecalho-nota';const classe=r.situacao==='Erro'?' erro':['Conferir sinalização','Não processado'].includes(r.situacao)?' atencao':'';cabecalho.append(texto('strong',r.nota),texto('span',r.situacao,'situacao'+classe));item.append(cabecalho,texto('p',r.detalhe||'Aguardando processamento.','detalhe-nota'));fragmento.append(item);}
+  for(const r of dados.resultados){
+    const item=document.createElement('li');item.className='resultado-nota';
+    const classe=r.situacao==='Concluído'?' concluido':r.situacao==='Erro'?' erro':['Conferir sinalização','Não processado'].includes(r.situacao)?' atencao':'';
+    const detalhe=r.situacao==='Concluído'?(r.detalhe||'').replace(/^XML e PDF salvos · /,''):r.detalhe;
+    const linha=texto('p','','detalhe-nota');
+    linha.append(texto('strong',r.nota),document.createTextNode(' · '+(detalhe||'Aguardando processamento.')));
+    item.append(texto('span',r.situacao,'situacao'+classe),linha);fragmento.append(item);
+  }
   if(dados.resultados.length)el('linhas').replaceChildren(fragmento);else el('linhas').replaceChildren(texto('li','O resultado das notas aparecerá aqui.','vazio'));
   renderizarPergunta(dados.pergunta);
 }
@@ -71,7 +79,7 @@ async function atualizar(){
   // Ociosidade confirmada não consulta periodicamente. Uma falha conserva a
   // necessidade de confirmação, inclusive antes de observar o lote aceito.
   try{const dados=await api('/api/estado');if(atual!==ciclo||encerrado||saindo)return;confirmacaoPendente=false;el('conexao').hidden=true;renderizar(dados);if(dados.ativo||dados.configurando)timer=setTimeout(atualizar,800);}
-  catch{if(atual!==ciclo||encerrado||saindo)return;confirmacaoPendente=true;assinatura='';el('fase').textContent='Reconectando';el('status').textContent='Aguardando confirmação do andamento…';el('conexao').hidden=false;el('conexao').textContent='Sem confirmação do andamento. Reconectando para conferir o lote; não reenvie os documentos.';el('campos').disabled=true;el('iniciar').disabled=true;el('exportar').disabled=true;el('escolher-pasta').disabled=true;timer=setTimeout(atualizar,1500);}
+  catch{if(atual!==ciclo||encerrado||saindo)return;confirmacaoPendente=true;assinatura='';el('fase').textContent='Reconectando';el('status').textContent='Aguardando confirmação do andamento…';el('conexao').hidden=false;el('conexao').textContent='Sem confirmação do andamento. Reconectando para conferir o lote; não reenvie os documentos.';el('campos').disabled=true;el('iniciar').disabled=true;el('escolher-pasta').disabled=true;el('abrir-pasta').disabled=true;timer=setTimeout(atualizar,1500);}
 }
 async function acao(caminho,dados={}){el('mensagem').textContent='';try{await api(caminho,dados);await atualizar();}catch(e){el('mensagem').textContent=e.message;}}
 el('formulario').onsubmit=async e=>{
@@ -81,14 +89,27 @@ el('formulario').onsubmit=async e=>{
   catch(e){el('mensagem').textContent=e.message;}
   finally{enviando=false;assinatura='';await atualizar();}
 };
+function informarPasta(mensagem){
+  if(el('configuracoes').open)el('configuracao-status').textContent=mensagem;
+}
 el('escolher-pasta').onclick=async()=>{
   if(!desktop||el('escolher-pasta').disabled||configurandoPasta)return;
-  configurandoPasta=true;el('escolher-pasta').disabled=true;el('campos').disabled=true;el('iniciar').disabled=true;el('exportar').disabled=true;
-  el('configuracao-status').textContent='Escolha a pasta no diálogo do Windows.';
-  try{const r=await api('/api/pasta',{});if(r.alterado){el('pasta-base').textContent=r.pasta;el('configuracao-status').textContent='Pasta salva. Será usada nas próximas execuções.';}else el('configuracao-status').textContent='Escolha cancelada. A pasta anterior foi mantida.';}
-  catch(e){el('configuracao-status').textContent=e.message;}
+  configurandoPasta=true;el('escolher-pasta').disabled=true;el('abrir-pasta').disabled=true;el('campos').disabled=true;el('iniciar').disabled=true;
+  informarPasta('Escolha a pasta no diálogo do Windows.');
+  try{const r=await api('/api/pasta',{});if(r.alterado){el('pasta-base').textContent=r.pasta;informarPasta('Pasta salva. Será usada nas próximas execuções.');}else informarPasta('Escolha cancelada. A pasta anterior foi mantida.');}
+  catch(e){informarPasta(e.message);}
   finally{configurandoPasta=false;await atualizar();}
 };
+el('abrir-pasta').onclick=async()=>{
+  if(!desktop||el('abrir-pasta').disabled||abrindoPasta)return;
+  abrindoPasta=true;el('abrir-pasta').disabled=true;
+  try{await api('/api/pasta/abrir',{});informarPasta('Pasta aberta no Explorador de Arquivos.');}
+  catch(e){informarPasta(e.message);}
+  finally{abrindoPasta=false;el('abrir-pasta').disabled=!desktop||Boolean(estado?.encerrando)||Boolean(estado?.configurando)||configurandoPasta||confirmacaoPendente;}
+};
+el('configuracoes').addEventListener('toggle',()=>{
+  if(!el('configuracoes').open)el('configuracao-status').textContent='';
+});
 window.addEventListener('keydown',e=>{if(e.key==='Escape')el('configuracoes').open=false;});
 function fecharConfiguracoesFora(e){
   const menu=el('configuracoes');
@@ -98,17 +119,6 @@ window.addEventListener('pointerdown',fecharConfiguracoesFora,true);
 window.addEventListener('focusin',fecharConfiguracoesFora);
 el('parar').onclick=()=>acao('/api/parar');el('cancelar-decisao').onclick=()=>acao('/api/parar');
 el('form-decisao').onsubmit=async e=>{e.preventDefault();if(!estado?.pergunta||el('responder').disabled)return;const p=estado.pergunta;const valor=p.tipo==='nome'?el('nome').value:document.querySelector('input[name="emitente"]:checked')?.value;if(valor===undefined)return;el('responder').disabled=true;try{await api('/api/responder',{id:p.id,valor});await atualizar();}catch(erro){el('erro-decisao').textContent=erro.message;}finally{el('responder').disabled=false;}};
-el('exportar').onclick=async()=>{
-  if(!estado||el('exportar').disabled)return;
-  if(desktop){
-    el('exportar').disabled=true;
-    try{const r=await api('/api/exportar',{});el('exportacao').textContent=r.salvo?'Resultado salvo no arquivo escolhido.':'Exportação cancelada; o resultado continua nesta janela.';}
-    catch(e){el('mensagem').textContent=e.message;}
-    finally{el('exportar').disabled=Boolean(estado?.ativo)||Boolean(estado?.encerrando)||Boolean(estado?.configurando)||configurandoPasta||confirmacaoPendente||!estado?.resultados.length;}
-    return;
-  }
-  const blob=new Blob([JSON.stringify({exportado_em:new Date().toISOString(),...estado},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='resultado-cofre.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
-};
 el('encerrar').onclick=async()=>{if(estado?.encerrando||!confirm('Deseja realmente encerrar o Cofre NF-e? Se houver processamento, a operação em curso será concluída antes da parada.'))return;try{await api('/api/fechar',{});encerrado=true;clearTimeout(timer);presenca?.abort();document.querySelectorAll('button,input,select,textarea').forEach(no=>no.disabled=true);el('status').textContent=desktop?'Encerrando. Aguarde a operação atual; a janela fechará automaticamente.':'Encerrando a aplicação. Você pode fechar esta aba.';el('decisao').hidden=true;}catch(e){el('mensagem').textContent=e.message;}};
 
 async function acompanhar(){

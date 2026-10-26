@@ -57,6 +57,8 @@ def criar_servidor(estado: EstadoInterface) -> ServidorInterface:
     '/cofre.js': (raiz / 'src/cofre.js', 'text/javascript; charset=utf-8'),
     '/nunes-tema.js': (raiz / 'src/nunes-tema.js', 'text/javascript; charset=utf-8'),
     '/icons/icone.svg': (raiz / 'icons/icone.svg', 'image/svg+xml'),
+    '/icons/tema-lua.svg': (raiz / 'icons/tema-lua.svg', 'image/svg+xml'),
+    '/icons/tema-lua-sol.svg': (raiz / 'icons/tema-lua-sol.svg', 'image/svg+xml'),
     '/icons/icone-192.png': (raiz / 'icons/icone-192.png', 'image/png'),
     '/favicon.ico': (raiz / 'icons/icone.ico', 'image/x-icon'),
   }
@@ -214,6 +216,16 @@ def criar_servidor(estado: EstadoInterface) -> ServidorInterface:
             self.json(500, {'erro': 'Não foi possível salvar a configuração. Confira o acesso à pasta de preferências.'})
             return
           self.json(200, resultado)
+          return
+        elif self.path == '/api/pasta/abrir' and servidor.modo_desktop and servidor.desktop is not None:
+          if dados:
+            raise ValueError('A abertura usa a pasta configurada; não envie caminhos pela página.')
+          try:
+            servidor.desktop.abrir_pasta()
+          except OSError:
+            self.json(500, {'erro': 'Não foi possível abrir a pasta configurada. Confira o acesso e tente novamente.'})
+            return
+          self.json(200, {'aberta': True})
           return
         elif self.path == '/api/exportar' and servidor.desktop is not None:
           if dados:

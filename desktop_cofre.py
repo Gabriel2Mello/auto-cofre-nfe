@@ -152,6 +152,17 @@ class Janela:
         estado.condicao.notify_all()
       self.exportando.release()
 
+  def abrir_pasta(self):
+    estado = self.servidor.estado
+    with estado.condicao:
+      if estado.encerrando or estado.configurando:
+        raise ValueError('Aguarde a conclusão da escolha de pasta ou do encerramento.')
+      caminho = documentos_entrada()
+    if not caminho or not Path(caminho).is_absolute() or not Path(caminho).is_dir():
+      raise ValueError('A pasta configurada está indisponível. Confira o caminho em Configurações.')
+    # O destino vem exclusivamente da configuração local, nunca da página.
+    os.startfile(caminho, 'explore')
+
   def exportar(self):
     if not self.exportando.acquire(blocking=False):
       raise ValueError('Há um diálogo aberto. Conclua ou cancele antes de exportar.')
@@ -201,12 +212,16 @@ class Janela:
     webview.settings['ALLOW_DOWNLOADS'] = False
     webview.settings['ALLOW_FILE_URLS'] = False
     janela = webview.create_window(NOME, f'http://127.0.0.1:{self.servidor.server_port}',
-                                  width=1080, height=780, min_size=(760, 540), text_select=True)
+                                  width=1009, height=618, min_size=(1009, 618),
+                                  resizable=False, text_select=True)
     self.janela = janela
 
     def restaurar():
       dados = desktop_windows.ler_geometria(pasta_preferencias())
       if dados:
+        # Só a posição persiste: preferências antigas não alteram o tamanho fixo.
+        dados = {**dados, 'retangulo': [*dados['retangulo'][:2],
+                 janela.native.Width, janela.native.Height], 'maximizada': False}
         desktop_windows.restaurar_geometria(janela.native, dados)
 
     janela.events.before_show += restaurar

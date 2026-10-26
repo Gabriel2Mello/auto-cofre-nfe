@@ -18,12 +18,14 @@
 <main>
   <header class="cabecalho">
     <div class="marca"><img src="/icons/icone.svg" width="32" height="32" alt=""><h1>Cofre NF-e <span>· Nunes</span></h1></div>
-    <details class="configuracoes" id="configuracoes"><summary>Configurações</summary><div class="menu-configuracoes">
-      <button id="tema" type="button">Tema escuro</button>
-      <p><strong>DOCUMENTOS DE ENTRADA</strong></p><p id="pasta-base" class="base-destino">__DESTINO_BASE__</p>
-      <p class="dica">Selecione a própria pasta DOCUMENTOS DE ENTRADA. A escolha ficará salva nesta instalação.</p>
-      <button id="escolher-pasta" type="button" aria-label="Alterar pasta de documentos" disabled>Alterar</button><p id="configuracao-status" class="dica" role="status"></p>
+    <div class="controles-cabecalho">
+    <button id="tema" class="botao-icone" type="button" title="Alternar tema" aria-label="Ativar tema escuro">Tema escuro</button>
+    <details class="configuracoes" id="configuracoes"><summary class="botao-icone" title="Configurações" aria-label="Configurações"><svg class="icone-controle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h9m4 0h3M4 17h3m4 0h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></summary><div class="menu-configuracoes">
+      <p id="pasta-base" class="base-destino">__DESTINO_BASE__</p>
+      <p class="dica">Selecione a própria pasta DOCUMENTOS DE ENTRADA.</p>
+      <div class="acoes-pasta"><button id="escolher-pasta" type="button" aria-label="Alterar pasta de documentos" disabled>Alterar</button><button id="abrir-pasta" type="button" aria-label="Abrir pasta de documentos" disabled>Abrir</button></div><p id="configuracao-status" class="dica" role="status"></p>
     </div></details>
+    </div>
   </header>
   <section class="area-trabalho" aria-label="Documentos">
     <form id="formulario"><fieldset id="campos">
@@ -37,15 +39,16 @@
         </div>
       </div>
       <div class="documentos">
-        <label for="notas">Notas</label><textarea id="notas" rows="2" maxlength="12000" placeholder="12345, 12346, 12347" aria-describedby="dica-notas" required></textarea>
+        <p id="rotulo-notas" class="rotulo-campo">Notas</p><textarea id="notas" rows="2" maxlength="12000" placeholder="12345, 12346, 12347" aria-labelledby="rotulo-notas" aria-describedby="dica-notas" required></textarea>
         <div class="rodape-entrada"><p id="dica-notas" class="dica">Separe por vírgula ou linha.</p><button type="submit" id="iniciar" class="botao-principal" disabled>Baixar</button></div>
       </div>
     </fieldset></form>
     <section class="resultados" aria-labelledby="titulo-resultados">
-      <div class="titulo-secao"><h2 id="titulo-resultados">Resultados</h2><button id="exportar" type="button" disabled>Salvar resultado</button></div>
+      <div class="titulo-secao"><h2 id="titulo-resultados">Resultados</h2></div>
+      <div class="rolagem-resultados" tabindex="0" role="region" aria-label="Andamento e resultados por nota">
       <div class="andamento" aria-label="Andamento"><span id="fase" class="sr-only">Aguardando</span><p id="status" role="status">Pronto</p><button id="parar" type="button" hidden>Parar processamento</button></div>
+      <div id="resumo" class="contagens" aria-label="Resumo do lote" hidden><span class="indicador concluidos"><strong id="concluidos">0</strong>Concluídas</span><span class="indicador pendentes"><strong id="pendentes">0</strong>Pendentes</span><span class="indicador erros" title="Erros e notas que precisam de conferência"><strong id="erros">0</strong>Erros</span></div>
       <p id="lote" class="dica lote" hidden></p>
-      <div id="resumo" class="contagens" aria-label="Resumo do lote" hidden><span><strong id="concluidos">0</strong> concluídas</span><span><strong id="pendentes">0</strong> pendentes</span><span><strong id="erros">0</strong> para conferir</span></div>
       <progress id="progresso" class="sr-only" value="0" max="1" aria-label="Progresso do lote"></progress>
       <p id="conexao" class="conexao" role="alert" hidden></p>
       <section id="decisao" class="aviso" aria-labelledby="titulo-decisao" hidden>
@@ -53,8 +56,8 @@
         <form id="form-decisao"><div id="opcoes"></div><div id="campo-nome" hidden><label for="nome">Apelido</label><input id="nome" type="text" maxlength="120" autocomplete="off"></div><div class="acoes"><button id="responder" class="botao-principal" type="submit">Confirmar</button><button id="cancelar-decisao" type="button">Parar execução</button></div></form>
         <p id="erro-decisao" class="mensagem" role="alert"></p>
       </section>
-      <p id="exportacao" class="dica" role="status"></p>
       <ul id="linhas" class="lista-resultados" aria-label="Resultado por nota"><li class="vazio">O resultado das notas aparecerá aqui.</li></ul>
+      </div>
     </section>
     <p id="mensagem" class="mensagem" role="alert"></p>
   </section>

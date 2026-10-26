@@ -2,7 +2,7 @@
 
 Uso: python -m tests.ensaio_desktop PASTA_ISOLADA. Não integra o pacote.
 Comandos de ensaio em comando.json: resultados, emitente, nome, compacto,
-minimizar, exportar, claro, escuro, fechar. Observações em sonda.json.
+minimizar, claro, escuro, fechar. Observações em sonda.json.
 """
 import json
 import os
@@ -35,6 +35,9 @@ def main():
   import src.controlador_web as controlador
   original = controlador.EstadoInterface
   estados = []
+  aberturas_pasta = []
+  # Simula somente a abertura no Explorer; a rota e a configuração continuam reais.
+  os.startfile = lambda caminho, operacao: aberturas_pasta.append({'pasta': caminho, 'operacao': operacao})
   liberar_gravacao = Event()
 
   def simular(pedido, estado):
@@ -127,7 +130,7 @@ def main():
                 p = estados[0].snapshot()['pergunta']
                 estados[0].responder({'id': p['id'], 'valor': '1'})
               elif acao == 'editar-nome':
-                janela.evaluate_js("el('nome').value='DECISAO SINTETICA EM EDICAO'")
+                janela.evaluate_js("el('nome').value='Decisao sintetica em edicao';el('nome').focus()")
               elif acao == 'configurar-pasta':
                 destino = pasta / 'DESTINO-ESCOLHIDO'
                 destino.mkdir(exist_ok=True)
@@ -135,8 +138,31 @@ def main():
                 janela.evaluate_js("el('configuracoes').open=true;el('escolher-pasta').click()")
               elif acao == 'ver-configuracoes':
                 janela.evaluate_js("el('configuracoes').open=true;window.scrollTo(0,0)")
+              elif acao == 'abrir-pasta':
+                janela.evaluate_js("el('configuracoes').open=true;el('abrir-pasta').click()")
               elif acao == 'fechar-configuracoes':
                 janela.evaluate_js("el('configuracoes').open=false")
+              elif acao == 'areas-clique':
+                janela.evaluate_js("""(() => {
+                  const opcao=document.querySelector('.opcao'),check=el('mesma-pasta');
+                  const inicial=check.checked,form=document.querySelector('#formulario').getBoundingClientRect();
+                  const rect=opcao.getBoundingClientRect(),foco=document.activeElement;
+                  const fora=document.elementFromPoint(form.right-2,rect.top+rect.height/2);
+                  fora.click();const foraPreservou=check.checked===inicial;
+                  check.checked=inicial;destino();
+                  opcao.querySelector('span').click();const textoAlternou=check.checked!==inicial;
+                  check.click();const checkboxAlternou=check.checked===inicial;
+                  check.checked=inicial;destino();el('iniciar').focus();
+                  const titulo=el('rotulo-notas'),tituloRect=titulo.getBoundingClientRect();
+                  titulo.click();const tituloNaoFocou=document.activeElement!==el('notas');
+                  document.elementFromPoint(form.right-2,tituloRect.top+tituloRect.height/2).click();
+                  const foraNotasNaoFocou=document.activeElement!==el('notas');
+                  el('notas').focus();const campoRecebeFoco=document.activeElement===el('notas');
+                  foco?.focus();
+                  window.ensaioAreasClique={foraPreservou,textoAlternou,checkboxAlternou,
+                    tituloNaoFocou,foraNotasNaoFocou,campoRecebeFoco,
+                    nomeAcessivel:el('notas').getAttribute('aria-labelledby')===titulo.id};
+                })()""")
               elif acao in ('falha-inicio', 'falha-inicio-prolongada'):
                 janela.evaluate_js("""(() => {
                   const original=window.fetch;let falhar=false;
@@ -159,7 +185,9 @@ def main():
               elif acao == 'compacto':
                 janela.resize(780, 600)
               elif acao == 'padrao':
-                janela.resize(1080, 780)
+                janela.resize(1009, 618)
+              elif acao == 'fim-resultados':
+                janela.evaluate_js("const painel=document.querySelector('.rolagem-resultados');painel.scrollTop=painel.scrollHeight")
               elif acao == 'minimizar':
                 janela.minimize()
               elif acao == 'desconectar':
@@ -172,8 +200,8 @@ def main():
                 janela.evaluate_js("el('titulo-decisao').scrollIntoView({block:'start'})")
               elif acao in ('claro', 'escuro'):
                 janela.evaluate_js("tema.aplicar('" + acao + "');api('/api/tema',{tema:'" + acao + "'})")
-              elif acao == 'exportar':
-                janela.evaluate_js("el('exportar').click()")
+              elif acao == 'alternar-tema':
+                janela.evaluate_js("el('tema').click()")
               elif acao == 'fechar':
                 estados[0].encerrar()
               elif acao == 'capturar':
@@ -188,11 +216,15 @@ def main():
                 janela.destroy()
           dados = janela.evaluate_js("""({notas:el('notas').value,nome:el('nome').value,
             tema:document.documentElement.dataset.tema,linhas:el('linhas').children.length,
+            iconeTema:getComputedStyle(el('tema'),'::before').maskImage,
+            rotuloTema:el('tema').getAttribute('aria-label'),
+            temaAoLado:!el('configuracoes').contains(el('tema'))&&Math.abs(el('tema').getBoundingClientRect().top-el('configuracoes').getBoundingClientRect().top)<1,
             pergunta:estado?.pergunta?.id,largura:innerWidth,altura:innerHeight,
             empresa:selecionado('empresa'),tipo:selecionado('tipo'),
             pastaBase:el('pasta-base').textContent,pastaBloqueada:el('pasta').disabled,
             camposBloqueados:el('notas').matches(':disabled'),
             configurando:estado?.configurando,configuracaoStatus:el('configuracao-status').textContent,
+            abrirAoLado:el('abrir-pasta').getBoundingClientRect().left>=el('escolher-pasta').getBoundingClientRect().right&&Math.abs(el('abrir-pasta').getBoundingClientRect().top-el('escolher-pasta').getBoundingClientRect().top)<1,
             resultadosAoLado:document.querySelector('.resultados').getBoundingClientRect().left>document.querySelector('.parametros').getBoundingClientRect().right,
             parametrosAntesNotas:document.querySelector('.parametros').getBoundingClientRect().bottom<=document.querySelector('.documentos').getBoundingClientRect().top,
             acaoAbaixoNotas:el('iniciar').getBoundingClientRect().top>=el('notas').getBoundingClientRect().bottom,
@@ -203,13 +235,21 @@ def main():
             excesso:document.documentElement.scrollWidth>innerWidth,
             ativo:estado?.ativo,confirmacaoPendente,inicioBloqueado:el('iniciar').disabled,
             conexao:window.ensaioConexao,
+            areasClique:window.ensaioAreasClique,
             primeiraLinhaVisivel:el('linhas').firstElementChild?.getBoundingClientRect().bottom<=innerHeight,
+            paginaRola:document.documentElement.scrollHeight>innerHeight,
+            resultadosRolam:document.querySelector('.rolagem-resultados').scrollHeight>document.querySelector('.rolagem-resultados').clientHeight,
+            fimResultadosVisivel:el('linhas').lastElementChild?.getBoundingClientRect().bottom<=document.querySelector('.rolagem-resultados').getBoundingClientRect().bottom+1,
+            tituloVisivel:el('titulo-resultados').getBoundingClientRect().top>=0,
+            apelidoMaiusculo:getComputedStyle(el('nome')).textTransform==='uppercase',
             rolagensInternas:[...document.querySelectorAll('main *')].filter(n=>
               ['auto','scroll'].includes(getComputedStyle(n).overflowY)&&n.scrollHeight>n.clientHeight).length})""")
           dados['carregamentos'] = len(cargas)
+          dados['aberturasPasta'] = list(aberturas_pasta)
           dados['hwnd'] = janela.native.Handle.ToInt64()
           dados['janela'] = {'x': janela.x, 'y': janela.y, 'largura': janela.width, 'altura': janela.height}
           dados['estado_janela'] = str(janela.native.WindowState)
+          dados['janelaFixa'] = str(janela.native.FormBorderStyle) == 'FixedSingle' and not janela.native.MaximizeBox
           dados['status'] = janela.evaluate_js("el('status').textContent")
           dados['comando'] = ultimo
           temp = pasta / 'sonda.tmp'

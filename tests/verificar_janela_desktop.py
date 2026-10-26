@@ -20,6 +20,9 @@ def main():
   ambiente = dict(os.environ, NUNES_HUB_DADOS=str(pasta / 'presenca'), NUNES_COFRE_DADOS=str(pasta / 'dados'),
                   NUNES_METRICAS_DADOS=str(pasta / 'metricas'), NUNES_CENTRAL_CONFIG=str(pasta / 'ausente.json'))
   log = (pasta / 'processo.log').open('w', encoding='utf-8')
+  (pasta / 'dados').mkdir()
+  (pasta / 'dados/desktop-janela.json').write_text(json.dumps({
+    'formato': 1, 'retangulo': [160, 160, 1600, 1000], 'maximizada': True}), encoding='utf-8')
   processo = subprocess.Popen([sys.executable, '-m', 'tests.ensaio_desktop', str(pasta)], cwd=RAIZ, env=ambiente,
                               stdout=log, stderr=log, creationflags=subprocess.CREATE_NO_WINDOW)
   caminho = pasta / 'presenca/cofre-nfe.json'
@@ -27,7 +30,13 @@ def main():
   contador = 0
 
   def sonda():
-    return ler_registro(pasta / 'sonda.json')
+    # A substituição atômica do snapshot pode coincidir com a abertura do leitor.
+    fim = time.monotonic() + 5
+    while True:
+      dados = ler_registro(pasta / 'sonda.json')
+      if dados or time.monotonic() >= fim:
+        return dados
+      time.sleep(.05)
 
   def comando(acao, **dados):
     nonlocal contador
@@ -50,14 +59,44 @@ def main():
     assert sonda()['empresa'] == 'FILIAL' and sonda()['tipo'] == 'nfe' and sonda()['pastaBloqueada']
     assert sonda()['parametrosAntesNotas'] and sonda()['acaoAbaixoNotas'] and sonda()['acaoADireita']
     assert sonda()['rodapeNoFim'] and sonda()['rodapeAposConteudo']
+    tamanho_inicial = sonda()['janela']
+    assert sonda()['janelaFixa'] and not sonda()['paginaRola']
+    assert abs(tamanho_inicial['largura'] - 1009) <= 1 and abs(tamanho_inicial['altura'] - 618) <= 1
+    assert sonda()['estado_janela'] == 'Normal'
     comando('escuro')
     comando('capturar', nome='layout-inicial')
     resultado['parametros_notas_acao_e_rodape_conforme_referencia'] = True
+    comando('alternar-tema')
+    esperar(lambda: sonda().get('tema') == 'claro')
+    assert sonda()['temaAoLado'] and '/tema-lua.svg' in sonda()['iconeTema']
+    assert sonda()['rotuloTema'] == 'Ativar tema escuro'
+    comando('capturar', nome='cabecalho-claro')
+    comando('alternar-tema')
+    esperar(lambda: sonda().get('tema') == 'escuro')
+    assert '/tema-lua-sol.svg' in sonda()['iconeTema']
+    assert sonda()['rotuloTema'] == 'Ativar tema claro'
+    resultado['botao_tema_ao_lado_de_configuracoes_com_icones_e_nome_acessivel'] = True
+    comando('areas-clique')
+    assert all(sonda()['areasClique'].values()), sonda()['areasClique']
+    resultado['areas_de_clique_restritas_com_nome_acessivel'] = True
     comando('configurar-pasta')
     esperar(lambda: sonda().get('configuracaoStatus', '').startswith('Pasta salva'))
     pasta_escolhida = sonda()['pastaBase']
     assert pasta_escolhida == str(pasta / 'DESTINO-ESCOLHIDO')
     comando('fechar-configuracoes')
+    esperar(lambda: sonda().get('configuracaoStatus') == '')
+    comando('abrir-pasta')
+    esperar(lambda: sonda().get('configuracaoStatus', '').startswith('Pasta aberta'))
+    assert sonda()['abrirAoLado']
+    assert sonda()['aberturasPasta'] == [{'pasta': pasta_escolhida, 'operacao': 'explore'}]
+    comando('capturar', nome='menu-pasta-abrir')
+    resultado['abrir_ao_lado_de_alterar_usa_pasta_configurada_sem_operacao_real'] = True
+    comando('fechar-configuracoes')
+    esperar(lambda: sonda().get('configuracaoStatus') == '')
+    comando('ver-configuracoes')
+    assert sonda()['configuracaoStatus'] == ''
+    comando('fechar-configuracoes')
+    resultado['avisos_dos_botoes_limpos_ao_fechar_e_reabrir_menu'] = True
     resultado['escolha_da_pasta_pelo_fluxo_http_com_dialogo_simulado'] = True
     comando('falha-inicio')
     esperar(lambda: sonda().get('pergunta') and not sonda().get('confirmacaoPendente'))
@@ -77,16 +116,23 @@ def main():
     esperar(lambda: not sonda().get('ativo'))
     comando('resultados')
     esperar(lambda: sonda().get('linhas') == 80)
-    assert sonda()['primeiraLinhaVisivel'] and sonda()['acaoVisivel'] and sonda()['resultadosAoLado'] and sonda()['rolagensInternas'] == 0
+    assert sonda()['primeiraLinhaVisivel'] and sonda()['acaoVisivel'] and sonda()['resultadosAoLado'] and sonda()['rolagensInternas'] == 1
     assert sonda()['rodapeAposConteudo']
-    resultado['primeiras_linhas_no_tamanho_padrao_sem_scroll_interno'] = True
+    assert sonda()['resultadosRolam'] and not sonda()['paginaRola'] and sonda()['rodapeNoFim']
+    assert sonda()['janela'] == tamanho_inicial
+    resultado['janela_fixa_com_rolagem_somente_nos_resultados'] = True
+    comando('claro')
+    comando('capturar', nome='indicadores-etiquetas-claro')
     comando('escuro')
-    comando('compacto')
-    esperar(lambda: sonda().get('largura', 1000) < 800)
+    comando('capturar', nome='indicadores-etiquetas-escuro')
+    comando('fim-resultados')
+    esperar(lambda: sonda().get('fimResultadosVisivel'))
+    assert sonda()['acaoVisivel'] and sonda()['rodapeNoFim'] and sonda()['tituloVisivel']
+    comando('capturar', nome='layout-fim-resultados')
+    comando('escuro')
     assert not sonda()['excesso']
     assert sonda()['parametrosAntesNotas'] and sonda()['acaoAbaixoNotas'] and sonda()['acaoADireita']
     assert sonda()['rodapeAposConteudo']
-    comando('capturar', nome='layout-compacto')
     comando('minimizar')
     esperar(lambda: sonda().get('estado_janela') == 'Minimized')
     reabrir()
@@ -108,7 +154,9 @@ def main():
     esperar(lambda: sonda().get('pergunta') not in (None, pergunta))
     comando('editar-nome')
     reabrir()
-    assert sonda()['nome'] == 'DECISAO SINTETICA EM EDICAO' and sonda()['carregamentos'] == 1
+    assert sonda()['nome'] == 'Decisao sintetica em edicao' and sonda()['carregamentos'] == 1
+    assert sonda()['apelidoMaiusculo'] and not sonda()['paginaRola']
+    comando('capturar', nome='apelido-maiusculo')
     resultado['decisoes_emitente_nome_preservadas'] = True
     opener = build_opener(ProxyHandler({}))
     with opener.open(atual['url']) as resposta:

@@ -123,6 +123,30 @@ class TestDesktop(unittest.TestCase):
     self.servidor.modo_desktop = False
     self.assertEqual(self.pedido('/api/pasta', headers=headers)[0], 404)
 
+  def test_abrir_pasta_http_usa_somente_configuracao_e_exige_autorizacao(self):
+    import re
+    _, html = self.pedido('/', 'GET', None)
+    token = re.search(rb'name="cofre-token" content="([^"]+)"', html).group(1).decode()
+    headers = {'Authorization': 'Bearer ' + token, 'Origin': f'http://127.0.0.1:{self.servidor.server_port}',
+               'Content-Type': 'application/json'}
+    rota = '/api/pasta/abrir'
+    self.assertEqual(self.pedido(rota, headers=headers, corpo=b'{"pasta":"C:/qualquer"}')[0], 400)
+    for alteracao in ({'Origin': 'null'}, {'Authorization': 'errado'}, {'Host': 'externo.invalid'}):
+      self.assertEqual(self.pedido(rota, headers=headers | alteracao)[0], 403)
+    self.assertEqual(self.pedido(rota, 'GET', None, headers)[0], 404)
+    self.servidor.desktop.abrir_pasta.assert_not_called()
+    codigo, corpo = self.pedido(rota, headers=headers)
+    self.assertEqual((codigo, json.loads(corpo)), (200, {'aberta': True}))
+    self.servidor.desktop.abrir_pasta.assert_called_once_with()
+    self.servidor.desktop.abrir_pasta.side_effect = ValueError('Pasta indisponível.')
+    self.assertEqual(self.pedido(rota, headers=headers)[0], 400)
+    self.servidor.desktop.abrir_pasta.side_effect = OSError('SINTÉTICO')
+    codigo, corpo = self.pedido(rota, headers=headers)
+    self.assertEqual(codigo, 500)
+    self.assertNotIn('SINTÉTICO', corpo.decode())
+    self.servidor.modo_desktop = False
+    self.assertEqual(self.pedido(rota, headers=headers)[0], 404)
+
   def test_exportacao_http_nao_aceita_caminho_da_pagina(self):
     _, html = self.pedido('/', 'GET', None)
     import re
@@ -139,6 +163,40 @@ class TestDesktop(unittest.TestCase):
 
 
 class TestCicloJanela(unittest.TestCase):
+  def test_abrir_usa_pasta_salva_e_nao_interfere_no_lote(self):
+    estado = EstadoInterface()
+    desktop = desktop_cofre.Janela(Mock(estado=estado))
+    with tempfile.TemporaryDirectory() as temporario, patch.dict(os.environ, {
+        'NUNES_COFRE_DADOS': temporario + '/perfil', 'CAMINHO_DOCUMENTO_ENTRADA': temporario}), \
+        patch('desktop_cofre.os.startfile') as abrir:
+      destino = Path(temporario) / 'DOCUMENTOS DE ENTRADA'
+      destino.mkdir()
+      desktop_cofre.salvar_documentos_entrada(str(destino))
+      antes = estado.snapshot()
+      desktop.abrir_pasta()
+      abrir.assert_called_once_with(str(destino.resolve()), 'explore')
+      self.assertEqual(estado.snapshot(), antes)
+      estado.dados['ativo'] = True
+      desktop.abrir_pasta()
+      self.assertEqual(abrir.call_count, 2)
+      self.assertTrue(estado.snapshot()['ativo'])
+
+  def test_abrir_rejeita_destino_invalido_e_configuracao_em_curso(self):
+    estado = EstadoInterface()
+    desktop = desktop_cofre.Janela(Mock(estado=estado))
+    with tempfile.TemporaryDirectory() as temporario, patch('desktop_cofre.os.startfile') as abrir:
+      arquivo = Path(temporario) / 'arquivo.txt'
+      arquivo.write_text('SINTETICO', encoding='utf-8')
+      for caminho in ('', 'relativa', str(Path(temporario) / 'ausente'), str(arquivo)):
+        with self.subTest(caminho=caminho), patch('desktop_cofre.documentos_entrada', return_value=caminho):
+          with self.assertRaisesRegex(ValueError, 'indisponível'):
+            desktop.abrir_pasta()
+      for atributo in ('configurando', 'encerrando'):
+        with patch.object(estado, atributo, True):
+          with self.assertRaises(ValueError):
+            desktop.abrir_pasta()
+      abrir.assert_not_called()
+
   def test_pasta_nativa_persiste_e_bloqueia_inicio_durante_dialogo(self):
     estado = EstadoInterface(lambda p, e: None)
     desktop = desktop_cofre.Janela(Mock(estado=estado))

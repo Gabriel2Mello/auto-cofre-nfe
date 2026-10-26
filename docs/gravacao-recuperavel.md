@@ -112,6 +112,13 @@ Falha somente na sinalização continua aparecendo como **Conferir sinalização
 
 ## Validação e limites
 
+Na otimização de 26/10/2026, a raiz local dos registros passa a ser calculada
+uma vez por consulta, em vez de uma vez por manifesto. Cada manifesto, seu
+identificador e seus caminhos continuam sendo lidos, resolvidos e validados;
+o histórico completo continua sendo examinado. Não há cache entre consultas,
+índice persistente novo nem alteração dos registros. Corrupção continua bloqueando
+novas gravações, inclusive quando o arquivo mantém tamanho e data de modificação.
+
 Na mudança de localização de 21/10/2026, passaram os **55 testes Python** do
 Cofre, com presença/métricas isoladas e documentos sintéticos. As seis novas
 regressões cobrem gravação na raiz do projeto a partir de outro diretório,

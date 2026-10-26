@@ -76,6 +76,37 @@ class TestGravacaoDocumentos(unittest.TestCase):
     self.assertFalse((self.base / '.cofre-gravacoes').exists())
     self.assertEqual(gravacao.listar_gravacoes(self.base)[0]['estado'], 'concluido')
 
+  def test_raiz_e_calculada_uma_vez_por_consulta_sem_omitir_registros(self):
+    for numero in ('123', '124', '125'):
+      chave = chave_fiscal(numero=numero)
+      gravacao.gravar_conjunto(xml_fiscal(numero=numero), pdf_fiscal(chave),
+                              replace(self.contexto, nota=numero), self.base)
+    esperado = gravacao.listar_gravacoes(self.base)
+    with patch.object(gravacao, '_pasta_registros', wraps=gravacao._pasta_registros) as raiz:
+      self.assertEqual(gravacao.listar_gravacoes(self.base), esperado)
+      raiz.assert_called_once_with(self.base.resolve())
+      self.assertEqual(gravacao.listar_gravacoes(self.base), esperado)
+      self.assertEqual(raiz.call_count, 2, 'A raiz deve ser recalculada na próxima consulta')
+    self.assertEqual({r['nome'] for r in esperado}, {'SINTETICO 123', 'SINTETICO 124', 'SINTETICO 125'})
+    self.assertTrue(all(r['estado'] == 'concluido' for r in esperado))
+
+  def test_corrupcao_com_mesmo_tamanho_e_mtime_e_detectada_na_proxima_consulta(self):
+    self.salvar()
+    resumo = gravacao.listar_gravacoes(self.base)[0]
+    manifesto = self.manifesto(self.base, resumo['id'])
+    anterior = manifesto.read_bytes()
+    metadados = manifesto.stat()
+    corrompido = anterior.replace(b'"versao": 1', b'"versao": 2')
+    self.assertNotEqual(corrompido, anterior)
+    self.assertEqual(len(corrompido), len(anterior))
+    manifesto.write_bytes(corrompido)
+    os.utime(manifesto, ns=(metadados.st_atime_ns, metadados.st_mtime_ns))
+    self.assertEqual(manifesto.stat().st_mtime_ns, metadados.st_mtime_ns)
+    self.assertEqual(gravacao.listar_gravacoes(self.base)[0]['estado'], 'invalido')
+    with self.assertRaises(ValueError):
+      self.salvar()
+    self.assertEqual(manifesto.read_bytes(), corrompido)
+
   def test_pendencias_de_destinos_distintos_nao_se_misturam(self):
     identificador = self.pendencia()
     outra_base = self.temporario / 'outros-documentos'

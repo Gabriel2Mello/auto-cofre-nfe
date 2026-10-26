@@ -135,8 +135,12 @@ def _pasta_registro(base: Path, identificador: str) -> Path:
   return _seguro(pasta, pasta / identificador)
 
 
-def _carregar(base: Path, identificador: str) -> tuple[dict, ContextoGravacao]:
-  pasta = _pasta_registro(base, identificador)
+def _carregar(base: Path, identificador: str, *, registros: Path | None = None) -> tuple[dict, ContextoGravacao]:
+  if registros is None:
+    pasta = _pasta_registro(base, identificador)
+  else:
+    _id(identificador)
+    pasta = _seguro(registros, registros / identificador)
   try:
     if not pasta.exists():
       # Compatibilidade somente de leitura com registros anteriores no OneDrive.
@@ -175,7 +179,9 @@ def listar_gravacoes(caminho: str | Path) -> list[dict]:
   resultados = []
   for identificador in sorted(identificadores):
     try:
-      registro, contexto = _carregar(base, identificador)
+      # A raiz é a mesma nesta consulta. Cada registro e seus destinos continuam
+      # sendo resolvidos e validados; nenhuma leitura persiste entre consultas.
+      registro, contexto = _carregar(base, identificador, registros=pastas[0])
       resultados.append({'id': identificador, 'estado': registro['estado'], 'nome': registro['nome'],
                          'empresa': str(contexto.empresa), 'tipo': str(contexto.tipo)})
     except ValueError as erro:

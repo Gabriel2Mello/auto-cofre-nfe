@@ -9,12 +9,14 @@ from src.enums import TipoDocumento
 
 CNPJ_EMPRESA = '00000000000100'
 CNPJ_EMITENTE = '00000000000200'
+CNPJ_FISCO = '00000000000400'
+CPF_EMITENTE = '00000000001'
 ID_PORTAL = 'P' * 22
 
 
-def chave_fiscal(tipo=TipoDocumento.NFE, numero='123', cnpj=CNPJ_EMITENTE, competencia='2610'):
+def chave_fiscal(tipo=TipoDocumento.NFE, numero='123', cnpj=CNPJ_EMITENTE, competencia='2610', serie='1'):
   modelo = '55' if tipo == TipoDocumento.NFE else '57'
-  base = f'35{competencia}{cnpj}{modelo}001{int(numero):09d}112345678'
+  base = f'35{competencia}{cnpj}{modelo}{int(serie):03d}{int(numero):09d}112345678'
   soma = sum(int(digito) * (2 + indice % 8) for indice, digito in enumerate(reversed(base)))
   resto = soma % 11
   return base + str(0 if resto < 2 else 11 - resto)
@@ -37,6 +39,26 @@ def xml_fiscal(tipo=TipoDocumento.NFE, numero='123', empresa=CNPJ_EMPRESA,
     protocolo, campo_chave = ('protNFe', 'chNFe') if nfe else ('protCTe', 'chCTe')
     conteudo = f'<{raiz} xmlns="{namespace}">{conteudo}<{protocolo}><infProt><{campo_chave}>{chave}</{campo_chave}></infProt></{protocolo}></{raiz}>'
   return conteudo.encode()
+
+
+def xml_avulsa(serie='890', processado=True):
+  chave = chave_fiscal(cnpj=CNPJ_FISCO, serie=serie)
+  return (xml_fiscal(chave=chave, processado=processado)
+          .replace(b'<serie>1</serie>', f'<serie>{serie}</serie>'.encode())
+          .replace(b'</ide>', b'<procEmi>1</procEmi></ide>')
+          .replace(b'<dest>', f'<avulsa><CNPJ>{CNPJ_FISCO}</CNPJ><xOrgao>FISCO FICTICIO</xOrgao></avulsa><dest>'.encode()))
+
+
+def xml_emitente_cpf(serie='910', processado=True):
+  if 890 <= int(serie) <= 899:
+    xml = xml_avulsa(serie, processado)
+  else:
+    chave = chave_fiscal(cnpj=CPF_EMITENTE.zfill(14), serie=serie)
+    xml = (xml_fiscal(chave=chave, processado=processado)
+           .replace(b'<serie>1</serie>', f'<serie>{serie}</serie>'.encode())
+           .replace(b'</ide>', b'<procEmi>1</procEmi></ide>' if int(serie) < 920 else b'<procEmi>0</procEmi></ide>'))
+  return xml.replace(f'<CNPJ>{CNPJ_EMITENTE}</CNPJ>'.encode(),
+                     f'<CPF>{CPF_EMITENTE}</CPF>'.encode())
 
 
 def pdf_fiscal(chave=None, texto=None, sem_paginas=False, senha=None, rotulo=None):

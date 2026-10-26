@@ -131,14 +131,13 @@ def baixar_arquivos(
   response_xml.raise_for_status()
   if response_xml.status_code != 200:
     raise DocumentoInvalido('Download do XML não foi concluído (redirecionamento ou resposta parcial). Confira a sessão no portal.')
-  chave_fiscal = validar_xml(response_xml.content, tipo, nota=nota, cnpj_empresa=cnpj_empresa,
-                            mes_nota=mes_nota, ano_nota=ano_nota)
+  validar_xml(response_xml.content, tipo)
 
   response_pdf = session.get(pdf_url, allow_redirects=False)
   response_pdf.raise_for_status()
   if response_pdf.status_code != 200:
     raise DocumentoInvalido('Download do PDF não foi concluído (redirecionamento ou resposta parcial). Confira a sessão no portal.')
-  validar_pdf(response_pdf.content, chave_fiscal)
+  validar_pdf(response_pdf.content)
 
   return response_xml.content, response_pdf.content
 

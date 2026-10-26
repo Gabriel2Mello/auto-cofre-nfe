@@ -12,12 +12,15 @@ import main
 from src.config import Config
 from src.controlador_web import EstadoInterface, Pedido, executar_lote
 from src.enums import Empresa, TipoDocumento
-from tests.documentos_sinteticos import CNPJ_EMPRESA, ID_PORTAL, chave_fiscal, pdf_fiscal, xml_fiscal
+from tests.documentos_sinteticos import (
+    CNPJ_EMPRESA, CNPJ_FISCO, CPF_EMITENTE, ID_PORTAL,
+    chave_fiscal, pdf_fiscal, xml_avulsa, xml_emitente_cpf, xml_fiscal)
 
 
 class TestDownloads(unittest.TestCase):
   def executar(self, modo='web', xml=None, pdf=None, tipo=TipoDocumento.NFE,
-               status_xml=200, status_pdf=200):
+               status_xml=200, status_pdf=200, chave=None):
+    chave = chave or chave_fiscal(tipo)
     with TemporaryDirectory() as temporario, ExitStack() as pilha:
       pilha.enter_context(patch('sincronizar_estatisticas.ler_configuracao', return_value=None))
       raiz = Path(temporario)
@@ -40,7 +43,7 @@ class TestDownloads(unittest.TestCase):
         resposta = Response()
         resposta.url = url
         resposta.status_code = status_xml if url.endswith('.xml') else status_pdf
-        resposta._content = (xml if xml is not None else xml_fiscal(tipo)) if url.endswith('.xml') else (pdf if pdf is not None else pdf_fiscal(chave_fiscal(tipo)))
+        resposta._content = (xml if xml is not None else xml_fiscal(tipo)) if url.endswith('.xml') else (pdf if pdf is not None else pdf_fiscal(chave))
         # Cabeçalhos aparentemente corretos não comprovam o conteúdo.
         resposta.headers['Content-Type'] = 'application/xml' if url.endswith('.xml') else 'application/pdf'
         return resposta
@@ -75,35 +78,26 @@ class TestDownloads(unittest.TestCase):
         self.assertTrue(all(caminho.read_bytes() == b'ARQUIVO ANTERIOR' for caminho in arquivos.values()))
       saidas = {}
       for ext, caminho in arquivos.items():
-        qualificado = caminho.with_stem(caminho.stem + ' - ' + chave_fiscal(tipo))
+        qualificado = caminho.with_stem(caminho.stem + ' - ' + chave)
         saidas[ext] = (qualificado if qualificado.exists() else caminho).read_bytes()
       return resultado, saidas, flag.call_count, registrar.call_count, requisicoes
 
   def test_respostas_invalidas_nao_substituem_arquivos_nem_concluem(self):
-    chave = chave_fiscal()
     xml_valido = xml_fiscal()
     casos = {
       'html_xml': {'xml': b'<html><body>Login</body></html>'},
       'xml_vazio': {'xml': b''},
       'xml_truncado': {'xml': xml_valido[:-12]},
       'xml_resumo': {'xml': b'<resNFe xmlns="http://www.portalfiscal.inf.br/nfe"/>'},
-      'xml_numero_divergente': {'xml': xml_fiscal(numero='124')},
-      'xml_empresa_divergente': {'xml': xml_fiscal(empresa='00000000000300')},
       'xml_tipo_divergente': {'xml': xml_fiscal(TipoDocumento.CTE)},
-      'xml_competencia_divergente': {'xml': xml_fiscal(chave=chave_fiscal(competencia='2609'), emissao='2026-09-01T12:00:00-03:00')},
-      'xml_id_divergente': {'xml': xml_fiscal(chave=chave_fiscal(numero='124'))},
-      'xml_protocolo_divergente': {'xml': xml_valido.replace(f'<chNFe>{chave}</chNFe>'.encode(), f'<chNFe>{chave_fiscal(numero="124")}</chNFe>'.encode())},
-      'xml_empresa_apenas_autorizada': {'xml': xml_valido.replace(b'<dest>', b'<autXML>').replace(b'</dest>', b'</autXML>')},
+      'xml_sem_identificador': {'xml': xml_valido.replace(b' Id="NFe', b' Outro="NFe')},
+      'xml_chave_impropria_para_organizar': {'xml': xml_fiscal(chave='../FORA')},
       'xml_documentos_duplicados': {'xml': xml_valido.replace(b'</NFe>', b'</NFe>' + xml_fiscal(processado=False))},
       'xml_dtd': {'xml': b'<!DOCTYPE nfeProc [<!ENTITY senha SYSTEM "file:///nao-deve-ser-lido">]>' + xml_valido},
       'pdf_html': {'pdf': b'<html><body>Login</body></html>'},
       'pdf_vazio': {'pdf': b''},
       'pdf_falso': {'pdf': b'%PDF-1.7\nconteudo invalido\n%%EOF'},
       'pdf_truncado': {'pdf': pdf_fiscal()[:-30]},
-      'pdf_outro_documento': {'pdf': pdf_fiscal(chave_fiscal(numero='124'))},
-      'pdf_tipo_divergente_com_referencia': {'pdf': pdf_fiscal(rotulo='DACTE')},
-      'pdf_identidade_ambigua': {'pdf': pdf_fiscal(texto=chave + ' ' + chave_fiscal(numero='124'))},
-      'pdf_sem_texto': {'pdf': pdf_fiscal(texto='')},
       'pdf_sem_paginas': {'pdf': pdf_fiscal(sem_paginas=True)},
       'pdf_protegido': {'pdf': pdf_fiscal(senha='SENHA-FICTICIA')},
       'redirecionamento_xml': {'status_xml': 302},
@@ -137,6 +131,19 @@ class TestDownloads(unittest.TestCase):
             self.assertTrue(all(ID_PORTAL in url for url, _ in requisicoes))
 
 
+  def test_nfae_conclui_nos_dois_fluxos_com_pdf_correspondente(self):
+    chave = chave_fiscal(cnpj=CNPJ_FISCO, serie='890')
+    for modo in ('web', 'console'):
+      for processado in (True, False):
+        with self.subTest(modo=modo, processado=processado):
+          xml = xml_avulsa(processado=processado)
+          pdf = pdf_fiscal(chave)
+          resultado, arquivos, flags, metricas, _ = self.executar(
+              modo=modo, xml=xml, pdf=pdf, chave=chave)
+          self.assertEqual(resultado['situacao'], 'Concluído')
+          self.assertEqual(arquivos, {'xml': xml, 'pdf': pdf})
+          self.assertEqual((flags, metricas), (1, 1))
+
   def test_cte_aceita_referencia_nfe_e_empresa_participante(self):
     chave = chave_fiscal(TipoDocumento.CTE)
     for modo in ('web', 'console'):
@@ -152,6 +159,61 @@ class TestDownloads(unittest.TestCase):
               modo=modo, tipo=TipoDocumento.CTE, xml=xml,
               pdf=pdf_fiscal(chave, texto=chave + ' Referencia NFe ' + chave_fiscal()))
           self.assertEqual(resultado['situacao'], 'Concluído')
+          self.assertEqual((flags, metricas), (1, 1))
+
+
+  def test_emitente_cpf_conclui_nos_dois_fluxos(self):
+    for modo in ('web', 'console'):
+      for serie in ('890', '910', '920'):
+        with self.subTest(modo=modo, serie=serie):
+          identidade = CNPJ_FISCO if serie == '890' else CPF_EMITENTE.zfill(14)
+          chave = chave_fiscal(cnpj=identidade, serie=serie)
+          xml = xml_emitente_cpf(serie)
+          pdf = pdf_fiscal(chave)
+          resultado, arquivos, flags, metricas, _ = self.executar(
+              modo=modo, xml=xml, pdf=pdf, chave=chave)
+          self.assertEqual(resultado['situacao'], 'Concluído')
+          self.assertEqual(arquivos, {'xml': xml, 'pdf': pdf})
+          self.assertEqual((flags, metricas), (1, 1))
+
+  def test_pdf_com_referencia_e_principal_correspondente_conclui(self):
+    for modo in ('web', 'console'):
+      for tipo in TipoDocumento:
+        with self.subTest(modo=modo, tipo=tipo):
+          chave = chave_fiscal(tipo)
+          pdf = pdf_fiscal(chave, texto=f'CHAVE DE ACESSO {chave} Referencia {chave_fiscal(tipo, numero="124")}')
+          resultado, arquivos, flags, metricas, _ = self.executar(modo=modo, tipo=tipo, pdf=pdf)
+          self.assertEqual(resultado['situacao'], 'Concluído')
+          self.assertEqual(arquivos['pdf'], pdf)
+          self.assertEqual((flags, metricas), (1, 1))
+
+
+  def test_incongruencias_fiscais_e_chaves_adicionais_ficam_para_operador(self):
+    chave = chave_fiscal()
+    outra = chave_fiscal(numero='124')
+    xml = (xml_fiscal().replace(b'<serie>1</serie>', b'<serie>2</serie>')
+           .replace(b'<CNPJ>00000000000200</CNPJ>', b'<CPF>00000000001</CPF>')
+           .replace(CNPJ_EMPRESA.encode(), b'00000000000300')
+           .replace(b'<nNF>123</nNF>', b'<nNF>124</nNF>')
+           .replace(b'2026-10-01', b'2026-09-01')
+           .replace(f'<chNFe>{chave}</chNFe>'.encode(), f'<chNFe>{outra}</chNFe>'.encode()))
+    for modo in ('web', 'console'):
+      with self.subTest(modo=modo):
+        pdf = pdf_fiscal(texto=f'CHAVE DE ACESSO {outra} Referencia {chave}')
+        resultado, arquivos, flags, metricas, _ = self.executar(modo=modo, xml=xml, pdf=pdf)
+        self.assertEqual(resultado['situacao'], 'Concluído')
+        self.assertEqual(arquivos, {'xml': xml, 'pdf': pdf})
+        self.assertEqual((flags, metricas), (1, 1))
+
+
+  def test_pdf_sem_texto_ou_com_outros_dados_e_organizado(self):
+    for modo in ('web', 'console'):
+      for nome, pdf in {'sem_texto': pdf_fiscal(texto=''),
+                        'outros_dados': pdf_fiscal(chave_fiscal(numero='124'), rotulo='DACTE')}.items():
+        with self.subTest(modo=modo, caso=nome):
+          resultado, arquivos, flags, metricas, _ = self.executar(modo=modo, pdf=pdf)
+          self.assertEqual(resultado['situacao'], 'Concluído')
+          self.assertEqual(arquivos['pdf'], pdf)
           self.assertEqual((flags, metricas), (1, 1))
 
 

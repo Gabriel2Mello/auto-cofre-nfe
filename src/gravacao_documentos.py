@@ -83,9 +83,8 @@ def _temporarios(destinos: dict[str, Path], identificador: str) -> dict[str, Pat
 
 
 def _validar_par(xml: bytes, pdf: bytes, contexto: ContextoGravacao) -> str:
-  chave = validar_xml(xml, contexto.tipo, nota=contexto.nota, cnpj_empresa=contexto.cnpj_empresa,
-                      mes_nota=contexto.mes_nota, ano_nota=contexto.ano_nota)
-  validar_pdf(pdf, chave)
+  chave = validar_xml(xml, contexto.tipo)
+  validar_pdf(pdf)
   return chave
 
 

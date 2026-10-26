@@ -11,6 +11,10 @@ from src.config import Config
 from src.utils import upper_strip, extract_digits
 
 
+class NotaNaoEncontrada(RuntimeError):
+  """A consulta não retornou documento elegível para a nota solicitada."""
+
+
 @dataclass
 class DocumentoFiscal:
   recebimento_quando: str
@@ -76,7 +80,7 @@ def encontrar_linha(
   tipo: TipoDocumento
 ) -> list[DocumentoFiscal]:
   if not linhas:
-    raise RuntimeError('Nenhum dado encontrado')
+    raise NotaNaoEncontrada('Nenhuma nota encontrada')
 
   fabrica = LinhaCTe if tipo == TipoDocumento.CTE else LinhaNFe
   matches = []
@@ -100,7 +104,7 @@ def encontrar_linha(
       matches.append(linha)
 
   if not matches:
-    raise RuntimeError('Nenhuma foi encontrada')
+    raise NotaNaoEncontrada('Nenhuma nota encontrada')
 
   return matches
 

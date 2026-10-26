@@ -11,7 +11,7 @@ from src.core import baixar_arquivos, marcar_flag, processar_nota, trocar_empres
 from src.emitente_handler import EmitenteHandler
 from src.enums import Empresa
 from src.http_client import TimeoutScraper
-from src.parsers import extrair_empresas_href
+from src.parsers import NotaNaoEncontrada, extrair_empresas_href
 from src.utils import salvar_arquivos
 from metricas_nunes import registrar_evento
 from src.controlador_web import ExecucaoInterrompida, mensagem_erro
@@ -58,6 +58,8 @@ def executar_lote(pedido: Pedido, estado: 'EstadoInterface') -> None:
         except ExecucaoInterrompida:
           estado.atualizar_nota(indice, 'Não processado', 'Execução interrompida antes de salvar.')
           raise
+        except NotaNaoEncontrada:
+          estado.atualizar_nota(indice, 'Erro', 'Nenhuma nota encontrada')
         except Exception as erro:
           situacao = 'Conferir sinalização' if salvo else 'Erro'
           detalhe = ('XML e PDF salvos; não foi possível confirmar a sinalização no portal. '

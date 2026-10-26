@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 from src.controlador_web import EstadoInterface, Pedido, executar_lote
 from src.enums import Empresa, TipoDocumento
 from src.interface_web import criar_servidor
-from src.parsers import LinhaNFe
+from src.parsers import LinhaNFe, NotaNaoEncontrada, encontrar_linha
 
 
 def entrada(**alteracoes):
@@ -127,7 +127,7 @@ class TestFluxo(unittest.TestCase):
         flag.assert_called_once()
         handler.return_value.close.assert_called_once()
 
-  def executar_simulado(self, falha_salvar=None, falha_flag=None, parar_ao_salvar=False):
+  def executar_simulado(self, falha_salvar=None, falha_flag=None, parar_ao_salvar=False, falha_consulta=None):
     estado = EstadoInterface()
     pedido = Pedido.de_json(entrada(notas='123'))
     estado.dados['resultados'] = [{'nota': '123', 'situacao': 'Aguardando', 'detalhe': ''}]
@@ -141,7 +141,7 @@ class TestFluxo(unittest.TestCase):
          patch('src.execucao_web.TimeoutScraper'), patch('src.execucao_web.login', return_value=''), \
          patch('src.execucao_web.extrair_empresas_href', return_value={}), \
          patch('src.execucao_web.trocar_empresa'), patch('src.execucao_web.ver_arquivos'), \
-         patch('src.execucao_web.processar_nota', return_value={
+         patch('src.execucao_web.processar_nota', side_effect=falha_consulta, return_value={
            'emitente': 'TESTE', 'empresa_id': '1', 'chave': 'teste', 'codigo_arquivo': '1'}), \
          patch('src.execucao_web.baixar_arquivos', return_value=(b'<xml/>', b'%PDF')), \
          patch('src.execucao_web.EmitenteHandler'), \
@@ -149,6 +149,15 @@ class TestFluxo(unittest.TestCase):
          patch('src.execucao_web.marcar_flag', side_effect=falha_flag) as flag:
       executar_lote(pedido, estado)
     return estado.snapshot()['resultados'][0], flag
+
+  def test_nota_ausente_exibe_mensagem_curta_sem_sinalizar(self):
+    for linhas in ([], [['', 'SINTETICO', '01/10/2026', '456', '10,00']]):
+      with self.subTest(linhas=linhas):
+        with self.assertRaises(NotaNaoEncontrada) as erro:
+          encontrar_linha(linhas, '123', 10, 2026, TipoDocumento.NFE)
+        resultado, flag = self.executar_simulado(falha_consulta=erro.exception)
+        self.assertEqual(resultado, {'nota': '123', 'situacao': 'Erro', 'detalhe': 'Nenhuma nota encontrada'})
+        flag.assert_not_called()
 
   def test_falha_ao_salvar_nao_sinaliza_portal(self):
     resultado, flag = self.executar_simulado(falha_salvar=OSError('teste'))

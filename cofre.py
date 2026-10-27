@@ -75,14 +75,21 @@ def iniciar() -> int:
   parser = argparse.ArgumentParser(description='Cofre NF-e desktop')
   parser.add_argument('--nunes-sem-navegador', action='store_true', help=argparse.SUPPRESS)
   parser.add_argument('--criar-atalho', type=Path)
+  parser.add_argument('--autoteste-pacote', type=Path, help=argparse.SUPPRESS)
   args = parser.parse_args()
   try:
+    if args.autoteste_pacote:
+      from versao_pacote import autoteste
+      return autoteste(args.autoteste_pacote)
     if args.criar_atalho:
       import desktop_windows
+      from cofre_instalacao import relancamento, icone_relancamento
       desktop_windows.criar_atalho(args.criar_atalho.resolve(),
-        desktop_windows.comando_reabrir([], Path(__file__).resolve()), recursos() / 'icons/icone.ico',
+        relancamento() or desktop_windows.comando_reabrir([], Path(__file__).resolve()), icone_relancamento() or recursos() / 'icons/icone.ico',
         app_id=APP_ID, descricao='Baixar e organizar XML e PDF do Cofre NF-e')
       return 0
+    from cofre_instalacao import reservar_execucao
+    reservar_execucao()
     limite = time.monotonic() + 15
     while True:
       publicacao = IntegracaoLocal('cofre-nfe', 'Cofre NF-e', False, sem_navegador=True)
@@ -93,6 +100,10 @@ def iniciar() -> int:
         if ativar_existente(publicacao.caminho, espera=max(0, limite - time.monotonic())):
           return 0
   except Exception as erro:
+    if args.autoteste_pacote:
+      from cofre_instalacao import atomico
+      atomico(args.autoteste_pacote, {'formato': 1, 'pronto': False, 'erro': type(erro).__name__})
+      return 1
     informar_falha(str(erro) if isinstance(erro, RuntimeError) else
       f'Não foi possível abrir a Cofre NF-e ({type(erro).__name__}). Confira a instalação e o diagnóstico local.')
     return 1

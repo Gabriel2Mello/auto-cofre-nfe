@@ -1,9 +1,14 @@
 # Windows x64 onedir. Nenhum catálogo, credencial ou registro operacional no pacote.
 from pathlib import Path
+import json
+import os
 
 raiz = Path(SPECPATH)
+metadados = Path(os.environ.get('NUNES_COFRE_BUILD', str(raiz / '.local/cofre-versao.json')))
+if not metadados.is_file():
+    raise ValueError('Informe NUNES_COFRE_BUILD com versão e commit do build.')
 a = Analysis([str(raiz / 'cofre.py')], pathex=[str(raiz)],
-             datas=[(str(raiz / 'src/cofre.html'), 'src'),
+             datas=[(str(metadados), '.'), (str(raiz / 'src/cofre.html'), 'src'),
                     (str(raiz / 'src/cofre.css'), 'src'),
                     (str(raiz / 'src/cofre.js'), 'src'),
                     (str(raiz / 'src/nunes-tema.js'), 'src'),

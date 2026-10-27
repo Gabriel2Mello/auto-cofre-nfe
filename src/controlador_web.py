@@ -111,6 +111,9 @@ class EstadoInterface:
       return deepcopy(self.dados) | {'encerrando': self.encerrando, 'configurando': self.configurando}
 
   def iniciar(self, dados: dict) -> None:
+    from cofre_instalacao import piloto
+    if piloto():
+      raise ValueError('Este piloto testa instalação e atualização. Operações fiscais estão desativadas.')
     pedido = Pedido.de_json(dados)
     with self.condicao:
       if self.encerrando:

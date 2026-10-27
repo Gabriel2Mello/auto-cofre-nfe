@@ -33,6 +33,8 @@ from src.core import (
 
 
 def main() -> int:
+  from cofre_instalacao import reservar_execucao
+  reservar_execucao()
   with Sincronizador(aplicacao='cofre-nfe'):
     return executar()
 

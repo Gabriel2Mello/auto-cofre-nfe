@@ -240,10 +240,13 @@ class Janela:
           janela.destroy()
           return
         hwnd = janela.native.Handle.ToInt64()
+        from cofre_instalacao import relancamento, pronto, icone_relancamento
         desktop_windows.propriedades_janela(hwnd,
-          desktop_windows.comando_reabrir([], Path(__file__).with_name('cofre.py')),
-          recursos() / 'icons/icone.ico', app_id=APP_ID, nome=NOME)
+          relancamento() or desktop_windows.comando_reabrir([], Path(__file__).with_name('cofre.py')),
+          icone_relancamento() or recursos() / 'icons/icone.ico', app_id=APP_ID, nome=NOME)
         carregou = self.aguardar(janela.events.loaded)
+        if carregou:
+          pronto()
         avisou = False
         while not self.fechada.wait(.1):
           if self.servidor.estado.encerrando and not avisou:

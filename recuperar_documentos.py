@@ -10,6 +10,8 @@ from src.gravacao_documentos import abandonar_preparacao, listar_gravacoes, recu
 
 
 def main(argumentos: Sequence[str] | None = None) -> int:
+  from cofre_instalacao import reservar_execucao
+  reservar_execucao()
   parser = argparse.ArgumentParser(description=__doc__)
   parser.add_argument('--pasta', required=True, type=Path, help='Pasta base dos documentos')
   acao = parser.add_mutually_exclusive_group()

@@ -1,5 +1,9 @@
 # Cofre NF-e desktop
 
+Piloto de atualização sob demanda: [instalação, pacote assinado, atalho estável,
+recuperação e limites](../nunes-hub/ATUALIZACAO-COFRE.md). O laboratório usa dados
+isolados e bloqueia operações fiscais; a instalação habitual continua separada.
+
 Entrada `cofre.py`: pywebview 6.2.1 + WebView2/WinForms, backend e janela no
 mesmo processo; HTTP em thread própria e executor fiscal na thread existente.
 Python local conferido: 3.13.13 x64. `main.py` conserva o modo console.

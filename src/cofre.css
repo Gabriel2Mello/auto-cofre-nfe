@@ -70,6 +70,26 @@ textarea::placeholder { color:var(--muted); }
 #tema { font-size:0; }
 #tema::before { content:""; width:24px; height:24px; background:currentColor; mask:url('/icons/tema-lua.svg') center / contain no-repeat; }
 :root[data-tema=escuro] #tema::before { mask-image:url('/icons/tema-lua-sol.svg'); }
+
+/* Efeitos locais, habilitados somente após uma troca manual de tema. */
+@media (prefers-reduced-motion:no-preference) {
+  :root[data-tema-animado] :where(body,button,input,textarea,summary,h1 span,.dica,
+    .segmentado label,.resultados,#status,.indicador,.indicador strong,.resultado-nota,
+    .detalhe-nota,.detalhe-nota strong,.situacao,.conexao,.aviso,.aviso .dica,
+    .escolha,.escolha small,.menu-configuracoes,.rodape,.assinatura,.mensagem,.vazio) {
+    transition:background-color 150ms ease,color 150ms ease,border-color 150ms ease;
+  }
+  :root[data-tema-animado] #notas {
+    transition:background-color 150ms ease,color 150ms ease,border-color 180ms ease-in-out;
+  }
+  :root[data-tema-animado] textarea::placeholder { transition:color 150ms ease; }
+  :root[data-tema-animado] #tema::before { transition:background-color 150ms ease; }
+  :root[data-tema-animado][data-tema=claro] #tema::before { animation:tema-icone-claro 120ms ease-out; }
+  :root[data-tema-animado][data-tema=escuro] #tema::before { animation:tema-icone-escuro 120ms ease-out; }
+}
+@keyframes tema-icone-claro { from { transform:rotate(-24deg); } to { transform:rotate(0); } }
+@keyframes tema-icone-escuro { from { transform:rotate(24deg); } to { transform:rotate(0); } }
+
 .configuracoes { position:relative; }
 .configuracoes summary { display:flex; list-style:none; cursor:pointer; min-height:40px; padding:8px; border:1px solid var(--borda); border-radius:7px; background:var(--cartao); }
 .configuracoes summary:hover { background:var(--suave); border-color:var(--marca); }

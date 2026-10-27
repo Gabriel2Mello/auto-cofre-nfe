@@ -10,6 +10,7 @@ el('escolher-pasta').hidden=!desktop;
 el('abrir-pasta').hidden=!desktop;
 
 const tema=window.NunesTema.iniciar({controle:el('tema'),chave:'cofre-tema',cookie:!desktop});
+el('tema').addEventListener('click',()=>{document.documentElement.dataset.temaAnimado='1';});
 if(desktop){
   tema.aplicar(document.querySelector('meta[name="cofre-tema"]').content);
   el('tema').addEventListener('click',async()=>{

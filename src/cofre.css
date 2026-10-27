@@ -22,9 +22,9 @@
 
 * { box-sizing:border-box; }
 html { height:100%; }
-body { display:flex; flex-direction:column; margin:0; height:100%; overflow:hidden; background:var(--fundo); color:var(--texto); font:14px/1.5 "Segoe UI",sans-serif; }
+body { display:flex; flex-direction:column; margin:0; height:100%; overflow:auto; background:var(--fundo); color:var(--texto); font:14px/1.5 "Segoe UI",sans-serif; }
 main,.rodape { width:100%; max-width:1220px; margin:0 auto; padding:16px 24px; }
-main { display:flex; flex-direction:column; flex:1; min-height:0; padding-bottom:12px; }
+main { display:flex; flex-direction:column; flex:1; min-height:min-content; padding-bottom:12px; }
 h1,h2,h3,p { margin:0; }
 h1 { font-size:21px; line-height:1.2; font-weight:600; }
 h1 span { margin-left:6px; color:var(--muted); font-size:13px; font-weight:400; }
@@ -102,7 +102,7 @@ textarea::placeholder { color:var(--muted); }
 /* Parâmetros, notas e ação à esquerda; resultados alinhados ao início dos parâmetros. */
 /* Os 12px extras da janela pertencem à coluna de resultados, preservando o formulário. */
 .area-trabalho { display:grid; flex:1; min-height:0; grid-template-columns:minmax(0,calc(50% - 20px)) minmax(0,1fr); grid-template-rows:minmax(0,1fr) auto; gap:0 28px; }
-#formulario { grid-column:1; grid-row:1; min-width:0; min-height:0; overflow-y:auto; }
+#formulario { grid-column:1; grid-row:1; min-width:0; }
 .documentos { margin-top:24px; }
 .parametros { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:18px 14px; }
 .segmentado { display:grid; grid-template-columns:1fr 1fr; }

@@ -198,7 +198,7 @@ def criar_servidor(estado: EstadoInterface) -> ServidorInterface:
         elif self.path == '/api/responder':
           estado.responder(dados)
         elif self.path == '/api/parar':
-          estado.parar()
+          estado.parar(origem='decisao' if dados.get('origem') == 'decisao' else 'parar')
         elif self.path == '/api/fechar':
           estado.encerrar()
         elif self.path == '/api/tema' and servidor.modo_desktop:

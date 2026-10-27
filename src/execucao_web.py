@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from src.auth import login
 from src.config import Config
+from src.diagnostico_portal import diagnostico_execucao
 from src.caminhos import documentos_entrada
 from src.core import baixar_arquivos, marcar_flag, processar_nota, trocar_empresa, ver_arquivos
 from src.emitente_handler import EmitenteHandler
@@ -29,8 +30,9 @@ def executar_lote(pedido: Pedido, estado: 'EstadoInterface') -> None:
     with TimeoutScraper() as sessao:
       estado.verificar_parada()
       estado.informar('Conectando ao Cofre NF-e…')
-      html = login(sessao, config.senha_cofre, config.cnpj[Empresa.MATRIZ])
-      trocar_empresa(sessao, pedido.empresa, extrair_empresas_href(html), config.cnpj[pedido.empresa])
+      with diagnostico_execucao(pedido.empresa, estado.id_execucao):
+        html = login(sessao, config.senha_cofre, config.cnpj[Empresa.MATRIZ])
+        trocar_empresa(sessao, pedido.empresa, extrair_empresas_href(html), config.cnpj[pedido.empresa])
       ver_arquivos(sessao, pedido.tipo)
       for indice, nota in enumerate(pedido.notas):
         estado.verificar_parada()

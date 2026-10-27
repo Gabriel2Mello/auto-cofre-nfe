@@ -12,6 +12,7 @@ from requests import (
 from src.auth import login
 from src.http_client import TimeoutScraper
 from src.config import Config
+from src.diagnostico_portal import diagnostico_execucao
 from src.interface import input_dados
 from src.parsers import extrair_empresas_href
 from src.emitente_handler import EmitenteHandler
@@ -48,13 +49,14 @@ def executar() -> int:
   falhas = 0
 
   with closing(emitente_handler), TimeoutScraper() as session:
-    html_login = login(
-      session,
-      config.senha_cofre,
-      config.cnpj[Empresa.MATRIZ]
-    )
-    empresas_href = extrair_empresas_href(html_login)
-    trocar_empresa(session, empresa, empresas_href, config.cnpj[empresa])
+    with diagnostico_execucao(empresa):
+      html_login = login(
+        session,
+        config.senha_cofre,
+        config.cnpj[Empresa.MATRIZ]
+      )
+      empresas_href = extrair_empresas_href(html_login)
+      trocar_empresa(session, empresa, empresas_href, config.cnpj[empresa])
 
     print('Sincronizado...')
     sleep(0.2)

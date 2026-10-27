@@ -1,6 +1,8 @@
 from cloudscraper import CloudScraper
 from src.config import Config
+from src.diagnostico_portal import etapa_portal, registrar_resposta
 
+@etapa_portal('login')
 def login(session: CloudScraper, senha: str, cnpj: str) -> str:
   """Realiza a autenticação no site e retorna o HTML da página inicial."""
   session.headers.update({
@@ -21,6 +23,7 @@ def login(session: CloudScraper, senha: str, cnpj: str) -> str:
     headers={'Referer': f'{Config.URL_BASE}/login'},
     allow_redirects=True,
   )
+  registrar_resposta('login', response)
   response.raise_for_status()
 
   return response.text

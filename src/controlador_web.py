@@ -100,6 +100,7 @@ class EstadoInterface:
     self.resposta: str | None = None
     self.encerrando = False
     self.configurando = False
+    self.id_execucao: str | None = None
     self.dados = {
       'ativo': False, 'parando': False, 'status': 'Pronto para baixar os documentos.',
       'resultados': [], 'pergunta': None, 'lote': None,
@@ -119,6 +120,7 @@ class EstadoInterface:
       if self.configurando:
         raise ValueError('Aguarde concluir a escolha da pasta antes de iniciar.')
       self.parada.clear()
+      self.id_execucao = uuid4().hex
       self.dados = {
         'ativo': True, 'parando': False, 'status': 'Preparando a execução…', 'pergunta': None,
         'lote': {'empresa': pedido.empresa.value, 'tipo': pedido.tipo.value,
@@ -159,9 +161,20 @@ class EstadoInterface:
     if self.parada.is_set():
       raise ExecucaoInterrompida()
 
-  def parar(self) -> None:
+  def parar(self, origem: str = 'parar') -> None:
     with self.condicao:
       if self.dados['ativo']:
+        if not self.parada.is_set():
+          pergunta = self.dados['pergunta']
+          empresa = (self.dados.get('lote') or {}).get('empresa')
+          try:
+            # Preserva a abertura sem bibliotecas de execução e a parada mesmo
+            # quando o diagnóstico não puder ser carregado.
+            from src.diagnostico_portal import registrar_parada
+            registrar_parada(self.id_execucao, Empresa(empresa) if empresa in (Empresa.MATRIZ, Empresa.FILIAL) else None,
+                             origem, pergunta['tipo'] if pergunta else None, self.encerrando)
+          except Exception:
+            pass
         self.parada.set()
         self.dados.update(parando=True, status='Parando após concluir a operação atual…', pergunta=None)
         self.condicao.notify_all()
@@ -169,7 +182,7 @@ class EstadoInterface:
   def encerrar(self) -> None:
     with self.condicao:
       self.encerrando = True
-      self.parar()
+      self.parar(origem='encerramento')
 
   def perguntar(self, tipo: str, **campos) -> str:
     with self.condicao:

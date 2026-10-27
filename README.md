@@ -18,6 +18,51 @@ queda de presença não encerra o desktop. O Hub também abre/restaura a janela.
 O modo console permanece em `main.py`. Veja [desktop, instalação, dados,
 empacotamento e validação](DESKTOP.md) e o [fluxo operacional](docs/interface-web.md).
 
+## Diagnóstico do acesso ao portal
+
+Desktop e console registram login, troca e confirmação da empresa em
+`%LOCALAPPDATA%\Nunes\Cofre\logs\cofre-portal.jsonl`. Com `NUNES_COFRE_DADOS`,
+o arquivo fica em `logs/cofre-portal.jsonl` dentro dessa pasta de isolamento.
+Feche e reabra a aplicação para ativar; executáveis precisam ser reconstruídos.
+
+Cada tentativa de acesso tem um identificador `execucao` próprio. O JSON por
+linha contém horário UTC com fuso explícito, Matriz/Filial, etapas e durações,
+status HTTP, categorias das páginas e redirecionamentos, tipo/tamanho da
+resposta e indicadores de formulário de login ou desafio de acesso. Esses
+indicadores são indícios, não confirmação de sessão expirada ou bloqueio.
+O campo `codigo` identifica por hash os arquivos-fonte de acesso na primeira
+tentativa do processo; sem fontes disponíveis, informa `indisponivel`.
+`formato` versiona o esquema do log.
+
+`confirmacao_empresa.motivo` distingue `cabecalho_ausente`,
+`cabecalho_ambiguo`, `cnpj_ausente`, `cnpj_ambiguo`, `cnpj_divergente`,
+`configuracao_invalida`, `vinculo_ausente`, `origem_invalida`,
+`resposta_invalida` e `confirmado`. As contagens de cabeçalhos, spans diretos
+e CNPJs ajudam a explicar a recusa sem gravar os valores encontrados.
+Campos nulos indicam que a página/configuração ainda não foi inspecionada.
+
+O registro cobre somente a preparação de acesso: `acesso_encerrado` com
+`confirmado` não significa que o lote foi baixado. Não gera novas requisições,
+repetições automáticas, métricas ou operações no portal, nem muda a checagem
+da empresa. Não grava HTML, documentos, notas, CNPJ, nomes, senha, cookies,
+tokens, URLs completas ou mensagens brutas de exceção. Falhas de comunicação
+são classificadas como `timeout`, `http` ou `comunicacao`.
+
+Rotação em aproximadamente 1 MiB por arquivo, com três cópias anteriores
+(`.jsonl.1` a `.jsonl.3`). O diagnóstico é local, não é enviado à central e
+não registra cada documento. Falhas de criação, escrita ou rotação não
+interrompem a baixa. Para investigar uma ocorrência, confira as linhas do
+horário correspondente e agrupe pelo mesmo `execucao`.
+
+No desktop, a solicitação de parada também gera `parada_solicitada`, com
+o mesmo `execucao` do acesso. `origem` distingue `parar` (botão de processamento),
+`decisao` (botão da pergunta) e `encerramento` (encerramento da aplicação).
+`pergunta` indica somente `nome`, `emitente` ou nulo; nenhum conteúdo da decisão
+é registrado. Uma parada já solicitada não gera registros repetidos.
+Esse evento identifica a origem do comando, não comprova que o usuário clicou
+fisicamente no botão. Vírgula seguida de quebra de linha é uma entrada válida
+e não solicita parada.
+
 ## Diagnóstico de abertura
 
 A abertura registra importações internas, identidade no Windows, estado,

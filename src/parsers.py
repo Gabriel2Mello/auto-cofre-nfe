@@ -9,6 +9,7 @@ from validate_docbr import CNPJ
 
 from src.enums import TipoDocumento
 from src.config import Config
+from src.diagnostico_portal import registrar_confirmacao
 from src.utils import upper_strip, extract_digits
 
 
@@ -175,10 +176,25 @@ def confirmar_empresa_ativa(html: str, cnpj: str) -> None:
   soup = BeautifulSoup(html, 'lxml')
   cabecalhos = soup.select('#mws-header-container > span')
   esperado = extract_digits(cnpj)
-  if len(cabecalhos) != 1 or len(esperado) != 14 or not esperado.isascii():
-    raise ValueError('Não foi possível confirmar a empresa ativa no portal. O lote não foi iniciado.')
+  configuracao_valida = len(esperado) == 14 and esperado.isascii()
   encontrados = re.findall(r'\(\s*(\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2})\s*\)',
-                            cabecalhos[0].get_text(' ', strip=True))
+                            cabecalhos[0].get_text(' ', strip=True)) if len(cabecalhos) == 1 else []
+  if not configuracao_valida:
+    motivo = 'configuracao_invalida'
+  elif not cabecalhos:
+    motivo = 'cabecalho_ausente'
+  elif len(cabecalhos) != 1:
+    motivo = 'cabecalho_ambiguo'
+  elif len(encontrados) != 1:
+    motivo = 'cnpj_ausente' if not encontrados else 'cnpj_ambiguo'
+  elif extract_digits(encontrados[0]) != esperado:
+    motivo = 'cnpj_divergente'
+  else:
+    motivo = 'confirmado'
+  registrar_confirmacao(motivo, len(soup.select('#mws-header-container')),
+                       len(cabecalhos), len(encontrados), configuracao_valida)
+  if len(cabecalhos) != 1 or not configuracao_valida:
+    raise ValueError('Não foi possível confirmar a empresa ativa no portal. O lote não foi iniciado.')
   if len(encontrados) != 1 or extract_digits(encontrados[0]) != esperado:
     raise ValueError('A empresa ativa no portal não corresponde à solicitada ou não pôde ser confirmada. O lote não foi iniciado.')
 

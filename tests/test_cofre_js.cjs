@@ -13,7 +13,7 @@ function elemento() {
 for(const id of ['tipo','empresa','competencia','pasta','mesma-pasta'])elementos.set(id,elemento());
 elementos.get('tipo').value='nfe';
 elementos.get('empresa').value='FILIAL';
-const eventos = new Map(), timers = new Map(), chamadas = [];
+const eventos = new Map(), timers = new Map(), chamadas = [], pedidos = [];
 let proximoTimer=0;
 let retorno={ativo:false,parando:false,status:'Pronto',resultados:[],pergunta:null,lote:null};
 let iniciarPendente=null, falharEstado=false;
@@ -27,6 +27,7 @@ const contexto = vm.createContext({
   clearTimeout(id){timers.delete(id);},AbortController,
   fetch:async(caminho,opcoes)=>{
     chamadas.push(caminho);
+    if(opcoes?.body)pedidos.push({caminho,dados:JSON.parse(opcoes.body)});
     if(caminho==='/api/presenca')return new Promise(()=>{});
     if(caminho==='/api/iniciar')return new Promise(resolve=>{iniciarPendente=()=>resolve({ok:true,json:async()=>({ok:true})});});
     if(caminho==='/api/estado'&&falharEstado)throw Error('Conexão sintética perdida');
@@ -151,6 +152,10 @@ async function testar(){
   assert.equal(elementos.get('iniciar').disabled,false);
   assert.equal(chamadas.filter(c=>c==='/api/iniciar').length,2,'Um POST por envio explícito, nenhum POST durante recuperação.');
   assert.equal(timers.size,0);
+  assert.equal(chamadas.includes('/api/parar'),false,'Iniciar e recuperar o andamento não devem solicitar parada.');
+  await elementos.get('parar').onclick();
+  await elementos.get('cancelar-decisao').onclick();
+  assert.deepEqual(pedidos.filter(p=>p.caminho==='/api/parar').map(p=>p.dados.origem),['parar','decisao']);
   retorno={...retorno,encerrando:true,ativo:true};
   await vm.runInContext('atualizar()',contexto);
   assert.equal(elementos.get('campos').disabled,true);

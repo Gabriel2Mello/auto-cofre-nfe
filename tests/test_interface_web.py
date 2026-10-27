@@ -239,6 +239,13 @@ class TestHTTP(unittest.TestCase):
       liberar.set()
       self.estado.worker.join(2)
 
+  def test_parada_identifica_origem_sem_aceitar_texto_livre(self):
+    for dados, origem in (({}, 'parar'), ({'origem': 'decisao'}, 'decisao'),
+                           ({'origem': 'CONTEUDO PRIVADO'}, 'parar')):
+      with self.subTest(origem=origem), patch.object(self.estado, 'parar') as parar:
+        self.assertEqual(self.requisicao('POST', '/api/parar', json.dumps(dados), self.cabecalhos())[0], 200)
+        parar.assert_called_once_with(origem=origem)
+
   def test_ausencia_da_ultima_aba_encerra_programa(self):
     with self.estado.condicao:
       self.servidor.teve_pagina = True

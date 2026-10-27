@@ -8,6 +8,7 @@ from validate_docbr import CNPJ
 
 from src.interface import escolher_emitente
 from src.config import Config
+from src.diagnostico_portal import etapa_portal, registrar_resposta, registrar_confirmacao
 from src.enums import TipoDocumento, Empresa
 from src.parsers import (DocumentoFiscal, encontrar_linha, extrair_dados,
                          confirmar_empresa_ativa, confirmar_flag)
@@ -60,6 +61,7 @@ def ver_arquivos(
         raise e
 
 
+@etapa_portal('troca_empresa')
 def trocar_empresa(
   session: Session,
   empresa: Empresa,
@@ -70,20 +72,24 @@ def trocar_empresa(
 
   cnpj_formatado = cnpj_validator.mask(cnpj)
   if not (empresa_link := empresas_href.get(cnpj_formatado)):
+    registrar_confirmacao('vinculo_ausente')
     raise ValueError(f"Link da empresa '{empresa}' não encontrado")
 
   destino = urljoin(Config.URL_BASE, empresa_link)
   origem = urlsplit(Config.URL_BASE)
   if (urlsplit(destino).scheme, urlsplit(destino).netloc) != (origem.scheme, origem.netloc):
+    registrar_confirmacao('origem_invalida')
     raise ValueError('Link de troca de empresa fora do portal. O lote não foi iniciado.')
   response = session.get(
     url=destino,
     headers={'Referer': f'{Config.URL_BASE}/login/enviar'},
     allow_redirects=True,
   )
+  registrar_resposta('troca_empresa', response)
   response.raise_for_status()
   if (response.status_code != 200
       or (urlsplit(response.url).scheme, urlsplit(response.url).netloc) != (origem.scheme, origem.netloc)):
+    registrar_confirmacao('resposta_invalida')
     raise ValueError('Não foi possível confirmar a troca de empresa. O lote não foi iniciado.')
   confirmar_empresa_ativa(response.text, cnpj)
 

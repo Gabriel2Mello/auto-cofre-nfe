@@ -117,7 +117,7 @@ function fecharConfiguracoesFora(e){
 }
 window.addEventListener('pointerdown',fecharConfiguracoesFora,true);
 window.addEventListener('focusin',fecharConfiguracoesFora);
-el('parar').onclick=()=>acao('/api/parar');el('cancelar-decisao').onclick=()=>acao('/api/parar');
+el('parar').onclick=()=>acao('/api/parar',{origem:'parar'});el('cancelar-decisao').onclick=()=>acao('/api/parar',{origem:'decisao'});
 el('form-decisao').onsubmit=async e=>{e.preventDefault();if(!estado?.pergunta||el('responder').disabled)return;const p=estado.pergunta;const valor=p.tipo==='nome'?el('nome').value:document.querySelector('input[name="emitente"]:checked')?.value;if(valor===undefined)return;el('responder').disabled=true;try{await api('/api/responder',{id:p.id,valor});await atualizar();}catch(erro){el('erro-decisao').textContent=erro.message;}finally{el('responder').disabled=false;}};
 el('encerrar').onclick=async()=>{if(estado?.encerrando||!confirm('Deseja realmente encerrar o Cofre NF-e? Se houver processamento, a operação em curso será concluída antes da parada.'))return;try{await api('/api/fechar',{});encerrado=true;clearTimeout(timer);presenca?.abort();document.querySelectorAll('button,input,select,textarea').forEach(no=>no.disabled=true);el('status').textContent=desktop?'Encerrando. Aguarde a operação atual; a janela fechará automaticamente.':'Encerrando a aplicação. Você pode fechar esta aba.';el('decisao').hidden=true;}catch(e){el('mensagem').textContent=e.message;}};
 

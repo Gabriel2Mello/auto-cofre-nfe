@@ -17,6 +17,18 @@ def informar_falha(mensagem: str) -> None:
     print(mensagem, file=sys.stderr)
 
 
+def informar_falha_abertura(erro, etapa):
+  from src.diagnostico_abertura import registrar
+  try:
+    caminho = registrar(erro, etapa)
+  except Exception:
+    caminho = None
+  mensagem = f'Não foi possível abrir o Cofre NF-e.\nEtapa: {etapa}. Erro: {type(erro).__name__}.'
+  if caminho:
+    mensagem += f'\n\nEnvie o conteúdo deste diagnóstico ao suporte:\n{caminho}'
+  informar_falha(mensagem)
+
+
 def main(publicacao: IntegracaoLocal) -> int:
   with MedidorAbertura('cofre-nfe') as medidor, ExitStack() as recursos:
     with medidor.etapa('sincronizacao'):
@@ -30,33 +42,41 @@ def executar_painel(publicacao: IntegracaoLocal, medidor: MedidorAbertura | None
   medidor = medidor or MedidorAbertura('cofre-nfe')
   servidor = None
   estado = None
+  etapa = 'importacoes'
   try:
     with medidor.etapa('importacoes'):
       from src.controlador_web import EstadoInterface
       from src.interface_web import criar_servidor
+    etapa = 'identidade_windows'
     with medidor.etapa('identidade_windows'):
       import desktop_windows
       from desktop_cofre import APP_ID
       desktop_windows.identidade_processo(APP_ID)
+    etapa = 'estado'
     with medidor.etapa('estado'):
       estado = EstadoInterface()
+    etapa = 'servidor_local'
     with medidor.etapa('servidor_local'):
       servidor = criar_servidor(estado)
       servidor.modo_desktop = True
     servidor_ativo, estado_ativo = servidor, estado
+    etapa = 'publicacao'
     with medidor.etapa('publicacao'):
       publicacao.registro['desktop'] = 1
       publicacao.publicar(servidor, estado.encerrar,
         lambda: {'encerrando': estado_ativo.encerrando, 'ocupado': estado_ativo.snapshot()['ativo'],
                  'paginas': len(servidor_ativo.paginas)})
+    etapa = 'janela_webview2'
     from desktop_cofre import executar
     executar(servidor)
   except KeyboardInterrupt:
     pass
   except Exception as erro:
-    publicacao.registrar_falha(erro)
-    informar_falha(f'Não foi possível manter a interface local ({type(erro).__name__}). '
-                   'Confira o ambiente Python e os recursos da instalação.')
+    try:
+      publicacao.registrar_falha(erro)
+    except OSError:
+      pass
+    informar_falha_abertura(erro, etapa)
     return 1
   finally:
     if estado is not None:

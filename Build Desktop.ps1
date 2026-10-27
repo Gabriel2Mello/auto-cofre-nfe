@@ -22,4 +22,10 @@ try {
     $env:NUNES_COFRE_BUILD = $buildAnteriorCofre
 }
 if ($LASTEXITCODE -ne 0) { throw 'O build desktop da Cofre falhou.' }
+$compiladorCofre = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
+& $compiladorCofre /nologo /target:exe /platform:anycpu /optimize+ "/out:$(Join-Path $Destino 'Cofre NFe\Preparar Cofre NFe.exe')" (Join-Path $PSScriptRoot 'src\PrepararCofre.cs')
+if ($LASTEXITCODE -ne 0) { throw 'O build do preparador da Cofre falhou.' }
+foreach ($arquivoPreparacaoCofre in @('Preparar Cofre NFe.cmd', 'LEIA-ME.txt')) {
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot $arquivoPreparacaoCofre) -Destination (Join-Path $Destino 'Cofre NFe')
+}
 Write-Output "Build $Versao em $Destino\Cofre NFe. Pacote assinado é uma etapa separada."

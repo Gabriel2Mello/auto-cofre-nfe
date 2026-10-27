@@ -7,8 +7,44 @@ isolados e bloqueia operações fiscais; a instalação habitual continua separa
 Entrada `cofre.py`: pywebview 6.2.1 + WebView2/WinForms, backend e janela no
 mesmo processo; HTTP em thread própria e executor fiscal na thread existente.
 Python local conferido: 3.13.13 x64. `main.py` conserva o modo console.
-Windows com .NET Framework 4.8 e WebView2 Evergreen são requisitos do destino;
-o pacote não instala esses runtimes. Não há fallback para Internet Explorer.
+Windows com .NET Framework 4.8 ou superior e WebView2 Evergreen são requisitos do destino.
+Depois de usar **Extrair Tudo** no ZIP, execute **Preparar Cofre NFe.exe** no usuário do operador:
+o preparador detecta os runtimes existentes e baixa/instala somente os ausentes,
+com internet e verificação da assinatura digital da Microsoft. O .NET solicita
+elevação pelo Windows; o WebView2 usa a instalação do usuário atual. Se o .NET
+exigir reinicialização, o preparador retorna 3010, pede reinício manual e deve ser
+executado novamente depois. Não reinicia o computador nem altera políticas de
+execução. É um executável CLR 4, disponível no Windows 10/11, sem depender do
+.NET 4.8 para iniciar nem executar scripts PowerShell. Bloqueios corporativos de
+executáveis precisam ser tratados pela TI. A preparação não
+configura credenciais, pasta fiscal nem vínculo da central, e não abre a automação.
+`Preparar Cofre NFe.exe --verificar` somente consulta os runtimes, sem baixar ou
+instalar. Não há fallback para Internet Explorer.
+
+Referências dos instaladores e detecção: [WebView2](https://learn.microsoft.com/microsoft-edge/webview2/concepts/distribution)
+e [.NET Framework](https://learn.microsoft.com/dotnet/framework/deployment/deployment-guide-for-developers).
+
+Falhas na abertura do painel exibem a etapa e o caminho de `cofre-diagnostico.txt`.
+O módulo `diagnostico_nunes.py` tem fonte no Hub e cópias independentes declaradas
+no manifesto; a adaptação Cofre fica em `src/diagnostico_abertura.py`. Veja o
+[padrão Nunes de diagnóstico](../estrutura-nunes/area-nunes/diagnosticos.md).
+No pacote, o arquivo fica ao lado do exe quando há permissão; os fallbacks são
+a pasta de preferências `logs/` e TEMP. O relatório registra tipos e locais da
+cadeia de exceções, códigos numéricos e presença/marca de download de recursos.
+Não inclui mensagens brutas, credenciais, documentos ou valores livres do ambiente.
+
+Se o diagnóstico indicar falha em `clr_loader/netfx.py` ao carregar
+`Python.Runtime.dll`, com `marca_download: true`, confira a marca de origem da
+distribuição. O Windows pode propagar a marca do ZIP para as bibliotecas extraídas,
+e o .NET recusa carregá-las. Confirmado em cópia sintética: adicionar ZoneId=3
+reproduziu `RuntimeError`; desbloquear somente a biblioteca de teste fez o
+autoteste do mesmo pacote passar, sem reinstalar runtimes.
+
+Para o ZIP conhecido do Cofre: **Propriedades → Desbloquear → Aplicar**, antes de
+**Extrair Tudo** em uma pasta nova. Isso se limita ao arquivo escolhido, sem mudar
+ExecutionPolicy, políticas de anexos ou a configuração global do .NET. Se a opção
+for bloqueada pela empresa, encaminhe à TI. Veja a
+[orientação da Microsoft para assemblies de origem remota](https://learn.microsoft.com/dotnet/framework/configure-apps/file-schema/runtime/loadfromremotesources-element).
 
 ## Preparar e abrir
 

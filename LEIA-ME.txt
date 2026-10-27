@@ -1,0 +1,22 @@
+COFRE NF-e - INSTALAÇÃO
+
+1. No ZIP do Cofre recebido desta distribuição: botão direito > Propriedades > Geral >
+   Desbloquear (se aparecer) > Aplicar. Depois use Extrair Tudo em uma nova pasta.
+   Não abra os programas de dentro do arquivo compactado.
+   Mantenha Cofre NFe.exe junto da pasta _internal.
+2. Execute Preparar Cofre NFe.exe com internet. Ele instala os pré-requisitos
+   ausentes. Autorize o administrador se solicitado; reinicie se indicado e repita.
+3. Configure no ambiente do usuário: SENHA_COFRE, CNPJ_MATRIZ e CNPJ_FILIAL.
+4. Abra Cofre NFe.exe. Em Configurações > Alterar, escolha DOCUMENTOS DE ENTRADA.
+
+CENTRAL
+Coloque o vínculo fornecido pela central em %LOCALAPPDATA%\Nunes\Cofre\central.json
+e reabra o Cofre. NUNES_CENTRAL_CONFIG, se definida, tem prioridade.
+Sem vínculo, os dados ficam locais; com vínculo, o envio é automático e inclui pendências.
+
+ATUALIZAÇÃO
+Feche o Cofre e preserve os dados em %LOCALAPPDATA%\Nunes\Cofre antes de substituir
+a pasta do programa. Credenciais e vínculo não estão incluídos neste pacote.
+
+ERRO AO ABRIR
+Envie ao suporte o cofre-diagnostico.txt indicado na mensagem de erro.

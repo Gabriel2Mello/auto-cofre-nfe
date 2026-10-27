@@ -34,6 +34,12 @@ O campo `codigo` identifica por hash os arquivos-fonte de acesso na primeira
 tentativa do processo; sem fontes disponíveis, informa `indisponivel`.
 `formato` versiona o esquema do log.
 
+Se a seleção terminar em outra página do portal, o cliente
+confere a empresa com uma leitura do painel `/nfe/empresa`, sem seguir novos
+redirecionamentos. Essa leitura aparece como etapa `confirmacao_empresa`.
+Ela só libera o lote com o CNPJ solicitado confirmado; não repete a seleção
+nem altera a gravação ou o catálogo de emitentes.
+
 `confirmacao_empresa.motivo` distingue `cabecalho_ausente`,
 `cabecalho_ambiguo`, `cnpj_ausente`, `cnpj_ambiguo`, `cnpj_divergente`,
 `configuracao_invalida`, `vinculo_ausente`, `origem_invalida`,

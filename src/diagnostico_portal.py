@@ -124,6 +124,7 @@ def _pagina(url: str) -> str:
     return 'outra_origem'
   # Não guardar URL, querystring, fragmento, vínculo ou identificador.
   return {'/login': 'login', '/login/enviar': 'login',
+          '/empresa': 'entrada_empresa',
           '/nfe/empresa': 'empresa',
           '/nfe/empresa/ver-arquivos-nfe': 'arquivos_nfe',
           '/nfe/empresa/ver-arquivos-cte': 'arquivos_cte'}.get(partes.path, 'outra')

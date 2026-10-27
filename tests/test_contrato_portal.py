@@ -5,7 +5,7 @@ from pathlib import Path
 import unittest
 from unittest.mock import Mock, patch
 
-from requests import Response
+from requests import HTTPError, Response
 
 import main
 from src.config import Config
@@ -52,6 +52,63 @@ class TestEmpresaAtiva(unittest.TestCase):
     sessao = Mock(get=Mock(return_value=resposta(self.html)))
     trocar_empresa(sessao, Empresa.MATRIZ, self.links, CNPJ)
     sessao.get.assert_called_once()
+
+  def test_destino_intermediario_le_painel_uma_vez_sem_repetir_troca(self):
+    intermediaria = resposta('<html><p>Entrada do portal</p></html>')
+    intermediaria.url = Config.URL_BASE + '/empresa'
+    sessao = Mock(get=Mock(side_effect=[intermediaria, resposta(self.html)]))
+    trocar_empresa(sessao, Empresa.MATRIZ, self.links, CNPJ)
+    self.assertEqual(sessao.get.call_count, 2)
+    primeira, segunda = sessao.get.call_args_list
+    self.assertIn('/login/trocarLogin?', primeira.kwargs['url'])
+    self.assertEqual(segunda.kwargs['url'], Config.URL_BASE + '/nfe/empresa')
+    self.assertFalse(segunda.kwargs['allow_redirects'])
+
+  def test_painel_apos_intermediaria_recusa_contexto_errado_login_ou_redirecionamento(self):
+    for final in (resposta(self.html.replace('0001-00', '0002-00')),
+                  resposta('<form><input type="password"></form>'),
+                  resposta('', 302), resposta('', 503)):
+      with self.subTest(status=final.status_code):
+        intermediaria = resposta('<html>Entrada</html>')
+        intermediaria.url = Config.URL_BASE + '/empresa'
+        sessao = Mock(get=Mock(side_effect=[intermediaria, final]))
+        with self.assertRaises((ValueError, HTTPError)):
+          trocar_empresa(sessao, Empresa.MATRIZ, self.links, CNPJ)
+        self.assertEqual(sessao.get.call_count, 2)
+
+  def test_confirmacao_canonica_recusa_url_externa_e_rota_inesperada(self):
+    for url in ('https://externo.invalid/nfe/empresa', Config.URL_BASE + '/login'):
+      with self.subTest(url=url):
+        intermediaria = resposta('Entrada')
+        intermediaria.url = Config.URL_BASE + '/empresa'
+        final = resposta(self.html)
+        final.url = url
+        sessao = Mock(get=Mock(side_effect=[intermediaria, final]))
+        with self.assertRaises(ValueError):
+          trocar_empresa(sessao, Empresa.MATRIZ, self.links, CNPJ)
+        self.assertEqual(sessao.get.call_count, 2)
+
+  def test_painel_sem_cabecalho_nao_repete_confirmacao(self):
+    sessao = Mock(get=Mock(return_value=resposta('<html>Sem contexto</html>')))
+    with self.assertRaises(ValueError):
+      trocar_empresa(sessao, Empresa.MATRIZ, self.links, CNPJ)
+    sessao.get.assert_called_once()
+
+  def test_retorno_ao_login_so_libera_com_empresa_confirmada_no_painel(self):
+    for final, sucesso in ((resposta(self.html), True),
+                           (resposta('<form><input type="password"></form>'), False),
+                           (resposta('', 307), False)):
+      with self.subTest(sucesso=sucesso, status=final.status_code):
+        login = resposta('<form><input type="password"></form>')
+        login.url = Config.URL_BASE + '/login/enviar'
+        sessao = Mock(get=Mock(side_effect=[login, final]))
+        if sucesso:
+          trocar_empresa(sessao, Empresa.MATRIZ, self.links, CNPJ)
+        else:
+          with self.assertRaises(ValueError):
+            trocar_empresa(sessao, Empresa.MATRIZ, self.links, CNPJ)
+        self.assertEqual(sessao.get.call_count, 2)
+        self.assertFalse(sessao.get.call_args.kwargs['allow_redirects'])
 
   def test_login_lista_vinculos_cabecalho_ambiguo_e_empresa_errada_nao_confirmam(self):
     invalidos = [

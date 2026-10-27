@@ -17,6 +17,24 @@ cabeçalho, igual ao CNPJ solicitado. Cabeçalho ausente, ambíguo ou divergente
 interrompe o lote antes de consultar, baixar, publicar, contabilizar ou sinalizar.
 Os erros não reproduzem CNPJ, HTML, vínculos ou identificadores de sessão.
 
+Na investigação de 26/10, os logs da aplicação mostraram seleções que terminam
+em outra página HTTP 200, com 2.361 bytes e sem cabeçalho, entre acessos que
+terminam normalmente em `/nfe/empresa`. A sequência observada em acessos
+bem-sucedidos passa por `/empresa` antes do painel. Os ensaios de login/seleção
+e abertura da entrada não reproduziram a página curta; a causa do comportamento
+intermitente do fornecedor ainda não foi identificada.
+
+Quando a seleção termina em uma rota diferente de `/nfe/empresa`, na mesma
+origem, o cliente faz **uma única leitura** explícita de
+`/nfe/empresa`, sem seguir redirecionamentos, e confirma o CNPJ nesse painel.
+Não repete a seleção, autenticação, downloads ou marcações. HTTP inesperado,
+rota/origem divergente, ausência/ambiguidade de cabeçalho e CNPJ divergente
+continuam impedindo o lote. Uma resposta de login não comprova acesso: a
+leitura só libera o lote se o painel confirmar a empresa; um redirecionamento
+para login é recusado. Respostas que já chegam ao painel conhecido não
+acionam leitura adicional. O diagnóstico distingue
+a etapa `confirmacao_empresa` e a categoria `entrada_empresa` para `/empresa`.
+
 ## Sinalização
 
 Na tabela `#tabelaNavegaArquivos`, o estado corrente de cada documento aparece

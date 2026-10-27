@@ -91,6 +91,27 @@ def trocar_empresa(
       or (urlsplit(response.url).scheme, urlsplit(response.url).netloc) != (origem.scheme, origem.netloc)):
     registrar_confirmacao('resposta_invalida')
     raise ValueError('Não foi possível confirmar a troca de empresa. O lote não foi iniciado.')
+  # O destino da seleção pode ser uma página intermediária do portal, sem o
+  # cabeçalho de contexto. Leia o painel conhecido, sem repetir a seleção.
+  # Login/erro na leitura do painel continuam falhando, sem tentativas em ciclo.
+  pagina = urlsplit(response.url).path
+  if pagina != '/nfe/empresa':
+    with etapa_portal('confirmacao_empresa'):
+      response = session.get(
+        url=f'{Config.URL_BASE}/nfe/empresa',
+        headers={'Referer': f'{Config.URL_BASE}/empresa'},
+        allow_redirects=False,
+      )
+      registrar_resposta('confirmacao_empresa', response)
+      response.raise_for_status()
+      destino_confirmacao = urlsplit(response.url)
+      if (response.status_code != 200
+          or (destino_confirmacao.scheme, destino_confirmacao.netloc) != (origem.scheme, origem.netloc)
+          or destino_confirmacao.path != '/nfe/empresa'):
+        registrar_confirmacao('resposta_invalida')
+        raise ValueError('Não foi possível confirmar a empresa no painel do portal. O lote não foi iniciado.')
+      confirmar_empresa_ativa(response.text, cnpj)
+    return
   confirmar_empresa_ativa(response.text, cnpj)
 
 

@@ -7,6 +7,8 @@ let enviando=false, confirmacaoPendente=true, configurandoPasta=false, abrindoPa
 const desktop=document.querySelector('meta[name="cofre-desktop"]')?.content==='1';
 const selecionado=id=>document.querySelector(`#${id} input:checked`).value;
 el('escolher-pasta').hidden=!desktop;
+el('escolher-emitentes').hidden=!desktop;
+for(const id of ['abrir-emitentes','editar-emitentes'])el(id).hidden=!desktop;
 el('abrir-pasta').hidden=!desktop;
 
 const tema=window.NunesTema.iniciar({controle:el('tema'),chave:'cofre-tema',cookie:!desktop});
@@ -36,7 +38,10 @@ function renderizar(dados){
   // Controles também precisam voltar quando a leitura recuperada é igual à anterior.
   el('campos').disabled=dados.ativo||dados.encerrando||dados.configurando||configurandoPasta||enviando||confirmacaoPendente;
   el('iniciar').disabled=el('campos').disabled;
+  el('limpar-notas').disabled=el('campos').disabled;
   el('escolher-pasta').disabled=el('campos').disabled||!desktop;
+  el('escolher-emitentes').disabled=el('escolher-pasta').disabled;
+  for(const id of ['abrir-emitentes','editar-emitentes'])el(id).disabled=el('escolher-emitentes').disabled;
   el('abrir-pasta').disabled=!desktop||dados.encerrando||dados.configurando||configurandoPasta||abrindoPasta||confirmacaoPendente;
   const chave=JSON.stringify(dados);if(chave===assinatura)return;assinatura=chave;
   el('parar').hidden=!dados.ativo;el('parar').disabled=dados.parando;
@@ -80,9 +85,43 @@ async function atualizar(){
   // Ociosidade confirmada não consulta periodicamente. Uma falha conserva a
   // necessidade de confirmação, inclusive antes de observar o lote aceito.
   try{const dados=await api('/api/estado');if(atual!==ciclo||encerrado||saindo)return;confirmacaoPendente=false;el('conexao').hidden=true;renderizar(dados);if(dados.ativo||dados.configurando)timer=setTimeout(atualizar,800);}
-  catch{if(atual!==ciclo||encerrado||saindo)return;confirmacaoPendente=true;assinatura='';el('fase').textContent='Reconectando';el('status').textContent='Aguardando confirmação do andamento…';el('conexao').hidden=false;el('conexao').textContent='Sem confirmação do andamento. Reconectando para conferir o lote; não reenvie os documentos.';el('campos').disabled=true;el('iniciar').disabled=true;el('escolher-pasta').disabled=true;el('abrir-pasta').disabled=true;timer=setTimeout(atualizar,1500);}
+  catch{if(atual!==ciclo||encerrado||saindo)return;confirmacaoPendente=true;assinatura='';el('fase').textContent='Reconectando';el('status').textContent='Aguardando confirmação do andamento…';el('conexao').hidden=false;el('conexao').textContent='Sem confirmação do andamento. Reconectando para conferir o lote; não reenvie os documentos.';el('campos').disabled=true;el('iniciar').disabled=true;el('escolher-pasta').disabled=true;el('escolher-emitentes').disabled=true;el('abrir-emitentes').disabled=true;el('editar-emitentes').disabled=true;el('abrir-pasta').disabled=true;timer=setTimeout(atualizar,1500);}
 }
 async function acao(caminho,dados={}){el('mensagem').textContent='';try{await api(caminho,dados);await atualizar();}catch(e){el('mensagem').textContent=e.message;}}
+const notasPermitidas=valor=>/^[0-9,; \t\r\n]*$/.test(valor);
+let ultimasNotasValidas=el('notas').value;
+el('notas').addEventListener('beforeinput',e=>{
+  if(notasPermitidas(el('notas').value))ultimasNotasValidas=el('notas').value;
+  if(e.data&&!notasPermitidas(e.data))e.preventDefault();
+});
+el('notas').addEventListener('input',()=>{
+  const campo=el('notas');
+  if(notasPermitidas(campo.value))ultimasNotasValidas=campo.value;
+  else campo.value=ultimasNotasValidas;
+});
+el('limpar-notas').onclick=()=>{
+  if(el('campos').disabled||el('iniciar').disabled)return;
+  el('notas').value='';ultimasNotasValidas='';
+  el('notas').focus();
+};
+function atualizarDicaNotas(){
+  el('dica-notas').textContent=el('enter-baixar').checked?'Separe por vírgula.':'Separe por vírgula ou linha.';
+}
+atualizarDicaNotas();
+el('enter-baixar').addEventListener('change',async()=>{
+  const controle=el('enter-baixar'), escolhido=controle.checked;
+  controle.disabled=true;
+  atualizarDicaNotas();
+  try{await api('/api/entrada-notas',{enter_baixar:escolhido});}
+  catch(e){controle.checked=!escolhido;atualizarDicaNotas();el('mensagem').textContent=e.message;}
+  finally{controle.disabled=false;}
+});
+el('notas').addEventListener('keydown',e=>{
+  if(e.key!=='Enter'||!el('enter-baixar').checked||e.shiftKey||e.ctrlKey||e.altKey||e.metaKey||e.isComposing)return;
+  e.preventDefault();
+  if(e.repeat||el('campos').disabled||el('iniciar').disabled||!el('notas').value.trim())return;
+  el('formulario').requestSubmit(el('iniciar'));
+});
 el('formulario').onsubmit=async e=>{
   e.preventDefault();if(enviando||el('iniciar').disabled||estado?.ativo||estado?.encerrando)return;
   enviando=true;confirmacaoPendente=true;el('campos').disabled=true;el('iniciar').disabled=true;el('mensagem').textContent='';
@@ -95,12 +134,30 @@ function informarPasta(mensagem){
 }
 el('escolher-pasta').onclick=async()=>{
   if(!desktop||el('escolher-pasta').disabled||configurandoPasta)return;
-  configurandoPasta=true;el('escolher-pasta').disabled=true;el('abrir-pasta').disabled=true;el('campos').disabled=true;el('iniciar').disabled=true;
+  configurandoPasta=true;el('escolher-pasta').disabled=true;el('escolher-emitentes').disabled=true;el('abrir-emitentes').disabled=true;el('editar-emitentes').disabled=true;el('abrir-pasta').disabled=true;el('campos').disabled=true;el('iniciar').disabled=true;
   informarPasta('Escolha a pasta no diálogo do Windows.');
   try{const r=await api('/api/pasta',{});if(r.alterado){el('pasta-base').textContent=r.pasta;informarPasta('Pasta salva. Será usada nas próximas execuções.');}else informarPasta('Escolha cancelada. A pasta anterior foi mantida.');}
   catch(e){informarPasta(e.message);}
   finally{configurandoPasta=false;await atualizar();}
 };
+el('escolher-emitentes').onclick=async()=>{
+  if(!desktop||el('escolher-emitentes').disabled||configurandoPasta)return;
+  configurandoPasta=true;el('escolher-pasta').disabled=true;el('escolher-emitentes').disabled=true;el('abrir-emitentes').disabled=true;el('editar-emitentes').disabled=true;el('abrir-pasta').disabled=true;el('campos').disabled=true;el('iniciar').disabled=true;
+  informarPasta('Escolha o arquivo JSON de emitentes no diálogo do Windows.');
+  try{const r=await api('/api/emitentes',{});if(r.alterado){el('arquivo-emitentes').textContent=r.arquivo;informarPasta('Arquivo salvo. Será usado e atualizado nas próximas execuções.');}else informarPasta('Escolha cancelada. O arquivo anterior foi mantido.');}
+  catch(e){informarPasta(e.message);}
+  finally{configurandoPasta=false;await atualizar();}
+};
+for(const acaoEmitentes of ['abrir','editar']){
+  const botao=el(acaoEmitentes+'-emitentes');
+  botao.onclick=async()=>{
+    if(botao.disabled||!desktop)return;
+    botao.disabled=true;
+    try{await api('/api/emitentes/'+acaoEmitentes,{});informarPasta(acaoEmitentes==='editar'?'Arquivo aberto no Bloco de Notas. Salve as alterações antes de iniciar um lote.':'Pasta do arquivo aberta no Explorador de Arquivos.');}
+    catch(e){informarPasta(e.message);}
+    finally{await atualizar();}
+  };
+}
 el('abrir-pasta').onclick=async()=>{
   if(!desktop||el('abrir-pasta').disabled||abrindoPasta)return;
   abrindoPasta=true;el('abrir-pasta').disabled=true;

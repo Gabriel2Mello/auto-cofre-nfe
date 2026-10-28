@@ -25,8 +25,8 @@ def encerrar_programa(texto: str | None) -> None:
 
 
 def obter_caminho_json(filename = 'emitentes_conhecidos.json') -> Path:
-  from src.caminhos import pasta_dados
-  return pasta_dados() / filename
+  from src.caminhos import arquivo_emitentes_padrao
+  return arquivo_emitentes_padrao().with_name(filename)
 
 
 def salvar_arquivos(

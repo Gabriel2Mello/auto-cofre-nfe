@@ -106,6 +106,24 @@ class TestDesktop(unittest.TestCase):
     self.assertIn(b'data-tema="escuro"', html)
     self.assertIn(b'name="cofre-desktop" content="1"', html)
 
+  def test_opcao_enter_persiste_e_reaparece_no_html(self):
+    import re
+    _, html = self.pedido('/', 'GET', None)
+    token = re.search(rb'name="cofre-token" content="([^"]+)"', html).group(1).decode()
+    headers = {'Authorization': 'Bearer ' + token, 'Origin': f'http://127.0.0.1:{self.servidor.server_port}', 'Content-Type': 'application/json'}
+    rota = '/api/entrada-notas'
+    self.assertFalse(desktop_cofre.ler_enter_baixar())
+    self.assertEqual(self.pedido(rota, headers=headers | {'Origin': 'null'}, corpo=b'{"enter_baixar":true}')[0], 403)
+    self.assertEqual(self.pedido(rota, headers=headers | {'Authorization': 'errado'}, corpo=b'{"enter_baixar":true}')[0], 403)
+    for valor in (True, False):
+      self.assertEqual(self.pedido(rota, headers=headers, corpo=json.dumps({'enter_baixar': valor}).encode())[0], 200)
+      self.assertEqual(desktop_cofre.ler_enter_baixar(), valor)
+      _, html = self.pedido('/', 'GET', None)
+      campo = re.search(rb'<input id="enter-baixar"[^>]*>', html).group()
+      self.assertEqual(b'checked' in campo, valor)
+    self.assertEqual(self.pedido(rota, headers=headers, corpo=b'{"enter_baixar":"true"}')[0], 400)
+    self.assertFalse(desktop_cofre.ler_enter_baixar())
+
   def test_pasta_http_exige_origem_token_e_dialogo_desktop(self):
     import re
     _, html = self.pedido('/', 'GET', None)
@@ -122,6 +140,23 @@ class TestDesktop(unittest.TestCase):
     self.assertEqual(self.pedido('/api/pasta', headers=headers)[0], 500)
     self.servidor.modo_desktop = False
     self.assertEqual(self.pedido('/api/pasta', headers=headers)[0], 404)
+
+  def test_emitentes_http_exige_origem_token_e_dialogo_desktop(self):
+    import re
+    _, html = self.pedido('/', 'GET', None)
+    token = re.search(rb'name="cofre-token" content="([^"]+)"', html).group(1).decode()
+    headers = {'Authorization': 'Bearer ' + token, 'Origin': f'http://127.0.0.1:{self.servidor.server_port}', 'Content-Type': 'application/json'}
+    self.assertEqual(self.pedido('/api/emitentes', headers=headers, corpo=b'{"pasta":"C:/qualquer"}')[0], 400)
+    self.assertEqual(self.pedido('/api/emitentes', headers=headers | {'Origin': 'null'})[0], 403)
+    self.assertEqual(self.pedido('/api/emitentes', headers=headers | {'Authorization': 'errado'})[0], 403)
+    self.servidor.desktop.escolher_emitentes.assert_not_called()
+    self.servidor.desktop.escolher_emitentes.return_value = {'alterado': False}
+    codigo, corpo = self.pedido('/api/emitentes', headers=headers)
+    self.assertEqual((codigo, json.loads(corpo)), (200, {'alterado': False}))
+    self.servidor.desktop.escolher_emitentes.side_effect = OSError('SINTÉTICO')
+    self.assertEqual(self.pedido('/api/emitentes', headers=headers)[0], 500)
+    self.servidor.modo_desktop = False
+    self.assertEqual(self.pedido('/api/emitentes', headers=headers)[0], 404)
 
   def test_abrir_pasta_http_usa_somente_configuracao_e_exige_autorizacao(self):
     import re
@@ -146,6 +181,19 @@ class TestDesktop(unittest.TestCase):
     self.assertNotIn('SINTÉTICO', corpo.decode())
     self.servidor.modo_desktop = False
     self.assertEqual(self.pedido(rota, headers=headers)[0], 404)
+
+  def test_acesso_emitentes_http_protegido(self):
+    import re
+    _, html = self.pedido('/', 'GET', None)
+    token = re.search(rb'name="cofre-token" content="([^"]+)"', html).group(1).decode()
+    headers = {'Authorization': 'Bearer ' + token, 'Origin': f'http://127.0.0.1:{self.servidor.server_port}', 'Content-Type': 'application/json'}
+    for acao in ('abrir', 'editar'):
+      rota = '/api/emitentes/' + acao
+      self.assertEqual(self.pedido(rota, headers=headers, corpo=b'{"arquivo":"outro"}')[0], 400)
+      self.assertEqual(self.pedido(rota, headers=headers | {'Origin': 'null'})[0], 403)
+      self.assertEqual(self.pedido(rota, headers=headers | {'Authorization': 'errado'})[0], 403)
+      self.assertEqual(self.pedido(rota, headers=headers)[0], 200)
+      self.servidor.desktop.abrir_emitentes.assert_called_with(editar=acao == 'editar')
 
   def test_exportacao_http_nao_aceita_caminho_da_pagina(self):
     _, html = self.pedido('/', 'GET', None)
@@ -196,6 +244,71 @@ class TestCicloJanela(unittest.TestCase):
           with self.assertRaises(ValueError):
             desktop.abrir_pasta()
       abrir.assert_not_called()
+
+  def test_emitentes_abre_pasta_e_edita_no_bloco_de_notas(self):
+    estado = EstadoInterface()
+    desktop = desktop_cofre.Janela(Mock(estado=estado))
+    with tempfile.TemporaryDirectory() as temporario:
+      catalogo = Path(temporario) / 'emitentes conhecidos.json'
+      catalogo.write_text('{}')
+      with patch('desktop_cofre.arquivo_emitentes', return_value=catalogo), patch('desktop_cofre.os.startfile') as abrir, patch('subprocess.Popen') as editar:
+        desktop.abrir_emitentes()
+        abrir.assert_called_once_with(str(catalogo.parent), 'explore')
+        desktop.abrir_emitentes(editar=True)
+        self.assertEqual(editar.call_args.args[0][1], str(catalogo))
+        self.assertEqual(Path(editar.call_args.args[0][0]).name, 'notepad.exe')
+        estado.dados['ativo'] = True
+        with self.assertRaises(ValueError):
+          desktop.abrir_emitentes(editar=True)
+        estado.dados['ativo'] = False
+        catalogo.unlink()
+        with self.assertRaises(ValueError):
+          desktop.abrir_emitentes(editar=True)
+        self.assertEqual(editar.call_count, 1)
+
+  def test_emitentes_nativo_valida_persiste_e_preserva_catalogo(self):
+    from src.caminhos import arquivo_emitentes, documentos_entrada, salvar_documentos_entrada
+    from src.emitente_handler import EmitenteHandler
+    self.estado = EstadoInterface()
+    self.pasta = Path(self.enterContext(tempfile.TemporaryDirectory()))
+    self.enterContext(patch.dict(os.environ, {'NUNES_COFRE_DADOS': str(self.pasta / 'perfil')}))
+    desktop = desktop_cofre.Janela(Mock(estado=self.estado))
+    desktop.janela = Mock()
+    self.enterContext(patch('src.caminhos.pasta_perfil', return_value=self.pasta / 'perfil-emitentes'))
+    catalogo = self.pasta / 'antigo.json'
+    original = b'{"ANTIGO": "APELIDO"}'
+    catalogo.write_bytes(original)
+    salvar_documentos_entrada(str(self.pasta))
+    def selecionar(*args, **kwargs):
+      self.assertTrue(self.estado.configurando)
+      with self.assertRaises(ValueError):
+        desktop.escolher_emitentes()
+      return (str(catalogo),)
+    desktop.janela.create_file_dialog.side_effect = selecionar
+    self.assertEqual(desktop.escolher_emitentes(), {'alterado': True, 'arquivo': str(catalogo.resolve())})
+    self.assertEqual(arquivo_emitentes(), catalogo.resolve())
+    self.assertEqual(documentos_entrada(), str(self.pasta.resolve()))
+    self.assertEqual(catalogo.read_bytes(), original)
+    handler = EmitenteHandler(arquivo_emitentes())
+    perguntar = Mock(return_value='NOVO APELIDO')
+    self.assertEqual(handler.get_nome('ANTIGO', perguntar), 'APELIDO')
+    perguntar.assert_not_called()
+    handler.get_nome('NOVO', perguntar)
+    handler.close()
+    self.assertEqual(json.loads(catalogo.read_text())['NOVO'], 'NOVO APELIDO')
+    desktop.janela.create_file_dialog.side_effect = None
+    desktop.janela.create_file_dialog.return_value = None
+    self.assertEqual(desktop.escolher_emitentes(), {'alterado': False})
+    invalido = self.pasta / 'invalido.json'
+    invalido.write_text('[]')
+    desktop.janela.create_file_dialog.return_value = (str(invalido),)
+    with self.assertRaises(ValueError):
+      desktop.escolher_emitentes()
+    self.assertEqual(arquivo_emitentes(), catalogo.resolve())
+    self.assertFalse(self.estado.configurando)
+    self.estado.dados['ativo'] = True
+    with self.assertRaises(ValueError):
+      desktop.escolher_emitentes()
 
   def test_pasta_nativa_persiste_e_bloqueia_inicio_durante_dialogo(self):
     estado = EstadoInterface(lambda p, e: None)
@@ -366,8 +479,27 @@ class TestPersistencia(unittest.TestCase):
 
   def test_catalogo_cria_pasta_persistente_e_reabre(self):
     from src.emitente_handler import EmitenteHandler
-    with tempfile.TemporaryDirectory() as temporario, patch.dict(os.environ, {'NUNES_COFRE_DADOS': temporario + '/dados'}):
+    with tempfile.TemporaryDirectory() as temporario, patch('src.caminhos.arquivo_emitentes_padrao', return_value=Path(temporario) / 'dados/emitentes_conhecidos.json'):
       handler = EmitenteHandler()
       handler.get_nome('SINTETICO', lambda _: 'EXEMPLO')
       handler.close()
       self.assertEqual(EmitenteHandler().get_nome('SINTETICO'), 'EXEMPLO')
+
+
+class TestEmitentesSemOverrideAmbiente(unittest.TestCase):
+  def test_variavel_nao_muda_padrao_nem_preferencia(self):
+    from src.caminhos import arquivo_emitentes, arquivo_emitentes_padrao, salvar_arquivo_emitentes
+    from src.utils import obter_caminho_json
+    with tempfile.TemporaryDirectory() as temporario, patch('src.caminhos.pasta_perfil', return_value=Path(temporario) / 'perfil'):
+      for empacotado in (False, True):
+        with self.subTest(empacotado=empacotado), patch('sys.frozen', empacotado, create=True):
+          padrao = arquivo_emitentes_padrao()
+          with patch.dict(os.environ, {'NUNES_COFRE_DADOS': temporario + '/override'}):
+            self.assertEqual(arquivo_emitentes(), padrao)
+            self.assertEqual(obter_caminho_json(), padrao)
+      catalogo = Path(temporario) / 'antigo.json'
+      catalogo.write_text('{"ANTIGO": "APROVADO"}', encoding='utf-8')
+      with patch.dict(os.environ, {'NUNES_COFRE_DADOS': temporario + '/override-a'}):
+        salvar_arquivo_emitentes(str(catalogo))
+      with patch.dict(os.environ, {'NUNES_COFRE_DADOS': temporario + '/override-b'}):
+        self.assertEqual(arquivo_emitentes(), catalogo.resolve())

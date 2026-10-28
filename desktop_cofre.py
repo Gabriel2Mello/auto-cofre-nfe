@@ -14,7 +14,7 @@ from urllib.request import Request, ProxyHandler, HTTPRedirectHandler, build_ope
 
 import desktop_windows
 from integracao_hub import consultar_instancia, gravar_registro, ler_registro, texto, trava_ocupada
-from src.caminhos import pasta_preferencias, recursos, documentos_entrada, salvar_documentos_entrada
+from src.caminhos import pasta_preferencias, recursos, documentos_entrada, salvar_documentos_entrada, arquivo_emitentes, salvar_arquivo_emitentes
 
 APP_ID = 'Nunes.Cofre.Desktop.1'
 NOME = 'Cofre NF-e'
@@ -41,6 +41,22 @@ def salvar_tema(tema):
   pasta = pasta_preferencias()
   pasta.mkdir(parents=True, exist_ok=True)
   gravar_registro(pasta / 'desktop-tema.json', {'tema': tema})
+
+
+def ler_enter_baixar():
+  try:
+    dados = json.loads((pasta_preferencias() / 'entrada-notas.json').read_text(encoding='utf-8'))
+    return isinstance(dados, dict) and dados.get('enter_baixar') is True
+  except (OSError, ValueError):
+    return False
+
+
+def salvar_enter_baixar(valor):
+  if not isinstance(valor, bool):
+    raise ValueError('A opção Enter para baixar deve ser booleana.')
+  pasta = pasta_preferencias()
+  pasta.mkdir(parents=True, exist_ok=True)
+  gravar_registro(pasta / 'entrada-notas.json', {'enter_baixar': valor})
 
 
 def ativar_existente(caminho, espera=15):
@@ -151,6 +167,49 @@ class Janela:
         estado.configurando = False
         estado.condicao.notify_all()
       self.exportando.release()
+
+  def escolher_emitentes(self):
+    estado = self.servidor.estado
+    with estado.condicao:
+      if estado.encerrando or estado.dados['ativo'] or estado.configurando or self.janela is None:
+        raise ValueError('Aguarde o fim da execução ou da escolha de arquivo atual.')
+      if not self.exportando.acquire(blocking=False):
+        raise ValueError('Há um diálogo aberto. Conclua ou cancele antes de escolher o arquivo.')
+      estado.configurando = True
+    try:
+      import webview
+      try:
+        inicial = str(arquivo_emitentes().parent)
+      except ValueError:
+        inicial = str(Path.home())
+      destino = self.janela.create_file_dialog(webview.FileDialog.OPEN, directory=inicial, allow_multiple=False, file_types=('Catálogo JSON (*.json)',))
+      if not destino:
+        return {'alterado': False}
+      caminho = destino[0] if isinstance(destino, (tuple, list)) else destino
+      with estado.condicao:
+        if estado.encerrando:
+          raise ValueError('A Cofre está encerrando; o arquivo não foi alterado.')
+        salvo = salvar_arquivo_emitentes(caminho)
+      return {'alterado': True, 'arquivo': salvo}
+    finally:
+      with estado.condicao:
+        estado.configurando = False
+        estado.condicao.notify_all()
+      self.exportando.release()
+
+  def abrir_emitentes(self, editar=False):
+    estado = self.servidor.estado
+    with estado.condicao:
+      if estado.encerrando or estado.configurando or (editar and estado.dados['ativo']):
+        raise ValueError('Aguarde a conclusão da operação antes de acessar o catálogo.')
+      caminho = arquivo_emitentes()
+      if not caminho.is_absolute() or not caminho.is_file() or caminho.suffix.lower() != '.json':
+        raise ValueError('O arquivo de emitentes está indisponível. Confira em Configurações.')
+      if editar:
+        import subprocess
+        subprocess.Popen([str(Path(os.environ.get('SystemRoot', 'C:/Windows')) / 'System32/notepad.exe'), str(caminho)])
+      else:
+        os.startfile(str(caminho.parent), 'explore')
 
   def abrir_pasta(self):
     estado = self.servidor.estado

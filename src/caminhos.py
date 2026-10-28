@@ -5,6 +5,15 @@ import sys
 import json
 
 
+def pasta_perfil() -> Path:
+  return Path(os.environ.get('LOCALAPPDATA', str(Path.home() / '.local/share'))) / 'Nunes' / 'Cofre'
+
+
+def arquivo_emitentes_padrao() -> Path:
+  pasta = pasta_perfil() if getattr(sys, 'frozen', False) else Path(__file__).resolve().parents[1]
+  return pasta / 'emitentes_conhecidos.json'
+
+
 def pasta_dados() -> Path:
   override = os.environ.get('NUNES_COFRE_DADOS')
   if override:
@@ -61,3 +70,34 @@ def vinculo_central() -> Path | None:
     if caminho.is_file():
       return caminho
   return None
+
+
+def arquivo_emitentes() -> Path:
+  arquivo = pasta_perfil() / 'desktop-emitentes.json'
+  try:
+    if arquivo.stat().st_size > 131072:
+      raise ValueError('Configuração muito grande.')
+    dados = json.loads(arquivo.read_text(encoding='utf-8'))
+    caminho = dados.get('arquivo') if isinstance(dados, dict) else None
+    if not isinstance(dados, dict) or dados.get('formato') != 1 or not isinstance(caminho, str) or not Path(caminho).is_absolute():
+      raise ValueError('Configuração inválida.')
+    return Path(caminho)
+  except FileNotFoundError:
+    return arquivo_emitentes_padrao()
+  except (OSError, ValueError, TypeError) as erro:
+    raise ValueError('Não foi possível ler o caminho dos emitentes. Escolha novamente em Configurações.') from erro
+
+
+def salvar_arquivo_emitentes(caminho: str) -> str:
+  from integracao_hub import gravar_registro
+  from src.emitente_handler import EmitenteHandler
+  arquivo = Path(caminho)
+  if not arquivo.is_absolute() or not arquivo.is_file() or arquivo.suffix.lower() != '.json':
+    raise ValueError('Selecione um arquivo JSON de emitentes existente e acessível.')
+  arquivo = arquivo.resolve()
+  # Valida sem modificar o catálogo selecionado.
+  EmitenteHandler(arquivo)
+  preferencias = pasta_perfil()
+  preferencias.mkdir(parents=True, exist_ok=True)
+  gravar_registro(preferencias / 'desktop-emitentes.json', {'formato': 1, 'arquivo': str(arquivo)})
+  return str(arquivo)

@@ -13,7 +13,7 @@ from threading import Event, Thread
 from time import monotonic
 
 from src.controlador_web import EstadoInterface
-from src.caminhos import documentos_entrada
+from src.caminhos import documentos_entrada, arquivo_emitentes
 
 
 class ServidorInterface(ThreadingHTTPServer):
@@ -131,7 +131,7 @@ def criar_servidor(estado: EstadoInterface) -> ServidorInterface:
             estado.condicao.notify_all()
 
     def do_GET(self) -> None:
-      from desktop_cofre import atender_ativacao, ler_tema
+      from desktop_cofre import atender_ativacao, ler_tema, ler_enter_baixar
       if atender_ativacao(self):
         return
       if atender_integracao(self):
@@ -147,11 +147,17 @@ def criar_servidor(estado: EstadoInterface) -> ServidorInterface:
               b'__MES__', date.today().strftime('%Y-%m').encode('ascii'))
             conteudo = conteudo.replace(b'__DESKTOP__', b'1' if servidor.modo_desktop else b'0')
             conteudo = conteudo.replace(b'__TEMA__', ler_tema().encode('ascii'))
+            conteudo = conteudo.replace(b'__ENTER_BAIXAR__', b'checked' if ler_enter_baixar() else b'')
             try:
               pasta = documentos_entrada() or 'Pasta não configurada. Escolha DOCUMENTOS DE ENTRADA abaixo.'
             except ValueError as erro:
               pasta = str(erro)
             conteudo = conteudo.replace(b'__DESTINO_BASE__', escape(pasta).encode('utf-8'))
+            try:
+              catalogo = str(arquivo_emitentes())
+            except ValueError as erro:
+              catalogo = str(erro)
+            conteudo = conteudo.replace(b'__ARQUIVO_EMITENTES__', escape(catalogo).encode('utf-8'))
           self.responder(200, conteudo, tipo)
         except OSError:
           self.json(500, {'erro': 'Recurso da interface ausente. Confira a instalação.'})
@@ -166,7 +172,7 @@ def criar_servidor(estado: EstadoInterface) -> ServidorInterface:
         self.json(404, {'erro': 'Endereço não encontrado.'})
 
     def do_POST(self) -> None:
-      from desktop_cofre import atender_ativacao, salvar_tema
+      from desktop_cofre import atender_ativacao, salvar_tema, salvar_enter_baixar
       if atender_ativacao(self):
         return
       if atender_integracao(self):
@@ -201,6 +207,14 @@ def criar_servidor(estado: EstadoInterface) -> ServidorInterface:
           estado.parar(origem='decisao' if dados.get('origem') == 'decisao' else 'parar')
         elif self.path == '/api/fechar':
           estado.encerrar()
+        elif self.path == '/api/entrada-notas':
+          if set(dados) != {'enter_baixar'}:
+            raise ValueError('Informe somente a opção Enter para baixar.')
+          try:
+            salvar_enter_baixar(dados['enter_baixar'])
+          except OSError:
+            self.json(500, {'erro': 'Não foi possível salvar a opção Enter para baixar.'})
+            return
         elif self.path == '/api/tema' and servidor.modo_desktop:
           try:
             salvar_tema(dados.get('tema'))
@@ -216,6 +230,26 @@ def criar_servidor(estado: EstadoInterface) -> ServidorInterface:
             self.json(500, {'erro': 'Não foi possível salvar a configuração. Confira o acesso à pasta de preferências.'})
             return
           self.json(200, resultado)
+          return
+        elif self.path == '/api/emitentes' and servidor.modo_desktop and servidor.desktop is not None:
+          if dados:
+            raise ValueError('O arquivo deve ser escolhido no diálogo nativo; não envie caminhos pela página.')
+          try:
+            resultado = servidor.desktop.escolher_emitentes()
+          except OSError:
+            self.json(500, {'erro': 'Não foi possível salvar a configuração. Confira o acesso à pasta de preferências.'})
+            return
+          self.json(200, resultado)
+          return
+        elif self.path in ('/api/emitentes/abrir', '/api/emitentes/editar') and servidor.modo_desktop and servidor.desktop is not None:
+          if dados:
+            raise ValueError('A ação usa o arquivo configurado; não envie caminhos pela página.')
+          try:
+            servidor.desktop.abrir_emitentes(editar=self.path.endswith('/editar'))
+          except OSError:
+            self.json(500, {'erro': 'Não foi possível abrir o catálogo. Confira o acesso ao arquivo.'})
+            return
+          self.json(200, {'aberto': True})
           return
         elif self.path == '/api/pasta/abrir' and servidor.modo_desktop and servidor.desktop is not None:
           if dados:

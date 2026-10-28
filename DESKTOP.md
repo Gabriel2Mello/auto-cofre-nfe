@@ -111,8 +111,9 @@ anteriores são ignorados. Monitor removido ajusta a posição à área útil.
 Fechar minimizada não faz o próximo início ficar oculto.
 
 No desenvolvimento, catálogo e `.cofre-gravacoes` conservam a raiz do projeto;
-preferências visuais usam o perfil. `NUNES_COFRE_DADOS` substitui explicitamente
-ambos para ensaios ou uma instalação com dados em outra pasta persistente.
+preferências visuais usam o perfil. `NUNES_COFRE_DADOS` substitui a pasta de
+recuperação e as demais preferências para ensaios ou outra pasta persistente.
+Essa variável não configura o catálogo nem a preferência do arquivo de emitentes.
 Métricas e presença mantêm seus próprios contratos e overrides independentes.
 O vínculo opcional da central no pacote fica em `central.json` nessa pasta
 persistente. `NUNES_CENTRAL_CONFIG` mantém precedência. No desenvolvimento,
@@ -120,8 +121,8 @@ continua em `.local/central.json`. Sem vínculo, a sincronização permanece des
 
 **Migração para pacote:** com a ferramenta fechada e backup, o responsável deve
 copiar o catálogo e a pasta completa `.cofre-gravacoes` da instalação anterior
-para a pasta de dados escolhida, antes da primeira operação. Não há migração,
-mesclagem nem leitura automática de dados de produção. Mantenha a mesma pasta
+para a pasta de dados escolhida, antes da primeira operação. Para o catálogo, também é possível selecionar o arquivo antigo em Configurações,
+conforme a seção abaixo. Não há migração nem mesclagem automática de dados de produção. Mantenha a mesma pasta
 nas atualizações e no console de recuperação. Para o script de recuperação
 de uma instalação empacotada, use Python com `requirements.txt` e configure
 `NUNES_COFRE_DADOS` para essa pasta antes de executar `recuperar_documentos.py`.
@@ -248,3 +249,28 @@ e aguardar saída. Conferir tabela extensa, erros e decisões em claro/escuro e
 tamanho fixo. Não testar operação fiscal real com a sonda.
 O relatório da entrega distingue testes automatizados, observação visual e
 homologação humana ainda pendente.
+
+
+### Arquivo de emitentes nas Configurações
+
+Em **Configurações → Arquivo de emitentes conhecidos → Alterar**, selecione o JSON da
+instalação anterior. O caminho completo aparece no menu e é preservado em
+`desktop-emitentes.json` em `%LOCALAPPDATA%\Nunes\Cofre`, independente
+de `NUNES_COFRE_DADOS`. O catálogo selecionado é
+validado sem alteração e passa a receber os novos apelidos ao concluir os lotes.
+A escolha não copia nem mescla cadastros e só pode ser feita sem lote em execução.
+Se o arquivo configurado estiver indisponível, o lote informa erro.
+Sem seleção, permanece o caminho padrão documentado acima. A preferência vale
+para a interface; o console conserva seu caminho anterior. A pasta DOCUMENTOS
+DE ENTRADA é independente. Reabra o Python para carregar a mudança; executáveis
+precisam ser reconstruídos e distribuídos para disponibilizar esse controle.
+
+Na seção de emitentes, **Abrir** mostra a pasta do JSON no Explorador e **Editar**,
+à direita, abre o arquivo configurado no Bloco de Notas. Salve e feche a edição
+antes do próximo lote. A edição não pode ser iniciada durante o processamento.
+
+**Limpar**, à direita de Baixar, apaga somente o campo de notas e devolve o foco.
+A opção discreta **Enter para baixar**, abaixo do campo, começa desmarcada e
+é preservada nas próximas aberturas em `entrada-notas.json` nas preferências.
+Quando marcada, Enter envia o formulário; Shift+Enter insere nova linha.
+Os controles ficam bloqueados durante operações e a repetição da tecla não reenvia.

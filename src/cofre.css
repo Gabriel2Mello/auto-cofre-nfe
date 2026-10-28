@@ -114,7 +114,9 @@ textarea::placeholder { color:var(--muted); }
 .competencias>label:not(.opcao) { display:grid; grid-template-rows:auto auto; }
 .opcao { grid-column:1 / -1; justify-self:start; max-width:100%; display:flex; align-items:center; gap:8px; min-height:32px; font-size:12px; font-weight:400; }
 .rodape-entrada { margin-top:7px; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:start; gap:8px 12px; }
-#iniciar { margin-left:auto; min-height:28px; height:28px; padding-block:2px; }
+.acoes-notas { margin-left:auto; }
+.acoes-notas button { min-height:28px; height:28px; padding-block:2px; }
+.atalho-notas { min-height:24px; color:var(--muted); gap:6px; }
 .mensagem { margin-top:12px; color:var(--erro); white-space:pre-wrap; overflow-wrap:anywhere; }
 #mensagem { grid-column:1 / -1; }
 .mensagem:empty { display:none; }

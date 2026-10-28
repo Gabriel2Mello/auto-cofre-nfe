@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from src.auth import login
 from src.config import Config
 from src.diagnostico_portal import diagnostico_execucao
-from src.caminhos import documentos_entrada
+from src.caminhos import documentos_entrada, arquivo_emitentes, arquivo_emitentes_padrao
 from src.core import baixar_arquivos, marcar_flag, processar_nota, trocar_empresa, ver_arquivos
 from src.emitente_handler import EmitenteHandler
 from src.enums import Empresa
@@ -25,7 +25,10 @@ def executar_lote(pedido: Pedido, estado: 'EstadoInterface') -> None:
   config = Config(caminho_documento_entrada=documentos_entrada() or None)
   if not Path(config.caminho_documento_entrada).is_dir():
     raise ValueError('A pasta CAMINHO_DOCUMENTO_ENTRADA está indisponível. Confira o acesso à rede.')
-  emitentes = EmitenteHandler()
+  caminho_emitentes = arquivo_emitentes()
+  if not caminho_emitentes.is_file() and caminho_emitentes != arquivo_emitentes_padrao():
+    raise ValueError('O arquivo de emitentes configurado está indisponível. Confira em Configurações.')
+  emitentes = EmitenteHandler(caminho_emitentes)
   try:
     with TimeoutScraper() as sessao:
       estado.verificar_parada()

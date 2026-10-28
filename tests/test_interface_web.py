@@ -26,7 +26,7 @@ class TestPedido(unittest.TestCase):
     self.assertEqual((p.empresa, p.tipo), (Empresa.MATRIZ, TipoDocumento.NFE))
 
   def test_rejeita_entrada_invalida_antes_de_executar(self):
-    for dados in [entrada(notas=''), entrada(notas='../123'), entrada(notas='0'),
+    for dados in [entrada(notas=''), entrada(notas='../123'), entrada(notas='123abc'), entrada(notas='12a34'), entrada(notas='0'),
                   entrada(notas='1234567890'), entrada(notas='１２３'), entrada(tipo='outro'),
                   entrada(empresa=''), entrada(competencia='2026-13'), entrada(pasta='0000-01'),
                   entrada(competencia=3), entrada(notas=None)]:

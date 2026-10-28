@@ -21,8 +21,8 @@ def _validar_catalogo(conteudo: object) -> dict[str, str]:
 
 
 class EmitenteHandler:
-  def __init__(self) -> None:
-    self.caminho_json = obter_caminho_json()
+  def __init__(self, caminho_json: Path | None = None) -> None:
+    self.caminho_json = caminho_json if caminho_json is not None else obter_caminho_json()
     self.emitentes_conhecidos = self._carregar_emitentes()
     self._dirty = False
 

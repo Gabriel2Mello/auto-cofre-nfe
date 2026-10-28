@@ -183,6 +183,9 @@ Erros e conferências usam texto além de cor, com etiquetas verdes para conclus
 amarelas para atenção, rosadas para erro e neutras para espera/processamento.
 Rótulos e mensagens usam Segoe UI; o campo de notas e seus números na lista
 mantêm Cascadia Code/Consolas para facilitar a leitura dos identificadores.
+Tipo, Empresa, Competência e Pasta têm contorno neutro mais visível nos dois
+temas, preservando formato e dimensões. O foco de teclado nesses controles é
+indicado por dentro do contorno, sem a borda verde externa.
 No modo web com largura inferior
 a 760 px, os resultados passam para baixo e a página volta a ter rolagem.
 Apelidos são exibidos em maiúsculas durante a digitação; a normalização na

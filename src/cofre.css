@@ -106,7 +106,8 @@ textarea::placeholder { color:var(--muted); }
 /* Os 12px extras da janela pertencem à coluna de resultados, preservando o formulário. */
 .area-trabalho { display:grid; flex:1; min-height:0; grid-template-columns:minmax(0,calc(50% - 20px)) minmax(0,1fr); grid-template-rows:minmax(0,1fr) auto; gap:0 28px; }
 #formulario { grid-column:1; grid-row:1; min-width:0; }
-.documentos { margin-top:24px; }
+.documentos { margin-top:16px; }
+.cabecalho-entrada { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:4px 12px; }
 .parametros { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:18px 14px; }
 .segmentado { display:grid; grid-template-columns:1fr 1fr; }
 .segmentado label { display:flex; align-items:center; justify-content:center; gap:6px; min-height:42px; padding:8px; border:1px solid var(--borda); background:var(--cartao); cursor:pointer; }
@@ -116,10 +117,10 @@ textarea::placeholder { color:var(--muted); }
 .competencias { grid-column:1 / -1; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px 14px; }
 .competencias>label:not(.opcao) { display:grid; grid-template-rows:auto auto; }
 .opcao { grid-column:1 / -1; justify-self:start; max-width:100%; display:flex; align-items:center; gap:8px; min-height:32px; font-size:12px; font-weight:400; }
-.rodape-entrada { margin-top:7px; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:start; gap:8px 12px; }
+.rodape-entrada { margin-top:8px; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:8px 12px; }
 .acoes-notas { margin-left:auto; }
 .acoes-notas button { min-height:28px; height:28px; padding-block:2px; }
-.atalho-notas { min-height:24px; color:var(--muted); gap:6px; }
+.atalho-notas { min-height:28px; color:var(--muted); gap:6px; }
 .mensagem { margin-top:12px; color:var(--erro); white-space:pre-wrap; overflow-wrap:anywhere; }
 #mensagem { grid-column:1 / -1; }
 .mensagem:empty { display:none; }

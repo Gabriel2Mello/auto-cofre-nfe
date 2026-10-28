@@ -146,8 +146,10 @@ visíveis; a pasta fica bloqueada e acompanha os documentos enquanto a opção
 Pasta na mesma competência estiver marcada. O checkbox e seu texto formam a área
 clicável, sem estender a seleção pelo restante da linha. Em Notas, apenas o campo
 de digitação recebe foco ao clicar; o título conserva o nome acessível do campo,
-sem ativá-lo. Notas ficam abaixo dos parâmetros, com a dica e o botão **Baixar**
-logo abaixo do campo; o botão fica à direita,
+sem ativá-lo. Notas ficam abaixo dos parâmetros, com a dica ao lado do título.
+A opção **Enter para baixar** fica abaixo do campo, alinhada ao centro dos botões
+**Baixar** e **Limpar** à direita. Em larguras menores, os grupos quebram a linha
+sem sobreposição. O botão **Baixar** permanece
 com altura compacta de 28 px (30% menor que a altura anterior de 40 px).
 Arquivos anteriores continuam preservados pela E5.
 Andamento é discreto na lista. O resumo mostra três indicadores compactos de

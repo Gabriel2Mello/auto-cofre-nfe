@@ -94,8 +94,10 @@ O Cofre funciona individualmente, sem Hub ou central em execução.
 Um documento conta uma vez após gravar o conjunto XML/PDF; repetir a mesma
 baixa não soma novamente. Falhar a sinalização posterior no portal não desfaz
 a contagem. Se a central estiver indisponível, a automação continua normalmente;
-o envio é retomado a cada cinco segundos enquanto estiver aberta ou na próxima
-abertura. O fechamento tenta um último envio após aguardar o processamento.
+o envio é retomado enquanto estiver aberta ou na próxima abertura. A espera
+entre ciclos é de cinco segundos, subindo gradualmente até 30 segundos somente
+sem atividade nem pendências; atividade ou falha retomam cinco segundos.
+O fechamento tenta um último envio após aguardar o processamento.
 Não repita downloads para recuperar estatísticas.
 
 O vínculo é criado pela central com `central.py vincular --automacao '..\auto-cofre-nfe'`.

@@ -73,8 +73,15 @@ class TestEstatisticasCofre(unittest.TestCase):
         self.servidor = Servidor(Armazem(self.armazem.caminho, 'c' * 32), self.config['token'], self.porta)
         self.abrir()
         # Abre/fecha o observador sem repetir a operação fiscal.
-        with sync.Sincronizador(aplicacao='cofre-nfe', relatar=lambda _: None):
-            pass
+        confirmado = Event()
+        sincronizar_real = sync.Cliente.sincronizar
+        def sincronizar(cliente):
+            resultado = sincronizar_real(cliente)
+            confirmado.set()
+            return resultado
+        with patch.object(sync.Cliente, 'sincronizar', sincronizar):
+            with sync.Sincronizador(aplicacao='cofre-nfe', relatar=lambda _: None):
+                self.assertTrue(confirmado.wait(5), 'A confirmação local deve terminar antes da conferência.')
         self.assertEqual(self.armazem.resumo('cofre-nfe')['total'], 1)
         self.assertEqual(self.cliente().pendentes(), [])
         self.console()

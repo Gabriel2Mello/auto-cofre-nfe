@@ -140,7 +140,7 @@ class EstadoInterface:
       self.informar('Execução interrompida. Confira os documentos pendentes.' if self.parada.is_set()
                     else 'Execução finalizada.')
     except ExecucaoInterrompida:
-      self.informar('Execução interrompida. Os documentos já concluídos foram preservados.')
+      self.informar('Execução interrompida. Os concluídos foram preservados.')
     except Exception as erro:
       self.informar('Execução encerrada: ' + mensagem_erro(erro))
     finally:

@@ -2,20 +2,20 @@
 :root {
   color-scheme:light;
   --fundo:#f6f5f2; --cartao:#fff; --texto:#24272b; --muted:#626871;
-  --borda:#dfdfdc; --marca:#166534; --suave:#eaf4ed; --botao-texto:#fff;
+  --borda:#dfdfdc; --contorno-controle:#778599; --marca:#166534; --suave:#eaf4ed; --botao-texto:#fff;
   --foco:#218046; --aviso:#765012; --aviso-fundo:#fff8e9; --aviso-borda:#dcc493; --erro:#aa2940; --erro-fundo:#fae9ed;
 }
 :root[data-tema=escuro] {
   color-scheme:dark;
   --fundo:#191b1e; --cartao:#22252a; --texto:#f0f0f0; --muted:#aeb4be;
-  --borda:#373b42; --marca:#99d8ae; --suave:#283c30; --botao-texto:#142a1c;
+  --borda:#373b42; --contorno-controle:#8293ac; --marca:#99d8ae; --suave:#283c30; --botao-texto:#142a1c;
   --foco:#99d8ae; --aviso:#f5d291; --aviso-fundo:#30281b; --aviso-borda:#6e562f; --erro:#ffadbd; --erro-fundo:#39252d;
 }
 @media (prefers-color-scheme:dark) {
   :root:not([data-tema]) {
     color-scheme:dark;
     --fundo:#191b1e; --cartao:#22252a; --texto:#f0f0f0; --muted:#aeb4be;
-    --borda:#373b42; --marca:#99d8ae; --suave:#283c30; --botao-texto:#142a1c;
+    --borda:#373b42; --contorno-controle:#8293ac; --marca:#99d8ae; --suave:#283c30; --botao-texto:#142a1c;
     --foco:#99d8ae; --aviso:#f5d291; --aviso-fundo:#30281b; --aviso-borda:#6e562f; --erro:#ffadbd; --erro-fundo:#39252d;
   }
 }
@@ -57,7 +57,8 @@ textarea::placeholder { color:var(--muted); }
 #notas,.detalhe-nota strong { font-family:"Cascadia Code",Consolas,monospace; }
 #nome { text-transform:uppercase; }
 #notas { resize:none; border-color:#39ff14; transition:border-color 180ms ease-in-out; }
-#notas:focus, #notas:not(:placeholder-shown) { border-color:var(--borda); outline:none; }
+/* Neutraliza o primeiro desenho enquanto o navegador aplica o foco inicial. */
+#notas[autofocus], #notas:focus, #notas:not(:placeholder-shown) { border-color:var(--borda); outline:none; }
 @media (prefers-reduced-motion:reduce) {
   #notas { transition:none; }
 }
@@ -95,6 +96,8 @@ textarea::placeholder { color:var(--muted); }
 @keyframes tema-icone-escuro { from { transform:rotate(24deg); } to { transform:rotate(0); } }
 
 .configuracoes { position:relative; }
+/* Evita transicoes de tema adiadas pelo conteudo recolhido do details. */
+.configuracoes:not([open]) .menu-configuracoes { display:none; }
 .configuracoes summary { display:flex; list-style:none; cursor:pointer; min-height:40px; padding:8px; border:1px solid var(--borda); border-radius:7px; background:var(--cartao); }
 .configuracoes summary:hover { background:var(--suave); border-color:var(--marca); }
 .configuracoes summary::-webkit-details-marker { display:none; }
@@ -102,7 +105,7 @@ textarea::placeholder { color:var(--muted); }
 .configuracao-caminho + .configuracao-caminho { margin-top:12px; }
 .configuracao-caminho > label { padding-left:8px; margin-bottom:2px; font-weight:400; }
 .acoes-pasta { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
-.menu-configuracoes .base-destino { margin-top:0; }
+.menu-configuracoes .base-destino { margin-top:0; border-color:var(--contorno-controle); }
 #configuracao-status { margin-top:12px; }
 #configuracao-status:empty { display:none; }
 
@@ -126,10 +129,11 @@ textarea::placeholder { color:var(--muted); }
 .opcao { grid-column:1 / -1; justify-self:start; max-width:100%; display:flex; align-items:center; gap:8px; min-height:32px; font-size:12px; font-weight:400; }
 .rodape-entrada { margin-top:8px; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:8px 12px; }
 .acoes-notas { margin-left:auto; }
-.acoes-notas button { min-height:28px; height:28px; padding-block:2px; }
+.acoes-notas button,.acoes-pasta button { min-height:28px; height:28px; padding-block:2px; }
 .atalho-notas { min-height:28px; color:var(--muted); gap:6px; }
 .mensagem { margin-top:12px; color:var(--erro); white-space:pre-wrap; overflow-wrap:anywhere; }
-#mensagem { grid-column:1 / -1; }
+#mensagem { margin:0; font-size:12px; }
+.cabecalho-entrada:has(#mensagem:not(:empty)) #dica-notas { display:none; }
 .mensagem:empty { display:none; }
 
 /* O título fica visível enquanto andamento, decisões e notas rolam à direita. */
@@ -144,6 +148,7 @@ textarea::placeholder { color:var(--muted); }
 .lote { margin-top:14px; }
 .contagens { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:8px; font-size:12px; }
 .indicador { min-width:0; padding:8px 10px; border:1px solid var(--borda); border-radius:7px; background:var(--cartao); color:var(--muted); }
+#resumo[data-finalizado="true"] .indicador { border-color:var(--contorno-controle); }
 .indicador strong { display:block; font-size:18px; font-weight:600; font-variant-numeric:tabular-nums; line-height:1.3; color:var(--texto); }
 .indicador.concluidos strong { color:var(--marca); }
 .indicador.erros strong { color:var(--erro); }

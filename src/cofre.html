@@ -50,8 +50,9 @@
         <div class="cabecalho-entrada">
           <p id="rotulo-notas" class="rotulo-campo">Notas</p>
           <p id="dica-notas" class="dica">Separe por vírgula ou linha.</p>
+          <p id="mensagem" class="mensagem" role="alert"></p>
         </div>
-        <textarea id="notas" rows="2" inputmode="numeric" spellcheck="false" maxlength="12000" placeholder="12345, 12346, 12347" aria-labelledby="rotulo-notas" aria-describedby="dica-notas" required></textarea>
+        <textarea id="notas" autofocus rows="2" inputmode="numeric" spellcheck="false" maxlength="12000" placeholder="12345, 12346, 12347" aria-labelledby="rotulo-notas" aria-describedby="dica-notas"></textarea>
         <div class="rodape-entrada">
           <label class="opcao atalho-notas" title="Quando marcado, Enter baixa e Shift+Enter quebra a linha."><input id="enter-baixar" type="checkbox" __ENTER_BAIXAR__><span>Enter para baixar</span></label>
           <div class="acoes acoes-notas"><button type="submit" id="iniciar" class="botao-principal" disabled>Baixar</button><button type="button" id="limpar-notas" disabled>Limpar</button></div>
@@ -74,7 +75,6 @@
       <ul id="linhas" class="lista-resultados" aria-label="Resultado por nota"><li class="vazio">O resultado das notas aparecerá aqui.</li></ul>
       </div>
     </section>
-    <p id="mensagem" class="mensagem" role="alert"></p>
   </section>
 </main>
 <footer class="rodape"><p class="assinatura">Desenvolvido por <a href="https://github.com/Gabriel2Mello" target="_blank" rel="noopener noreferrer" aria-label="g2mello — perfil no GitHub"><span aria-hidden="true">g2me<span class="assinatura-ll"><span>l</span><span>l</span></span>o</span></a></p><button id="encerrar" type="button">Encerrar</button></footer>

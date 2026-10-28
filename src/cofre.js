@@ -52,6 +52,7 @@ function renderizar(dados){
   const erros=dados.resultados.length-feitos-pendentes;
   el('concluidos').textContent=feitos;el('pendentes').textContent=pendentes;el('erros').textContent=erros;
   el('resumo').hidden=!dados.resultados.length;
+  el('resumo').dataset.finalizado=String(!dados.ativo&&dados.resultados.length>0);
   el('progresso').max=Math.max(1,dados.resultados.length);
   el('progresso').value=dados.resultados.filter(r=>!['Aguardando','Processando'].includes(r.situacao)).length;
   el('lote').hidden=!dados.lote;
@@ -89,7 +90,16 @@ async function atualizar(){
 }
 async function acao(caminho,dados={}){el('mensagem').textContent='';try{await api(caminho,dados);await atualizar();}catch(e){el('mensagem').textContent=e.message;}}
 const notasPermitidas=valor=>/^[0-9,; \t\r\n]*$/.test(valor);
+const avisoNotasVazias='Informe ao menos uma nota.';
+// Captura antes da acao para preservar o aviso criado pela propria interacao.
+for(const evento of ['pointerdown','click','keydown','input','change','wheel']){
+  window.addEventListener(evento,()=>{
+    if(el('mensagem').textContent===avisoNotasVazias)el('mensagem').textContent='';
+  },{capture:true,passive:true});
+}
 let ultimasNotasValidas=el('notas').value;
+// O neon volta a valer depois que o usuario sai do campo pela primeira vez.
+el('notas').addEventListener('blur',()=>{el('notas').autofocus=false;},{once:true});
 el('notas').addEventListener('beforeinput',e=>{
   if(notasPermitidas(el('notas').value))ultimasNotasValidas=el('notas').value;
   if(e.data&&!notasPermitidas(e.data))e.preventDefault();
@@ -124,6 +134,8 @@ el('notas').addEventListener('keydown',e=>{
 });
 el('formulario').onsubmit=async e=>{
   e.preventDefault();if(enviando||el('iniciar').disabled||estado?.ativo||estado?.encerrando)return;
+  if(!el('notas').value.trim()){el('mensagem').textContent=avisoNotasVazias;el('notas').focus();return;}
+  el('resumo').dataset.finalizado='false';
   enviando=true;confirmacaoPendente=true;el('campos').disabled=true;el('iniciar').disabled=true;el('mensagem').textContent='';
   try{await api('/api/iniciar',{notas:el('notas').value,empresa:selecionado('empresa'),tipo:selecionado('tipo'),competencia:el('competencia').value,pasta:el('mesma-pasta').checked?el('competencia').value:el('pasta').value});}
   catch(e){el('mensagem').textContent=e.message;}

@@ -22,7 +22,7 @@ const contexto = vm.createContext({
     querySelector(seletor){if(seletor==='#tipo input:checked')return elementos.get('tipo');if(seletor==='#empresa input:checked')return elementos.get('empresa');return elemento();},querySelectorAll(){return [];},createElement:elemento,createDocumentFragment:elemento,createTextNode(textContent){return {textContent};}},
   localStorage:{getItem(){return null;},setItem(){}},matchMedia(){return {matches:false,addEventListener(){}};},
   crypto:{randomUUID(){return 'pagina-teste';}},
-  window:{addEventListener(nome,acao){eventos.set(nome,acao);}},
+  window:{addEventListener(nome,acao){const anterior=eventos.get(nome);eventos.set(nome,anterior?e=>{anterior(e);acao(e);}:acao);}},
   setTimeout(fn,tempo){const id=++proximoTimer;timers.set(id,{fn,tempo});return id;},
   clearTimeout(id){timers.delete(id);},AbortController,
   fetch:async(caminho,opcoes)=>{
@@ -83,6 +83,22 @@ async function testar(){
   assert.equal(notas.value,'');
   teclado({key:'Enter',preventDefault(){}});
   assert.equal(enviosTeclado,1,'Campo vazio, repetição e operação ativa não enviam.');
+  const enviosAntes=chamadas.filter(c=>c==='/api/iniciar').length;
+  await elementos.get('formulario').onsubmit({preventDefault(){}});
+  assert.equal(chamadas.filter(c=>c==='/api/iniciar').length,enviosAntes,'Campo vazio não inicia lote pelo botão.');
+  assert.equal(elementos.get('mensagem').textContent,'Informe ao menos uma nota.');
+  assert.equal(elementos.get('iniciar').disabled,false,'Validação vazia mantém o formulário disponível.');
+  await esvaziar();
+  assert.equal(elementos.get('mensagem').textContent,'Informe ao menos uma nota.','Aviso permanece sem interação.');
+  for(const nomeEvento of ['pointerdown','click','keydown','input','change','wheel']){
+    await elementos.get('formulario').onsubmit({preventDefault(){}});
+    eventos.get(nomeEvento)({key:'a',target:notas});
+    assert.equal(elementos.get('mensagem').textContent,'',`${nomeEvento} devolve o espaço à dica anterior.`);
+  }
+  elementos.get('mensagem').textContent='Falha de conexão';
+  eventos.get('keydown')({key:'a',target:notas});
+  assert.equal(elementos.get('mensagem').textContent,'Falha de conexão','Interação não descarta outros erros.');
+  elementos.get('mensagem').textContent='';
   atalho.checked=false;
   await atalho.eventos.get('change')();
   assert.equal(chamadas.filter(c=>c==='/api/estado').length,1);
@@ -145,10 +161,12 @@ async function testar(){
   retorno={...retorno,ativo:true,resultados:[{nota:'123',situacao:'Aguardando',detalhe:''}]};
   await vm.runInContext('atualizar()',contexto);
   assert.equal(timers.size,1,'Execução ativa deve acompanhar o andamento.');
+  assert.equal(elementos.get('resumo').dataset.finalizado,'false','Borda final não aparece durante a execução.');
   const agendado=[...timers.values()][0];timers.clear();
   retorno={...retorno,ativo:false,resultados:[{nota:'123',situacao:'Concluído',detalhe:'XML e PDF salvos · FORNECEDOR 123'}]};
   await agendado.fn();
   assert.equal(timers.size,0,'Finalizar deve parar as consultas periódicas.');
+  assert.equal(elementos.get('resumo').dataset.finalizado,'true','Fim da execução habilita a borda neutra.');
   assert.equal(elementos.get('concluidos').textContent,1);
   const primeiraNota=elementos.get('linhas').children[0].children[0];
   assert.equal(primeiraNota.children[0].textContent,'Concluído');
@@ -166,8 +184,10 @@ async function testar(){
   assert.equal(elementos.get('nome').value,'DECISÃO PARCIAL DO OPERADOR','Atualização não apaga a decisão em edição.');
   retorno={...retorno,ativo:false,pergunta:null};
   await vm.runInContext('atualizar()',contexto);
+  notas.value='123';
   const evento={preventDefault(){}};
   const primeira=elementos.get('formulario').onsubmit(evento);
+  assert.equal(elementos.get('resumo').dataset.finalizado,'false','Novo envio remove a borda anterior imediatamente.');
   await elementos.get('formulario').onsubmit(evento);
   assert.equal(chamadas.filter(c=>c==='/api/iniciar').length,1,'Duplo envio não deve repetir início.');
   falharEstado=true;iniciarPendente();await primeira;

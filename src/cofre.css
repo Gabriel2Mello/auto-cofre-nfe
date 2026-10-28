@@ -38,7 +38,11 @@ button { min-height:40px; padding:8px 12px; font-weight:500; cursor:pointer; }
 button:hover:enabled { background:var(--suave); border-color:var(--marca); }
 button:disabled { opacity:.55; cursor:default; }
 fieldset:disabled :is(input,textarea) { opacity:.7; }
-:is(button,input,a,summary,#titulo-decisao):focus-visible { outline:3px solid var(--foco); outline-offset:3px; }
+:focus { outline:none; }
+:focus-visible { outline:none; box-shadow:inset 0 -3px 0 currentColor; }
+/* Em alto contraste, o preenchimento do sistema identifica o foco sem anel. */
+@media(forced-colors:active){:focus-visible{background:Highlight !important;color:HighlightText !important}}
+
 .botao-principal { background:var(--marca); border-color:var(--marca); color:var(--botao-texto); font-weight:600; }
 .botao-principal:hover:enabled { background:var(--marca); filter:brightness(.95); }
 fieldset { min-width:0; border:0; padding:0; margin:0; }
@@ -116,6 +120,9 @@ textarea::placeholder { color:var(--muted); }
 .segmentado label:has(input:checked) { color:var(--marca); background:var(--suave); }
 .competencias { grid-column:1 / -1; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px 14px; }
 .competencias>label:not(.opcao) { display:grid; grid-template-rows:auto auto; }
+.segmentado label:has(input:focus-visible) { box-shadow:inset 0 -3px 0 currentColor; }
+#tipo input:focus-visible,#empresa input:focus-visible { box-shadow:none; }
+@media(forced-colors:active) { .segmentado label:has(input:focus-visible) { background:Highlight; color:HighlightText; } }
 .opcao { grid-column:1 / -1; justify-self:start; max-width:100%; display:flex; align-items:center; gap:8px; min-height:32px; font-size:12px; font-weight:400; }
 .rodape-entrada { margin-top:8px; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:8px 12px; }
 .acoes-notas { margin-left:auto; }
@@ -128,7 +135,7 @@ textarea::placeholder { color:var(--muted); }
 /* O título fica visível enquanto andamento, decisões e notas rolam à direita. */
 .resultados { display:flex; flex-direction:column; grid-column:2; grid-row:1; min-width:0; min-height:0; padding-left:24px; border-left:1px solid var(--borda); }
 .rolagem-resultados { flex:1; min-height:0; overflow-y:auto; scrollbar-gutter:stable; padding-right:12px; overflow-wrap:anywhere; }
-.rolagem-resultados:focus-visible { outline:2px solid var(--foco); outline-offset:-2px; }
+.rolagem-resultados:focus-visible { outline:none; box-shadow:inset 0 -3px 0 currentColor; }
 .titulo-secao { flex-shrink:0; }
 .titulo-secao { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; }
 .andamento { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }

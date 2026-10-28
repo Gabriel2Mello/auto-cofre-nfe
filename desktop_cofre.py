@@ -266,6 +266,8 @@ class Janela:
   def executar(self):
     if os.name != 'nt':
       raise RuntimeError('O desktop da Cofre requer Windows.')
+    from dpi_windows import preparar, validar_janela
+    preparar('CofreDesktop')
     import webview
     desktop_windows.identidade_processo(APP_ID)
     webview.settings['ALLOW_DOWNLOADS'] = False
@@ -278,9 +280,11 @@ class Janela:
     def restaurar():
       dados = desktop_windows.ler_geometria(pasta_preferencias())
       if dados:
+        from dpi_windows import monitor_do_retangulo
+        escala = monitor_do_retangulo(dados['retangulo'])['escala']
         # Só a posição persiste: preferências antigas não alteram o tamanho fixo.
         dados = {**dados, 'retangulo': [*dados['retangulo'][:2],
-                 janela.native.Width, janela.native.Height], 'maximizada': False}
+                 int(1009 * escala), int(618 * escala)], 'maximizada': False}
         desktop_windows.restaurar_geometria(janela.native, dados)
 
     janela.events.before_show += restaurar
@@ -299,6 +303,7 @@ class Janela:
           janela.destroy()
           return
         hwnd = janela.native.Handle.ToInt64()
+        validar_janela(hwnd)
         from cofre_instalacao import relancamento, pronto, icone_relancamento
         desktop_windows.propriedades_janela(hwnd,
           relancamento() or desktop_windows.comando_reabrir([], Path(__file__).with_name('cofre.py')),

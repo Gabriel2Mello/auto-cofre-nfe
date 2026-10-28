@@ -8,6 +8,25 @@ Entrada `cofre.py`: pywebview 6.2.1 + WebView2/WinForms, backend e janela no
 mesmo processo; HTTP em thread própria e executor fiscal na thread existente.
 Python local conferido: 3.13.13 x64. `main.py` conserva o modo console.
 Windows com .NET Framework 4.8 ou superior e WebView2 Evergreen são requisitos do destino.
+A janela usa DPI por monitor (Per-Monitor V2, Windows 10 1703 ou posterior).
+Ao mover entre telas com escalas diferentes, WinForms e WebView2 redesenham a
+interface na escala de destino. O tamanho de referência continua 1009 × 618
+unidades lógicas; os pixels físicos acompanham o monitor, com arredondamento
+de até poucos pixels. As escalas e o zoom do usuário são preservados.
+
+`dpi_windows.py` configura o processo antes de carregar WinForms e inicializa o
+.NET Framework com `desktop-winforms.config` em um AppDomain próprio, com
+alvo 4.8 explícito. O alvo é necessário porque o host Python não declara um
+framework gerenciado; sem ele, WinForms ignora sua configuração de DPI dinâmico.
+O arquivo acompanha o pacote e é conferido pelo autoteste. Não há alteração de
+bibliotecas instaladas nem configurações globais do Windows. O componente
+segue o [padrão Nunes de DPI em 100%/125%](../estrutura-nunes/identidade-visual/interfaces/desktop-dpi.md),
+com fonte no Hub e cópias locais verificadas. O HWND é conferido após a criação;
+as consultas de monitores usam a API nativa, e a restauração aplica a posição
+antes das dimensões para evitar dupla escala.
+Reabra o Cofre para carregar a correção; executáveis anteriores precisam ser
+reconstruídos e distribuídos.
+
 Depois de usar **Extrair Tudo** no ZIP, execute **Preparar Cofre NFe.exe** no usuário do operador:
 o preparador detecta os runtimes existentes e baixa/instala somente os ausentes,
 com internet e verificação da assinatura digital da Microsoft. O .NET solicita
@@ -234,11 +253,20 @@ $env:NUNES_METRICAS_DADOS = "$env:TEMP\cofre-ensaio\metricas"
 & .\.venv\Scripts\python.exe -m unittest discover -s tests -v
 node --test tests/test_cofre_js.cjs
 & .\.venv\Scripts\python.exe -m tests.verificar_janela_desktop
+& .\.venv\Scripts\python.exe -m tests.verificar_dpi_desktop
 & .\.venv\Scripts\python.exe -m tests.verificar_pacote_desktop
 # Usar --cofre e --hub para conferir pacotes específicos; --hub-desktop abre ambos.
 # Janela com executor sintético e rede externa bloqueada:
 & .\.venv\Scripts\python.exe -m tests.ensaio_desktop "$env:TEMP\cofre-visual"
 ```
+
+O ensaio de DPI move somente a janela sintética pelos monitores disponíveis,
+nos temas claro e escuro, conferindo o contexto nativo, `DeviceDpi` do WinForms,
+`devicePixelRatio` do WebView2, dimensões e preservação da decisão em edição.
+Também fecha e reabre no último monitor. Não altera a escala das telas; com
+apenas uma escala disponível, o resultado não declara validação de DPI misto.
+Evidências ficam em `.local/qa-desktop/dpi.json`, com capturas na pasta TEMP
+indicada pelo comando.
 
 No ensaio visual, informar números e iniciar produz decisões sintéticas de
 emitente e nome, sem acesso ao portal nem gravação fiscal. Sua instrumentação

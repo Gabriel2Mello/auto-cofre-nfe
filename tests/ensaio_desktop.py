@@ -184,6 +184,15 @@ def main():
                 janela.evaluate_js('window.ensaioManterFalha=false')
               elif acao == 'compacto':
                 janela.resize(780, 600)
+              elif acao == 'mover-monitor':
+                from System import Action
+                from System.Drawing import Point
+                from System.Windows.Forms import Screen, FormStartPosition
+                def mover():
+                  area = Screen.AllScreens[int(pedido['monitor'])].WorkingArea
+                  janela.native.StartPosition = FormStartPosition.Manual
+                  janela.native.Location = Point(area.X + 32, area.Y + 32)
+                janela.native.Invoke(Action(mover))
               elif acao == 'padrao':
                 janela.resize(1009, 618)
               elif acao == 'fim-resultados':
@@ -244,11 +253,35 @@ def main():
             apelidoMaiusculo:getComputedStyle(el('nome')).textTransform==='uppercase',
             rolagensInternas:[...document.querySelectorAll('main *')].filter(n=>
               ['auto','scroll'].includes(getComputedStyle(n).overflowY)&&n.scrollHeight>n.clientHeight).length})""")
+          if dados is None and (janela.events.closed.is_set() or estados[0].encerrando):
+            return  # O renderer já pode ter sido liberado no fechamento cooperativo.
           dados['carregamentos'] = len(cargas)
           dados['aberturasPasta'] = list(aberturas_pasta)
           dados['hwnd'] = janela.native.Handle.ToInt64()
           dados['janela'] = {'x': janela.x, 'y': janela.y, 'largura': janela.width, 'altura': janela.height}
           dados['estado_janela'] = str(janela.native.WindowState)
+          import ctypes
+          from ctypes import wintypes
+          from System import Action
+          from System.Windows.Forms import Screen
+          user = ctypes.WinDLL('user32', use_last_error=True)
+          user.GetDpiForWindow.argtypes = [wintypes.HWND]
+          user.GetDpiForWindow.restype = wintypes.UINT
+          user.GetWindowDpiAwarenessContext.argtypes = [wintypes.HWND]
+          user.GetWindowDpiAwarenessContext.restype = ctypes.c_void_p
+          user.AreDpiAwarenessContextsEqual.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+          user.AreDpiAwarenessContextsEqual.restype = wintypes.BOOL
+          dados['dpi'] = user.GetDpiForWindow(dados['hwnd'])
+          dados['perMonitorV2'] = bool(user.AreDpiAwarenessContextsEqual(
+            user.GetWindowDpiAwarenessContext(dados['hwnd']), -4))
+          def observar_dpi():
+            dados['dpiWinForms'] = janela.native.DeviceDpi
+            dados['pixelsJanela'] = {'largura': janela.native.Width, 'altura': janela.native.Height}
+            dados['zoomWebView'] = janela.native.webview.ZoomFactor
+            dados['monitor'] = Screen.FromControl(janela.native).DeviceName
+            dados['monitores'] = [s.DeviceName for s in Screen.AllScreens]
+          janela.native.Invoke(Action(observar_dpi))
+          dados['webDpi'] = janela.evaluate_js('({dpr:devicePixelRatio,largura:innerWidth,altura:innerHeight})')
           dados['janelaFixa'] = str(janela.native.FormBorderStyle) == 'FixedSingle' and not janela.native.MaximizeBox
           dados['status'] = janela.evaluate_js("el('status').textContent")
           dados['comando'] = ultimo

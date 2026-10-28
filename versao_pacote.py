@@ -21,13 +21,15 @@ def autoteste(destino):
         raise InstalacaoErro('O autoteste não permite conexões de rede.')
     socket.socket.connect = proibido
     socket.create_connection = proibido
+    from dpi_windows import preparar
+    preparar('CofreDesktop')
     # Dependências adiadas pela abertura normal precisam existir no pacote completo.
     for modulo in ('requests', 'cloudscraper', 'bs4', 'lxml.etree', 'pypdf', 'dateutil',
                    'src.execucao_web', 'src.validacao_documentos', 'webview.platforms.winforms',
                    'webview.platforms.edgechromium'):
         importlib.import_module(modulo)
     from src.caminhos import recursos
-    for nome in ('src/cofre.html', 'src/cofre.js', 'src/cofre.css', 'icons/icone.ico'):
+    for nome in ('src/cofre.html', 'src/cofre.js', 'src/cofre.css', 'desktop-winforms.config', 'icons/icone.ico'):
         if not (recursos() / nome).is_file():
             raise InstalacaoErro('Recurso ausente no pacote.')
     versao = metadados()['versao']

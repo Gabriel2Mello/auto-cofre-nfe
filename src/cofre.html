@@ -21,9 +21,17 @@
     <div class="controles-cabecalho">
     <button id="tema" class="botao-icone" type="button" title="Alternar tema" aria-label="Ativar tema escuro">Tema escuro</button>
     <details class="configuracoes" id="configuracoes"><summary class="botao-icone" title="Configurações" aria-label="Configurações"><svg class="icone-controle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h9m4 0h3M4 17h3m4 0h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></summary><div class="menu-configuracoes">
-      <p id="pasta-base" class="base-destino">__DESTINO_BASE__</p>
-      <p class="dica">Selecione a própria pasta DOCUMENTOS DE ENTRADA.</p>
-      <div class="acoes-pasta"><button id="escolher-pasta" type="button" aria-label="Alterar pasta de documentos" disabled>Alterar</button><button id="abrir-pasta" type="button" aria-label="Abrir pasta de documentos" disabled>Abrir</button></div><p class="dica">Arquivo de emitentes conhecidos</p><p id="arquivo-emitentes" class="base-destino">__ARQUIVO_EMITENTES__</p><div class="acoes-pasta"><button id="escolher-emitentes" type="button" aria-label="Alterar arquivo de emitentes" disabled>Alterar</button><button id="abrir-emitentes" type="button" aria-label="Abrir pasta dos emitentes" disabled>Abrir</button><button id="editar-emitentes" type="button" aria-label="Editar emitentes no Bloco de Notas" disabled>Editar</button></div><p id="configuracao-status" class="dica" role="status"></p>
+      <div class="configuracao-caminho configuracao-documentos">
+        <label for="pasta-base" class="dica">Selecione a própria pasta DOCUMENTOS DE ENTRADA.</label>
+        <input id="pasta-base" class="base-destino" type="text" value="__DESTINO_BASE__" spellcheck="false" readonly>
+        <div class="acoes-pasta"><button id="escolher-pasta" type="button" aria-label="Alterar pasta de documentos" disabled>Alterar</button><button id="abrir-pasta" type="button" aria-label="Abrir pasta de documentos" disabled>Abrir</button></div>
+      </div>
+      <div class="configuracao-caminho">
+        <label for="arquivo-emitentes" class="dica">Arquivo de emitentes conhecidos</label>
+        <input id="arquivo-emitentes" class="base-destino" type="text" value="__ARQUIVO_EMITENTES__" spellcheck="false" readonly>
+        <div class="acoes-pasta"><button id="escolher-emitentes" type="button" aria-label="Alterar arquivo de emitentes" disabled>Alterar</button><button id="abrir-emitentes" type="button" aria-label="Abrir pasta dos emitentes" disabled>Abrir</button><button id="editar-emitentes" type="button" aria-label="Editar emitentes no Bloco de Notas" disabled>Editar</button></div>
+      </div>
+      <p id="configuracao-status" class="dica" role="status"></p>
     </div></details>
     </div>
   </header>

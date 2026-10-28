@@ -136,7 +136,7 @@ el('escolher-pasta').onclick=async()=>{
   if(!desktop||el('escolher-pasta').disabled||configurandoPasta)return;
   configurandoPasta=true;el('escolher-pasta').disabled=true;el('escolher-emitentes').disabled=true;el('abrir-emitentes').disabled=true;el('editar-emitentes').disabled=true;el('abrir-pasta').disabled=true;el('campos').disabled=true;el('iniciar').disabled=true;
   informarPasta('Escolha a pasta no diálogo do Windows.');
-  try{const r=await api('/api/pasta',{});if(r.alterado){el('pasta-base').textContent=r.pasta;informarPasta('Pasta salva. Será usada nas próximas execuções.');}else informarPasta('Escolha cancelada. A pasta anterior foi mantida.');}
+  try{const r=await api('/api/pasta',{});if(r.alterado){el('pasta-base').value=r.pasta;informarPasta('Pasta salva. Será usada nas próximas execuções.');}else informarPasta('Escolha cancelada. A pasta anterior foi mantida.');}
   catch(e){informarPasta(e.message);}
   finally{configurandoPasta=false;await atualizar();}
 };
@@ -144,7 +144,7 @@ el('escolher-emitentes').onclick=async()=>{
   if(!desktop||el('escolher-emitentes').disabled||configurandoPasta)return;
   configurandoPasta=true;el('escolher-pasta').disabled=true;el('escolher-emitentes').disabled=true;el('abrir-emitentes').disabled=true;el('editar-emitentes').disabled=true;el('abrir-pasta').disabled=true;el('campos').disabled=true;el('iniciar').disabled=true;
   informarPasta('Escolha o arquivo JSON de emitentes no diálogo do Windows.');
-  try{const r=await api('/api/emitentes',{});if(r.alterado){el('arquivo-emitentes').textContent=r.arquivo;informarPasta('Arquivo salvo. Será usado e atualizado nas próximas execuções.');}else informarPasta('Escolha cancelada. O arquivo anterior foi mantido.');}
+  try{const r=await api('/api/emitentes',{});if(r.alterado){el('arquivo-emitentes').value=r.arquivo;informarPasta('Arquivo salvo. Será usado e atualizado nas próximas execuções.');}else informarPasta('Escolha cancelada. O arquivo anterior foi mantido.');}
   catch(e){informarPasta(e.message);}
   finally{configurandoPasta=false;await atualizar();}
 };

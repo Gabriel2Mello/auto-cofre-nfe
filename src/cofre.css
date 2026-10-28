@@ -94,9 +94,12 @@ textarea::placeholder { color:var(--muted); }
 .configuracoes summary { display:flex; list-style:none; cursor:pointer; min-height:40px; padding:8px; border:1px solid var(--borda); border-radius:7px; background:var(--cartao); }
 .configuracoes summary:hover { background:var(--suave); border-color:var(--marca); }
 .configuracoes summary::-webkit-details-marker { display:none; }
-.menu-configuracoes { position:absolute; top:calc(100% + 8px); right:0; z-index:5; width:min(450px,calc(100vw - 48px)); padding:16px; border:1px solid var(--borda); border-radius:8px; background:var(--cartao); display:grid; gap:12px; }
-.acoes-pasta { display:flex; flex-wrap:wrap; gap:8px; }
-.base-destino { overflow-wrap:anywhere; font-size:13px; }
+.menu-configuracoes { position:absolute; top:calc(100% + 8px); right:0; z-index:5; width:min(450px,calc(100vw - 48px)); padding:12px 16px 16px; border:1px solid var(--borda); border-radius:8px; background:var(--cartao); }
+.configuracao-caminho + .configuracao-caminho { margin-top:12px; }
+.configuracao-caminho > label { padding-left:8px; margin-bottom:2px; font-weight:400; }
+.acoes-pasta { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+.menu-configuracoes .base-destino { margin-top:0; }
+#configuracao-status { margin-top:12px; }
 #configuracao-status:empty { display:none; }
 
 /* Parâmetros, notas e ação à esquerda; resultados alinhados ao início dos parâmetros. */

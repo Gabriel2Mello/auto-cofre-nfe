@@ -57,6 +57,7 @@ textarea::placeholder { color:var(--muted); }
 #notas,.detalhe-nota strong { font-family:"Cascadia Code",Consolas,monospace; }
 #nome { text-transform:uppercase; }
 #notas { resize:none; border-color:#39ff14; transition:border-color 180ms ease-in-out; }
+#notas:placeholder-shown { user-select:none; }
 /* Neutraliza o primeiro desenho enquanto o navegador aplica o foco inicial. */
 #notas[autofocus], #notas:focus, #notas:not(:placeholder-shown) { border-color:var(--borda); outline:none; }
 @media (prefers-reduced-motion:reduce) {
@@ -100,6 +101,8 @@ textarea::placeholder { color:var(--muted); }
 .configuracoes:not([open]) .menu-configuracoes { display:none; }
 .configuracoes summary { display:flex; list-style:none; cursor:pointer; min-height:40px; padding:8px; border:1px solid var(--borda); border-radius:7px; background:var(--cartao); }
 .configuracoes summary:hover { background:var(--suave); border-color:var(--marca); }
+.controles-cabecalho #tema, .controles-cabecalho #tema:hover:enabled,
+.configuracoes summary, .configuracoes summary:hover { border-color:var(--contorno-controle); }
 .configuracoes summary::-webkit-details-marker { display:none; }
 .menu-configuracoes { position:absolute; top:calc(100% + 8px); right:0; z-index:5; width:min(450px,calc(100vw - 48px)); padding:12px 16px 16px; border:1px solid var(--borda); border-radius:8px; background:var(--cartao); }
 .configuracao-caminho + .configuracao-caminho { margin-top:12px; }
@@ -116,6 +119,12 @@ textarea::placeholder { color:var(--muted); }
 .documentos { margin-top:16px; }
 .cabecalho-entrada { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:4px 12px; }
 .parametros { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:18px 14px; }
+#tipo > legend, #empresa > legend, .competencias > label { user-select:none; }
+.marca, .segmentado label, .configuracao-caminho > label, .acoes-pasta button,
+#rotulo-notas, #dica-notas, .atalho-notas, .acoes-notas button,
+#titulo-resultados, .assinatura, #encerrar, #parar, #campo-nome > label,
+#responder, #cancelar-decisao, #status, #mensagem { user-select:none; }
+.competencias input[type=month] { user-select:text; }
 .segmentado { display:grid; grid-template-columns:1fr 1fr; }
 .segmentado label { display:flex; align-items:center; justify-content:center; gap:6px; min-height:42px; padding:8px; border:1px solid var(--contorno-controle); background:var(--cartao); cursor:pointer; }
 .segmentado label:first-child { border-radius:7px 0 0 7px; }

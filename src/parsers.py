@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from functools import cached_property
 from html import unescape
+import json
 import re
 
 from dateutil import parser
@@ -112,15 +113,7 @@ def encontrar_linha(
 
 
 def extrair_dados(linha: DocumentoFiscal) -> dict[str, str]:
-  link_element = linha.soup.select_one('a.linkManifestar[onclick]')
- 
-  onclick_attr = link_element.get('onclick') if link_element else None
-  if not onclick_attr:
-    raise ValueError('Atributo onclick não encontrado')
-
-  chave = _extract_chave(str(onclick_attr), Config.TAMANHO_CHAVE)
-  if not chave:
-    raise ValueError('Chave da nota não encontrada')
+  chave = _extrair_chave_portal(linha.soup)
 
   link_xml = linha.soup.select_one('a.iconeXML[href]')
   url_parts = [p for p in str(link_xml.get('href', '')).split('/') if p] if link_xml else []
@@ -142,6 +135,47 @@ def extrair_dados(linha: DocumentoFiscal) -> dict[str, str]:
     'codigo_arquivo': str(id_str).replace('flagArq', ''),
     'emitente': emitente
   }
+
+
+def _extrair_chave_portal(soup: BeautifulSoup) -> str:
+  # HTML observado em NF-e e CT-e: eventos declarativos com argumentos JSON.
+  links = soup.select('a.linkManifestar[data-on-click="consultarSituacaoNota"], '
+                      'a.linkManifestar[data-on-click="manifestarNFE"]')
+  if links:
+    chaves = set()
+    for link in links:
+      try:
+        argumentos = json.loads(str(link.get('data-on-click-args', '')))
+      except (ValueError, TypeError):
+        raise ValueError('Não foi possível identificar a chave da nota no Cofre.') from None
+      if (not isinstance(argumentos, list) or len(argumentos) != 2
+          or argumentos[0] != 'empresa' or not isinstance(argumentos[1], str)):
+        raise ValueError('Não foi possível identificar a chave da nota no Cofre.')
+      chave = argumentos[1]
+      if link.get('data-on-click') == 'manifestarNFE':
+        partes = chave.split('/')
+        if len(partes) != 2 or not re.fullmatch(r'[0-9]+', partes[0]):
+          raise ValueError('Não foi possível identificar a chave da nota no Cofre.')
+        chave = partes[1]
+      if not re.fullmatch(r'[A-Za-z0-9]{' + str(Config.TAMANHO_CHAVE) + r'}', chave):
+        raise ValueError('Chave da nota não encontrada')
+      chaves.add(chave)
+    if len(chaves) != 1:
+      raise ValueError('Identificadores da nota divergentes no Cofre.')
+    return chaves.pop()
+
+  # Compatibilidade com as respostas anteriores do portal.
+  link_element = soup.select_one('a.linkManifestar[onclick]')
+
+  onclick_attr = link_element.get('onclick') if link_element else None
+  if not onclick_attr:
+    raise ValueError('Não foi possível identificar a chave da nota no Cofre.')
+
+  chave = _extract_chave(str(onclick_attr), Config.TAMANHO_CHAVE)
+  if not chave:
+    raise ValueError('Chave da nota não encontrada')
+
+  return chave
 
 
 def extrair_empresas_href(html_content: str) -> dict[str, str]:

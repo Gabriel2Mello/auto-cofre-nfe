@@ -1,6 +1,6 @@
 # Contrato observado do portal Cofre
 
-Observação feita em 26/10/2026 na aba do Edge disponibilizada pelo responsável.
+Observações feitas em 26 e 29/10/2026 na aba do Edge disponibilizada pelo responsável.
 Este documento descreve os sinais usados pelo cliente; não é documentação
 oficial da API nem garantia de estabilidade do HTML do fornecedor.
 
@@ -74,10 +74,37 @@ o mesmo total ainda dependem das garantias de ordenação do fornecedor.
 As respostas HTTP usadas nos testes são sintéticas; não foram arquivadas respostas
 JSON de documentos reais.
 
+## Identificador do documento e eventos HTML
+
+Em 29/10/2026, as consultas de NF-e e CT-e da Matriz e Filial apresentaram
+ações declarativas em `data-on-click`, com argumentos JSON em
+`data-on-click-args`, sem o atributo `onclick` usado anteriormente.
+Foram conferidas 25 NF-e de cada empresa, 25 CT-e da Filial e os 12 registros
+disponíveis de CT-e da Matriz (10 documentos e dois eventos). A observação
+confirma o formato atual, sem determinar a data da atualização do fornecedor.
+
+O link `a.linkManifestar` com ação `consultarSituacaoNota` fornece
+`["empresa", "IDENTIFICADOR"]`. Na NF-e, `manifestarNFE` também fornece
+`["empresa", "ID_EMPRESA/IDENTIFICADOR"]`. O cliente lê esses argumentos como
+JSON, sem executar JavaScript, exige identificador alfanumérico ASCII de
+22 caracteres e recusa argumentos inválidos ou identificadores divergentes.
+Esse identificador interno continua distinto da chave fiscal de 44 dígitos.
+O formato anterior com `onclick` permanece aceito quando não há eventos novos
+reconhecidos na linha; evento novo inválido não é ignorado para aceitar o antigo.
+
+Empresa para download e código de sinalização continuam vindo, respectivamente,
+do link XML e de `div#flagArqID`. O ajuste não aciona manifestações nem altera
+os endpoints, a confirmação da empresa, a validação dos arquivos ou a marcação.
+Os testes usam respostas HTTP falsas: não homologam uma baixa real no portal.
+
 ## Amostras e regressões
 
 - `tests/amostras_portal/empresa_ativa.html`: estrutura mínima do cabeçalho.
 - `tests/amostras_portal/marcacao.html`: indicador corrente e opções da paleta.
+- `tests/amostras_portal/nfe_atual.html` e `cte_atual.html`: eventos declarativos,
+  links de download e indicador corrente com identificadores fictícios.
+- `tests/test_parsers_documentos.py`: extração atual/legada, montagem dos downloads
+  de NF-e/CT-e para dois contextos de empresa e rejeição de argumentos inválidos.
 - `tests/test_contrato_portal.py`: respostas HTTP falsas, paginação, contexto e
   confirmação de marcação, incluindo recusas antes dos efeitos de negócio.
 

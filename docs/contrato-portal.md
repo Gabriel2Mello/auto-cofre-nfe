@@ -105,6 +105,11 @@ Os testes usam respostas HTTP falsas: não homologam uma baixa real no portal.
   links de download e indicador corrente com identificadores fictícios.
 - `tests/test_parsers_documentos.py`: extração atual/legada, montagem dos downloads
   de NF-e/CT-e para dois contextos de empresa e rejeição de argumentos inválidos.
+- `tests/test_sinalizacao_fluxo.py`: parser, downloads, gravação e sinalização reais
+  sobre HTTP e arquivos fictícios, no desktop e console. Reproduz a falha de
+  extração e verifica ausência de downloads, métricas e envio de flag; também
+  cobre falha depois de uma nota concluída e preservação de marcação anterior.
+  O envio de sucesso exige que todos os arquivos de destino já existam no teste.
 - `tests/test_contrato_portal.py`: respostas HTTP falsas, paginação, contexto e
   confirmação de marcação, incluindo recusas antes dos efeitos de negócio.
 

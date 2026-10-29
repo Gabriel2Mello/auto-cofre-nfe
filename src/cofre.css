@@ -3,7 +3,7 @@
   color-scheme:light;
   --fundo:#f6f5f2; --cartao:#fff; --texto:#24272b; --muted:#626871;
   --borda:#dfdfdc; --contorno-controle:#778599; --marca:#166534; --suave:#eaf4ed; --botao-texto:#fff;
-  --neon-notas:#42c970;
+  --neon-notas:var(--marca);
   --foco:#218046; --aviso:#765012; --aviso-fundo:#fff8e9; --aviso-borda:#dcc493; --erro:#aa2940; --erro-fundo:#fae9ed;
 }
 :root[data-tema=escuro] {
@@ -60,7 +60,7 @@ textarea::placeholder { color:var(--muted); }
 #notas,.detalhe-nota strong { font-family:"Cascadia Code",Consolas,monospace; }
 #nome { text-transform:uppercase; }
 #notas { resize:none; border-color:var(--neon-notas); transition:border-color 180ms ease-in-out; }
-:root[data-tema=claro] #notas { border-width:2px; padding:8px 9px; }
+:root[data-tema=claro] #notas { border-width:1.4px; }
 #notas:placeholder-shown { user-select:none; }
 /* Neutraliza o primeiro desenho enquanto o navegador aplica o foco inicial. */
 #notas[autofocus], #notas:focus, #notas:not(:placeholder-shown) { border-color:var(--borda); outline:none; }

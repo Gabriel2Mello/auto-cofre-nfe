@@ -16,7 +16,7 @@ elementos.get('empresa').value='FILIAL';
 const eventos = new Map(), timers = new Map(), chamadas = [], pedidos = [];
 let proximoTimer=0;
 let retorno={ativo:false,parando:false,status:'Pronto',resultados:[],pergunta:null,lote:null};
-let iniciarPendente=null, falharEstado=false;
+let iniciarPendente=null, falharEstado=false, falharDiagnostico=false;
 const contexto = vm.createContext({
   document:{documentElement:{dataset:{},setAttribute(nome,valor){this.dataset.tema=valor;}},getElementById(id){if(!idsHtml.has(id))return null;if(!elementos.has(id))elementos.set(id,elemento());return elementos.get(id);},
     querySelector(seletor){if(seletor==='#tipo input:checked')return elementos.get('tipo');if(seletor==='#empresa input:checked')return elementos.get('empresa');if(seletor==='input[name="emitente"]:checked')return elementos.get('opcoes').children.map(label=>label.children[0]).find(radio=>radio.checked)||null;return elemento();},querySelectorAll(){return [];},createElement:elemento,createDocumentFragment:elemento,createTextNode(textContent){return {textContent};}},
@@ -29,7 +29,11 @@ const contexto = vm.createContext({
     chamadas.push(caminho);
     if(opcoes?.body)pedidos.push({caminho,dados:JSON.parse(opcoes.body)});
     if(caminho==='/api/presenca')return new Promise(()=>{});
-    if(caminho==='/api/iniciar')return new Promise(resolve=>{iniciarPendente=()=>resolve({ok:true,json:async()=>({ok:true})});});
+    if(caminho==='/api/iniciar')return new Promise((resolve,reject)=>{iniciarPendente=(erro,resposta)=>erro?reject(erro):resolve(resposta||{ok:true,json:async()=>({ok:true})});});
+    if(caminho==='/api/diagnostico-inicio'){
+      if(falharDiagnostico)throw Error('Diagnóstico indisponível');
+      return {ok:true,json:async()=>({caminho:'C:/perfil/logs/cofre-diagnostico.txt'})};
+    }
     if(caminho==='/api/estado'&&falharEstado)throw Error('Conexão sintética perdida');
     return {ok:true,json:async()=>structuredClone(retorno)};
   },console,
@@ -94,6 +98,15 @@ async function testar(){
     await elementos.get('formulario').onsubmit({preventDefault(){}});
     eventos.get(nomeEvento)({key:'a',target:notas});
     assert.equal(elementos.get('mensagem').textContent,'',`${nomeEvento} devolve o espaço à dica anterior.`);
+    elementos.get('mensagem').textContent='Início não confirmado.';
+    eventos.get(nomeEvento)({key:'a',target:notas});
+    assert.equal(elementos.get('mensagem').textContent,'',`${nomeEvento} dispensa o aviso de resposta perdida.`);
+    elementos.get('mensagem').textContent='403 · Início não confirmado.';
+    eventos.get(nomeEvento)({key:'a',target:notas});
+    assert.equal(elementos.get('mensagem').textContent,'');
+    elementos.get('mensagem').textContent='Confira o portal e a conexão.';
+    eventos.get(nomeEvento)({key:'a',target:notas});
+    assert.equal(elementos.get('mensagem').textContent,'','Interação dispensa o aviso HTTP 503.');
   }
   elementos.get('mensagem').textContent='Falha de conexão';
   eventos.get('keydown')({key:'a',target:notas});
@@ -235,7 +248,10 @@ async function testar(){
   assert.equal(elementos.get('resumo').dataset.finalizado,'false','Novo envio remove a borda anterior imediatamente.');
   await elementos.get('formulario').onsubmit(evento);
   assert.equal(chamadas.filter(c=>c==='/api/iniciar').length,1,'Duplo envio não deve repetir início.');
-  falharEstado=true;iniciarPendente();await primeira;
+  falharEstado=true;iniciarPendente(new TypeError('SIMULAÇÃO · Resposta de início perdida. SEGREDO'));await primeira;
+  assert.equal(elementos.get('mensagem').textContent,'Início não confirmado.');
+  assert.equal(elementos.get('mensagem').title,'','Pendência de diagnóstico não exibe tooltip técnica.');
+  assert.equal(chamadas.includes('/api/diagnostico-inicio'),false,'Diagnóstico aguarda conexão confirmada.');
   assert.equal(elementos.get('iniciar').disabled,true,'Perda de resposta mantém início bloqueado até uma leitura válida.');
   assert.equal(elementos.get('campos').disabled,true);
   assert.equal(elementos.get('fase').textContent,'Reconectando');
@@ -243,6 +259,10 @@ async function testar(){
   falharEstado=false;
   retorno={...retorno,ativo:true};
   await agendamento(1500);
+  await esvaziar();
+  assert.equal(elementos.get('mensagem').textContent,'','Reconexão remove o aviso sem interação.');
+  assert.equal(elementos.get('mensagem').title,'','Diagnóstico concluído não restaura o aviso removido.');
+  assert.deepEqual(pedidos.find(p=>p.caminho==='/api/diagnostico-inicio').dados,{tipo:'TypeError',status:null});
   assert.equal(chamadas.filter(c=>c==='/api/iniciar').length,1,'Recuperação deve usar somente leitura.');
   assert.equal(elementos.get('iniciar').disabled,true,'Lote recuperado continua em andamento.');
   retorno={...retorno,ativo:false};
@@ -252,12 +272,70 @@ async function testar(){
   // A leitura pode voltar ao mesmo snapshot ocioso (POST recusado ou lote rápido).
   // Mesmo sem alteração do DOM, os controles precisam ser liberados.
   const segunda=elementos.get('formulario').onsubmit(evento);
-  falharEstado=true;iniciarPendente();await segunda;
+  falharEstado=true;iniciarPendente(new TypeError('Resposta perdida'));await segunda;
+  assert.equal(elementos.get('mensagem').textContent,'Início não confirmado.');
   falharEstado=false;await agendamento(1500);
+  assert.equal(elementos.get('mensagem').textContent,'','Reconexão ociosa também remove o aviso.');
   assert.equal(elementos.get('campos').disabled,false);
   assert.equal(elementos.get('iniciar').disabled,false);
   assert.equal(chamadas.filter(c=>c==='/api/iniciar').length,2,'Um POST por envio explícito, nenhum POST durante recuperação.');
   assert.equal(timers.size,0);
+  for(const [status,resposta] of [
+    [403,{ok:false,status:403,json:async()=>({erro:'SEGREDO '.repeat(500)})}],
+    [503,{ok:false,status:503,json:async()=>({erro:'PORTAL PRIVADO'})}],
+    [502,{ok:false,status:502,json:async()=>{throw new SyntaxError('HTML PRIVADO');}}],
+  ]){
+    const antes=chamadas.filter(c=>c==='/api/iniciar').length;
+    falharDiagnostico=true;
+    const tentativa=elementos.get('formulario').onsubmit(evento);
+    iniciarPendente(null,resposta);await tentativa;await esvaziar();
+    assert.equal(elementos.get('mensagem').textContent,status===503?'Confira o portal e a conexão.':`${status} · Início não confirmado.`);
+    assert.equal(elementos.get('mensagem').title,'','Falha do diagnóstico não exibe tooltip técnica.');
+    assert.equal(elementos.get('campos').disabled,false,'Falha do diagnóstico não bloqueia formulário confirmado.');
+    falharDiagnostico=false;
+    await vm.runInContext('atualizar()',contexto);await esvaziar();
+    assert.equal(elementos.get('mensagem').title,'Diagnóstico: C:/perfil/logs/cofre-diagnostico.txt');
+    assert.equal(chamadas.filter(c=>c==='/api/iniciar').length,antes+1,'Diagnosticar não reenvia início.');
+    assert.equal(timers.size,0);
+  }
+  retorno={...retorno,aviso_portal:{id:'falha-portal-1',status:503}};
+  await vm.runInContext('atualizar()',contexto);
+  assert.equal(elementos.get('mensagem').textContent,'Confira o portal e a conexão.');
+  eventos.get('pointerdown')({target:notas});
+  retorno={...retorno,status:'Execução finalizada.'};
+  await vm.runInContext('atualizar()',contexto);
+  assert.equal(elementos.get('mensagem').textContent,'','Atualizar o estado não restaura um aviso dispensado.');
+  retorno={...retorno,aviso_portal:{id:'falha-portal-2',status:503}};
+  await vm.runInContext('atualizar()',contexto);
+  assert.equal(elementos.get('mensagem').textContent,'Confira o portal e a conexão.','Nova ocorrência exibe novo aviso.');
+  falharEstado=true;await vm.runInContext('atualizar()',contexto);
+  assert.equal(elementos.get('mensagem').textContent,'Confira o portal e a conexão.');
+  falharEstado=false;await agendamento(1500);await esvaziar();
+  assert.equal(elementos.get('mensagem').textContent,'','Reconexão dispensa o aviso HTTP 503.');
+  for(const [tipo,orientacao] of [
+    ['timeout','Confira o portal e a conexão.'],['comunicacao','Confira o portal e a conexão.'],
+    ['pasta_destino','Confira a pasta de destino.'],['gravacao','Confira o acesso à pasta.'],
+    ['emitentes','Arquivo emitentes indisponível.'],['sinalizacao','Confira a sinalização no Cofre.'],
+  ]){
+    retorno={...retorno,status:'Detalhe permanente do resultado.',aviso_portal:{id:'aviso-'+tipo,tipo,status:null}};
+    await vm.runInContext('atualizar()',contexto);
+    assert.equal(elementos.get('mensagem').textContent,orientacao);
+    for(const nomeEvento of ['pointerdown','click','keydown','input','change','wheel']){
+      elementos.get('mensagem').textContent=orientacao;
+      eventos.get(nomeEvento)({target:notas,key:'a'});
+      assert.equal(elementos.get('mensagem').textContent,'');
+      assert.equal(elementos.get('status').textContent,'Detalhe permanente do resultado.');
+    }
+    await vm.runInContext('atualizar()',contexto);
+    assert.equal(elementos.get('mensagem').textContent,'','Atualização não restaura orientação dispensada.');
+    retorno={...retorno,aviso_portal:{id:'reconexao-'+tipo,tipo,status:null}};
+    await vm.runInContext('atualizar()',contexto);
+    falharEstado=true;await vm.runInContext('atualizar()',contexto);
+    falharEstado=false;await agendamento(1500);
+    assert.equal(elementos.get('mensagem').textContent,'');
+    assert.equal(elementos.get('status').textContent,'Detalhe permanente do resultado.');
+  }
+  assert.equal(JSON.stringify(pedidos.filter(p=>p.caminho==='/api/diagnostico-inicio')).includes('SEGREDO'),false);
   assert.equal(chamadas.includes('/api/parar'),false,'Iniciar e recuperar o andamento não devem solicitar parada.');
   await elementos.get('parar').onclick();
   await elementos.get('cancelar-decisao').onclick();

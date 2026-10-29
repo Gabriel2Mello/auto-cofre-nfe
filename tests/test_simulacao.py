@@ -9,7 +9,7 @@ from threading import Event, Thread
 import unittest
 from unittest.mock import patch
 
-from src.controlador_web import EstadoInterface, mensagem_erro, mensagem_erro_documento
+from src.controlador_web import EstadoInterface, mensagem_erro_documento
 from src.interface_web import criar_servidor
 from tests.preview_interface import ambiente_isolado, criar_previa, simular
 from tests.test_interface_web import entrada
@@ -49,25 +49,27 @@ class TestSimulacao(unittest.TestCase):
     self.assertEqual(situacoes.count('Conferir sinalização'), 20)
 
   def test_http503_no_acesso_encerra_o_lote_antes_de_processar(self):
-    with patch('src.controlador_web.mensagem_erro', wraps=mensagem_erro) as traduzir:
-      dados = self.concluir(self.executar('1012,1001'))
+    dados = self.concluir(self.executar('1012,1001'))
     self.assertFalse(dados['ativo'])
     self.assertIsNone(dados['pergunta'])
-    self.assertEqual(dados['status'], 'Execução encerrada: Falha de comunicação com o Cofre NF-e. Confira o portal e a conexão.')
+    self.assertEqual(dados['status'], 'Erro 503: Falha na comunicação com o Cofre.')
+    self.assertEqual(dados['aviso_portal']['status'], 503)
+    self.assertRegex(dados['aviso_portal']['id'], r'^[0-9a-f]{32}$')
     self.assertEqual([r['situacao'] for r in dados['resultados']], ['Não processado', 'Não processado'])
-    self.assertEqual(traduzir.call_args.args[0].response.status_code, 503)
 
   def test_http503_por_documento_preserva_diferenca_entre_baixa_e_sinalizacao(self):
     for nota, situacao in [('1013', 'Erro'), ('1014', 'Conferir sinalização')]:
       with self.subTest(nota=nota), patch('tests.preview_interface.mensagem_erro_documento', wraps=mensagem_erro_documento) as traduzir:
         dados = self.concluir(self.executar(nota + ',1001'))
         self.assertEqual([r['situacao'] for r in dados['resultados']], [situacao, 'Concluído'])
-        esperado = ('XML e PDF salvos; não foi possível confirmar a sinalização no Cofre NF-e. Confira o portal e a conexão.'
-                    if nota == '1014' else 'Falha de comunicação com o Cofre NF-e. Confira o portal e a conexão.')
+        esperado = ('XML e PDF salvos; não foi possível confirmar a sinalização no Cofre.'
+                    if nota == '1014' else 'Falha na comunicação com o Cofre.')
+        self.assertEqual(dados['aviso_portal']['status'], 503)
         self.assertEqual(dados['resultados'][0]['detalhe'], esperado)
         self.assertEqual(traduzir.call_args.args[0].response.status_code, 503)
         if nota == '1014':
           self.assertTrue(dados['resultados'][0]['detalhe'].startswith('XML e PDF salvos;'))
+          self.assertEqual(dados['aviso_portal']['tipo'], 'sinalizacao')
     for extensao in ['*.xml', '*.pdf', '*.sqlite3']:
       self.assertEqual(list(self.raiz.rglob(extensao)), [])
 
@@ -75,6 +77,25 @@ class TestSimulacao(unittest.TestCase):
     with estado.condicao:
       self.assertTrue(estado.condicao.wait_for(lambda: estado.dados['pergunta'] is not None, 2))
       return estado.snapshot()['pergunta']
+
+  def test_orientacoes_e_detalhes_dos_novos_cenarios(self):
+    for nota, tipo, detalhe in (
+      ('1015', 'timeout', 'O Cofre não respondeu dentro do prazo.'),
+      ('1016', 'comunicacao', 'Falha na comunicação com o Cofre.'),
+      ('1017', 'pasta_destino', 'Não foi possível acessar a pasta DOCUMENTOS DE ENTRADA.'),
+      ('1018', 'emitentes', 'O arquivo de emitentes está indisponível.'),
+      ('1007', 'gravacao', 'Não foi possível gravar os arquivos do documento.'),
+      ('1008', 'sinalizacao', 'XML e PDF salvos; não foi possível confirmar a sinalização no Cofre.'),
+    ):
+      with self.subTest(nota=nota):
+        estado = self.executar(nota)
+        dados = self.concluir(estado)
+        self.assertEqual(dados['aviso_portal']['tipo'], tipo)
+        self.assertIsNone(dados['aviso_portal']['status'])
+        texto = dados['status'] if int(nota) >= 1015 else dados['resultados'][0]['detalhe']
+        self.assertIn(detalhe, texto)
+        identificador = dados['aviso_portal']['id']
+        self.assertEqual(estado.snapshot()['aviso_portal']['id'], identificador)
 
   def test_escolha_de_emitente_e_apelido_usam_validacoes_reais(self):
     estado = self.executar('1003,1004,1011')
@@ -163,7 +184,7 @@ class TestHTTPPrevia(unittest.TestCase):
     codigo, pagina = self.requisitar('GET', '/')
     self.assertEqual(codigo, 200)
     self.assertIn(b'id="simulacao"', pagina)
-    self.assertEqual(pagina.count(b'<option '), 17)
+    self.assertEqual(pagina.count(b'<option '), 21)
     self.assertIn(b'HTTP 503 ao acessar o Cofre', pagina)
     self.assertIn(b'HTTP 503 na consulta / baixa', pagina)
     self.assertIn('HTTP 503 na sinalização'.encode('utf-8'), pagina)
@@ -193,4 +214,4 @@ class TestHTTPPrevia(unittest.TestCase):
     dados = json.loads(corpo)
     self.assertFalse(dados['ativo'])
     self.assertTrue(all(r['situacao'] == 'Não processado' for r in dados['resultados']))
-    self.assertIn('Falha de comunicação com o Cofre NF-e.', dados['status'])
+    self.assertEqual(dados['status'], 'Erro 503: Falha na comunicação com o Cofre.')

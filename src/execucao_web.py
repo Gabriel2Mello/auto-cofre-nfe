@@ -15,7 +15,9 @@ from src.http_client import TimeoutScraper
 from src.parsers import NotaNaoEncontrada, extrair_empresas_href
 from src.utils import salvar_arquivos
 from metricas_nunes import registrar_evento
-from src.controlador_web import ExecucaoInterrompida, mensagem_erro_documento
+from src.controlador_web import (ExecucaoInterrompida, mensagem_erro_documento,
+                                 PastaDestinoIndisponivel, EmitentesIndisponiveis,
+                                 FalhaGravacaoDocumento)
 
 if TYPE_CHECKING:
   from src.controlador_web import EstadoInterface, Pedido
@@ -24,10 +26,10 @@ if TYPE_CHECKING:
 def executar_lote(pedido: Pedido, estado: 'EstadoInterface') -> None:
   config = Config(caminho_documento_entrada=documentos_entrada() or None)
   if not Path(config.caminho_documento_entrada).is_dir():
-    raise ValueError('A pasta CAMINHO_DOCUMENTO_ENTRADA está indisponível. Confira o acesso à rede.')
+    raise PastaDestinoIndisponivel()
   caminho_emitentes = arquivo_emitentes()
   if not caminho_emitentes.is_file() and caminho_emitentes != arquivo_emitentes_padrao():
-    raise ValueError('O arquivo de emitentes configurado está indisponível. Confira em Configurações.')
+    raise EmitentesIndisponiveis()
   emitentes = EmitenteHandler(caminho_emitentes)
   try:
     with TimeoutScraper() as sessao:
@@ -50,10 +52,13 @@ def executar_lote(pedido: Pedido, estado: 'EstadoInterface') -> None:
                                     nota=nota, cnpj_empresa=config.cnpj[pedido.empresa],
                                     mes_nota=pedido.mes_nota, ano_nota=pedido.ano_nota)
           estado.verificar_parada()
-          nome_arquivo = salvar_arquivos(xml, pdf, nome, nota, pedido.empresa, pedido.mes_pasta,
-                          str(pedido.ano_pasta), pedido.tipo, config.caminho_documento_entrada,
-                          cnpj_empresa=config.cnpj[pedido.empresa],
-                          mes_nota=pedido.mes_nota, ano_nota=pedido.ano_nota)
+          try:
+            nome_arquivo = salvar_arquivos(xml, pdf, nome, nota, pedido.empresa, pedido.mes_pasta,
+                            str(pedido.ano_pasta), pedido.tipo, config.caminho_documento_entrada,
+                            cnpj_empresa=config.cnpj[pedido.empresa],
+                            mes_nota=pedido.mes_nota, ano_nota=pedido.ano_nota)
+          except OSError as erro:
+            raise FalhaGravacaoDocumento() from erro
           salvo = True
           registrar_evento('documento_baixado', f"{pedido.empresa}:{pedido.tipo}:{dados['chave']}",
                            nota, empresa=str(pedido.empresa), tipo=str(pedido.tipo))
@@ -66,6 +71,7 @@ def executar_lote(pedido: Pedido, estado: 'EstadoInterface') -> None:
         except NotaNaoEncontrada:
           estado.atualizar_nota(indice, 'Erro', 'Nenhuma nota encontrada')
         except Exception as erro:
+          estado.avisar_falha_operacao(erro, salvo)
           situacao = 'Conferir sinalização' if salvo else 'Erro'
           estado.atualizar_nota(indice, situacao, mensagem_erro_documento(erro, salvo))
   finally:

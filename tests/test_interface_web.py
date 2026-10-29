@@ -2,13 +2,15 @@ import json
 import tempfile
 import socket
 import unittest
+from pathlib import Path
 from http.client import HTTPConnection
 from threading import Event, Thread
 from time import monotonic
 from unittest.mock import MagicMock, patch
 from requests import HTTPError, Timeout
 
-from src.controlador_web import EstadoInterface, Pedido, executar_lote
+from src.controlador_web import (EstadoInterface, Pedido, executar_lote,
+                                 PastaDestinoIndisponivel, EmitentesIndisponiveis)
 from src.enums import Empresa, TipoDocumento
 from src.interface_web import criar_servidor
 from src.parsers import LinhaNFe, NotaNaoEncontrada, encontrar_linha
@@ -89,6 +91,23 @@ class TestDecisoes(unittest.TestCase):
 
 
 class TestFluxo(unittest.TestCase):
+  def test_preparacao_identifica_destino_e_catalogo_sem_acessar_portal(self):
+    with tempfile.TemporaryDirectory() as pasta:
+      raiz = Path(pasta)
+      config = MagicMock(caminho_documento_entrada=str(raiz / 'ausente'))
+      with patch('src.execucao_web.Config', return_value=config), \
+           patch('src.execucao_web.documentos_entrada', return_value=pasta), \
+           patch('src.execucao_web.arquivo_emitentes', return_value=raiz / 'emitentes-ausente.csv'), \
+           patch('src.execucao_web.arquivo_emitentes_padrao', return_value=raiz / 'padrao.csv'), \
+           patch('src.execucao_web.login') as login:
+        pedido = Pedido.de_json(entrada())
+        with self.assertRaises(PastaDestinoIndisponivel):
+          executar_lote(pedido, EstadoInterface())
+        config.caminho_documento_entrada = pasta
+        with self.assertRaises(EmitentesIndisponiveis):
+          executar_lote(pedido, EstadoInterface())
+        login.assert_not_called()
+
   def test_fluxo_completo_realiza_escolhas_no_painel(self):
     linhas = [LinhaNFe('', 'FORNECEDOR A', '01/10/2026', '123', '10,00'),
               LinhaNFe('', 'FORNECEDOR B', '02/10/2026', '123', '20,00')]
@@ -130,7 +149,7 @@ class TestFluxo(unittest.TestCase):
         flag.assert_called_once()
         handler.return_value.close.assert_called_once()
 
-  def executar_simulado(self, falha_salvar=None, falha_flag=None, parar_ao_salvar=False, falha_consulta=None):
+  def executar_simulado(self, falha_salvar=None, falha_flag=None, parar_ao_salvar=False, falha_consulta=None, com_aviso=False):
     estado = EstadoInterface()
     pedido = Pedido.de_json(entrada(notas='123'))
     estado.dados['resultados'] = [{'nota': '123', 'situacao': 'Aguardando', 'detalhe': ''}]
@@ -151,7 +170,28 @@ class TestFluxo(unittest.TestCase):
          patch('src.execucao_web.salvar_arquivos', side_effect=salvar), \
          patch('src.execucao_web.marcar_flag', side_effect=falha_flag) as flag:
       executar_lote(pedido, estado)
-    return estado.snapshot()['resultados'][0], flag
+    dados = estado.snapshot()
+    retorno = (dados['resultados'][0], flag)
+    return (*retorno, dados.get('aviso_portal')) if com_aviso else retorno
+
+  def test_executor_publica_orientacao_sem_expor_excecao(self):
+    for falha, tipo, salvo in (
+      ({'falha_consulta': Timeout('SEGREDO')}, 'timeout', False),
+      ({'falha_consulta': HTTPError('SEGREDO')}, 'comunicacao', False),
+      ({'falha_salvar': PermissionError('SEGREDO')}, 'gravacao', False),
+      ({'falha_flag': Timeout('SEGREDO')}, 'sinalizacao', True),
+      ({'falha_flag': RuntimeError('SEGREDO')}, 'sinalizacao', True),
+    ):
+      with self.subTest(tipo=tipo, salvo=salvo):
+        resultado, flag, aviso = self.executar_simulado(**falha, com_aviso=True)
+        self.assertEqual(aviso['tipo'], tipo)
+        self.assertNotIn('SEGREDO', json.dumps([resultado, aviso]))
+        self.assertEqual(resultado['situacao'], 'Conferir sinalização' if salvo else 'Erro')
+        if salvo:
+          flag.assert_called_once()
+          self.assertTrue(resultado['detalhe'].startswith('XML e PDF salvos;'))
+        else:
+          flag.assert_not_called()
 
   def test_nota_ausente_exibe_mensagem_curta_sem_sinalizar(self):
     for linhas in ([], [['', 'SINTETICO', '01/10/2026', '456', '10,00']]):
@@ -176,19 +216,18 @@ class TestFluxo(unittest.TestCase):
   def test_falha_de_comunicacao_usa_mensagens_curtas_sem_perder_estado(self):
     resultado, flag = self.executar_simulado(falha_consulta=HTTPError('HTTP 503'))
     self.assertEqual(resultado['situacao'], 'Erro')
-    self.assertEqual(resultado['detalhe'], 'Falha de comunicação com o Cofre NF-e. Confira o portal e a conexão.')
+    self.assertEqual(resultado['detalhe'], 'Falha na comunicação com o Cofre.')
     flag.assert_not_called()
     resultado, flag = self.executar_simulado(falha_flag=HTTPError('HTTP 503'))
     self.assertEqual(resultado['situacao'], 'Conferir sinalização')
-    self.assertEqual(resultado['detalhe'], 'XML e PDF salvos; não foi possível confirmar a sinalização no Cofre NF-e. Confira o portal e a conexão.')
+    self.assertEqual(resultado['detalhe'], 'XML e PDF salvos; não foi possível confirmar a sinalização no Cofre.')
     flag.assert_called_once()
 
-  def test_outros_erros_conservam_orientacoes_anteriores(self):
+  def test_gravacao_e_timeout_exibem_detalhes_objetivos(self):
     resultado, _ = self.executar_simulado(falha_salvar=OSError('teste'))
-    self.assertEqual(resultado['detalhe'], 'O documento não foi concluído. Confira os arquivos antes de repetir. Falha ao acessar ou gravar arquivos. Confira as permissões e o acesso à pasta.')
+    self.assertEqual(resultado['detalhe'], 'Não foi possível gravar os arquivos do documento.')
     resultado, _ = self.executar_simulado(falha_consulta=Timeout('teste'))
-    self.assertIn('O portal demorou a responder.', resultado['detalhe'])
-    self.assertTrue(resultado['detalhe'].startswith('O documento não foi concluído.'))
+    self.assertEqual(resultado['detalhe'], 'O Cofre não respondeu dentro do prazo.')
 
   def test_parada_apos_salvar_conclui_sinalizacao_sem_repetir(self):
     resultado, flag = self.executar_simulado(parar_ao_salvar=True)
@@ -245,6 +284,25 @@ class TestHTTP(unittest.TestCase):
     _, pagina = self.requisicao('GET', '/')
     self.assertNotIn(b'__TOKEN__', pagina)
     self.assertNotIn(b'__MES__', pagina)
+
+  def test_diagnostico_inicio_exige_autorizacao_e_dados_limitados(self):
+    dados = json.dumps({'tipo': 'TypeError', 'status': None})
+    with patch('src.diagnostico_interface.registrar_inicio', return_value='C:/teste/cofre-diagnostico.txt') as gravar:
+      self.assertEqual(self.requisicao('POST', '/api/diagnostico-inicio', dados)[0], 403)
+      externo = {**self.cabecalhos(), 'Origin': 'https://exemplo.invalid'}
+      self.assertEqual(self.requisicao('POST', '/api/diagnostico-inicio', dados, externo)[0], 403)
+      gravar.assert_not_called()
+      status, corpo = self.requisicao('POST', '/api/diagnostico-inicio', dados, self.cabecalhos())
+      self.assertEqual(status, 200)
+      self.assertEqual(json.loads(corpo)['caminho'], 'C:/teste/cofre-diagnostico.txt')
+      gravar.assert_called_once_with({'tipo': 'TypeError', 'status': None})
+    invalido = json.dumps({'tipo': 'Error', 'status': 403, 'mensagem': 'PRIVADO'})
+    self.assertEqual(self.requisicao('POST', '/api/diagnostico-inicio', invalido, self.cabecalhos())[0], 400)
+    with patch('src.diagnostico_interface.registrar_inicio', side_effect=OSError('PRIVADO')):
+      status, corpo = self.requisicao('POST', '/api/diagnostico-inicio', dados, self.cabecalhos())
+      self.assertEqual(status, 500)
+      self.assertNotIn(b'PRIVADO', corpo)
+    self.assertIsNone(self.estado.worker)
 
   def test_fechar_solicita_parada_sem_matar_operacao(self):
     liberar = Event()

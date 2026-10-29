@@ -79,6 +79,48 @@ e não solicita parada.
 
 ## Diagnóstico de abertura
 
+Quando o pedido de início falha, o painel mostra `403 · Início não confirmado.`
+(com o código HTTP recebido) ou `Início não confirmado.` (sem resposta).
+O aviso desaparece na próxima interação ou quando uma consulta de estado
+confirma a reconexão após falhas de leitura; o acompanhamento continua consultando
+o estado sem reenviar o lote. Após uma consulta bem-sucedida, o painel solicita
+o diagnóstico local: tipo conhecido da falha no navegador e código HTTP,
+registrados na etapa `inicio_<tipo>_http_<codigo>` ou `inicio_<tipo>_sem_resposta`.
+Mensagens brutas, notas, tokens, corpos de resposta e pilhas do navegador não
+são enviados ao diagnóstico.
+
+Para HTTP 503, o aviso temporário é `Confira o portal e a conexão.`, tanto
+na falha do início local quanto em erros HTTP do portal durante o lote.
+Cada ocorrência chega em `aviso_portal` com identificador próprio, tipo de
+orientação e status 503 quando disponível; a interface não restaura um aviso
+já dispensado em novas leituras.
+Ele desaparece por interação ou reconexão, sem apagar os resultados do lote.
+Quando HTTP 503 encerra o lote, o status é `Erro 503: Falha na comunicação com o Cofre.`.
+Os demais avisos seguem o mesmo comportamento:
+
+| Falha | Orientação temporária | Detalhe preservado em Resultados |
+| --- | --- | --- |
+| Prazo de resposta | Confira o portal e a conexão. | O Cofre não respondeu dentro do prazo. |
+| Comunicação sem HTTP | Confira o portal e a conexão. | Falha na comunicação com o Cofre. |
+| Destino indisponível | Confira a pasta de destino. | Não foi possível acessar a pasta DOCUMENTOS DE ENTRADA. |
+| Gravação | Confira o acesso à pasta. | Não foi possível gravar os arquivos do documento. |
+| Catálogo de emitentes | Arquivo emitentes indisponível. | O arquivo de emitentes está indisponível. |
+| Sinalização após salvar | Confira a sinalização no Cofre. | XML e PDF salvos; não foi possível confirmar a sinalização no Cofre. |
+
+As falhas por documento ficam na respectiva nota; falhas antes de processar
+ficam no status da execução. A simulação inclui cenários de prazo excedido,
+falha de conexão sem HTTP, pasta de destino e catálogo indisponíveis, além
+dos cenários de gravação e sinalização. Nenhum deles executa operações fiscais.
+
+O relatório usa o padrão Nunes, com contexto do runtime e gravação atômica de
+`cofre-diagnostico.txt`: ao lado do executável, com fallback para `logs/` na
+pasta de preferências e depois TEMP. Somente o último relatório é mantido.
+O caminho completo fica na descrição ao passar o mouse sobre o aviso.
+Sem conexão/autorização, o diagnóstico permanece pendente na página; falhas de
+gravação permitem nova tentativa na próxima consulta bem-sucedida. Fechar ou
+recarregar a página antes da gravação perde esse registro pendente. A gravação
+não bloqueia o acompanhamento nem muda o encerramento da aplicação.
+
 A abertura registra importações internas, identidade no Windows, estado,
 servidor, sincronizador e publicação em `logs/cofre-nfe-abertura.log`, na
 pasta de presença da sessão Nunes. Reabra a aplicação para carregar a mudança.

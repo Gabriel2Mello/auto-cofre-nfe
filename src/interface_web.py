@@ -202,6 +202,15 @@ def criar_servidor(estado: EstadoInterface) -> ServidorInterface:
           raise ValueError('Os dados enviados devem ser um objeto.')
         if self.path == '/api/iniciar':
           estado.iniciar(dados)
+        elif self.path == '/api/diagnostico-inicio':
+          from src.diagnostico_interface import registrar_inicio
+          try:
+            caminho = registrar_inicio(dados)
+          except OSError:
+            self.json(500, {'erro': 'Diagnóstico local indisponível.'})
+            return
+          self.json(200, {'caminho': str(caminho)})
+          return
         elif self.path == '/api/responder':
           estado.responder(dados)
         elif self.path == '/api/parar':

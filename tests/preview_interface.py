@@ -9,7 +9,9 @@ import sys
 import tempfile
 from threading import Thread
 
-from src.controlador_web import EstadoInterface, mensagem_erro_documento
+from src.controlador_web import (EstadoInterface, mensagem_erro_documento,
+                                 PastaDestinoIndisponivel, EmitentesIndisponiveis,
+                                 FalhaGravacaoDocumento)
 from src.interface_web import criar_servidor
 
 
@@ -31,6 +33,10 @@ CENARIOS = (
   ('HTTP 503 ao acessar o Cofre', '1012, 1001', 'Simula serviço indisponível no acesso inicial. O lote encerra e as notas ficam não processadas.'),
   ('HTTP 503 na consulta / baixa', '1013, 1001', 'Simula uma falha do portal por documento. A primeira nota fica com erro e a próxima continua.'),
   ('HTTP 503 na sinalização', '1014, 1001', 'Simula falha de sinalização após a gravação fictícia. A primeira nota pede conferência e a próxima continua.'),
+  ('Tempo de resposta excedido', '1015', 'Simula o Cofre sem responder dentro do prazo.'),
+  ('Falha de conexão sem HTTP', '1016', 'Simula falha de comunicação sem resposta HTTP.'),
+  ('Pasta de destino indisponível', '1017', 'Simula indisponibilidade de DOCUMENTOS DE ENTRADA.'),
+  ('Arquivo de emitentes indisponível', '1018', 'Simula catálogo de emitentes indisponível.'),
 )
 
 
@@ -49,6 +55,12 @@ def falhar_http503():
 
 
 def simular(pedido, estado):
+  from requests import Timeout, ConnectionError
+  falhas_iniciais = {1015: Timeout, 1016: ConnectionError,
+                    1017: PastaDestinoIndisponivel, 1018: EmitentesIndisponiveis}
+  for nota in pedido.notas:
+    if int(nota) in falhas_iniciais:
+      raise falhas_iniciais[int(nota)]()
   if any(int(nota) == 1012 for nota in pedido.notas):
     estado.informar('Conectando ao Cofre NF-e…')
     pausar(estado, .8)
@@ -78,15 +90,20 @@ def simular(pedido, estado):
       detalhe = f'SIMULAÇÃO · Apelido {nome} confirmado somente nesta execução.'
       if codigo == 1011:
         detalhe += ' · DOCUMENTOS DE ENTRADA / FORNECEDOR COM RAZÃO SOCIAL EXTENSA / ' + ('SUBPASTA-DE-DEMONSTRAÇÃO-' * 8)
-    elif codigo in (1005, 1006, 1007):
+    elif codigo in (1005, 1006):
       situacao = 'Erro'
       detalhe = 'SIMULAÇÃO · ' + {
         1005: 'XML inválido: conteúdo incompleto. Arquivos anteriores preservados.',
         1006: 'PDF inválido: arquivo protegido ou incompleto. Arquivos anteriores preservados.',
-        1007: 'Falha ao acessar ou gravar arquivos. Confira as permissões e o acesso à pasta.',
       }[codigo]
+    elif codigo == 1007:
+      erro = FalhaGravacaoDocumento()
+      estado.avisar_falha_operacao(erro)
+      situacao, detalhe = 'Erro', mensagem_erro_documento(erro, False)
     elif codigo == 1008:
-      situacao, detalhe = 'Conferir sinalização', 'SIMULAÇÃO · Arquivos salvos; confirmação da sinalização pendente. Confira antes de repetir.'
+      erro = RuntimeError()
+      estado.avisar_falha_operacao(erro, True)
+      situacao, detalhe = 'Conferir sinalização', mensagem_erro_documento(erro, True)
     elif codigo == 1009:
       detalhe = 'SIMULAÇÃO · Arquivos válidos já existentes foram reaproveitados.'
     elif codigo in (1013, 1014):
@@ -95,6 +112,7 @@ def simular(pedido, estado):
         falhar_http503()
       except HTTPError as erro:
         salvo = codigo == 1014
+        estado.avisar_falha_operacao(erro, salvo)
         situacao = 'Conferir sinalização' if salvo else 'Erro'
         detalhe = mensagem_erro_documento(erro, salvo)
     estado.atualizar_nota(indice, situacao, detalhe)

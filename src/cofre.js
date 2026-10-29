@@ -22,7 +22,20 @@ if(desktop){
 }
 async function api(caminho,dados){
   const r=await fetch(caminho,{method:dados===undefined?'GET':'POST',headers,body:dados===undefined?undefined:JSON.stringify(dados)});
-  const retorno=await r.json();if(!r.ok)throw Error(retorno.erro||'Não foi possível concluir a ação.');return retorno;
+  let retorno;
+  try{retorno=await r.json();}catch(erro){erro.statusHTTP=r.status;throw erro;}
+  if(!r.ok){const erro=Error(retorno?.erro||'Não foi possível concluir a ação.');erro.statusHTTP=r.status;throw erro;}return retorno;
+}
+let diagnosticoInicioPendente=null, gravandoDiagnosticoInicio=false, ultimoAvisoPortal='';
+function registrarDiagnosticoInicio(){
+  if(!diagnosticoInicioPendente||gravandoDiagnosticoInicio)return;
+  const dados=diagnosticoInicioPendente;
+  gravandoDiagnosticoInicio=true;
+  api('/api/diagnostico-inicio',dados).then(retorno=>{
+    if(diagnosticoInicioPendente!==dados)return;
+    diagnosticoInicioPendente=null;
+    if(avisoTemporarioVisivel())el('mensagem').title=`Diagnóstico: ${retorno.caminho}`;
+  }).catch(()=>{}).finally(()=>{gravandoDiagnosticoInicio=false;});
 }
 function destino(){
   el('pasta').disabled=el('mesma-pasta').checked;
@@ -44,6 +57,11 @@ function renderizar(dados){
   for(const id of ['abrir-emitentes','editar-emitentes'])el(id).disabled=el('escolher-emitentes').disabled;
   el('abrir-pasta').disabled=!desktop||dados.encerrando||dados.configurando||configurandoPasta||abrindoPasta||confirmacaoPendente;
   const chave=JSON.stringify(dados);if(chave===assinatura)return;assinatura=chave;
+  const orientacao=orientacoesOperacao[dados.aviso_portal?.tipo]||(dados.aviso_portal?.status===503?avisoPortalIndisponivel:null);
+  if(orientacao&&dados.aviso_portal.id!==ultimoAvisoPortal){
+    ultimoAvisoPortal=dados.aviso_portal.id;
+    el('mensagem').textContent=orientacao;el('mensagem').title='';
+  }
   el('parar').hidden=!dados.ativo;el('parar').disabled=dados.parando;
   el('fase').textContent=dados.encerrando?'Encerrando':dados.parando?'Parando':dados.pergunta?'Sua conferência':dados.ativo?'Processando':dados.resultados.length?'Finalizado':'Aguardando';
   el('status').textContent=dados.encerrando?'Encerrando. Aguarde a conclusão da operação atual…':dados.status==='Pronto para baixar os documentos.'?'Pronto':dados.status;
@@ -101,16 +119,30 @@ async function atualizar(){
   clearTimeout(timer);if(encerrado||saindo)return;const atual=++ciclo;
   // Ociosidade confirmada não consulta periodicamente. Uma falha conserva a
   // necessidade de confirmação, inclusive antes de observar o lote aceito.
-  try{const dados=await api('/api/estado');if(atual!==ciclo||encerrado||saindo)return;confirmacaoPendente=false;el('conexao').hidden=true;renderizar(dados);if(dados.ativo||dados.configurando)timer=setTimeout(atualizar,800);}
+  try{const dados=await api('/api/estado');if(atual!==ciclo||encerrado||saindo)return;confirmacaoPendente=false;if(!el('conexao').hidden)limparAvisoInicio();el('conexao').hidden=true;renderizar(dados);registrarDiagnosticoInicio();if(dados.ativo||dados.configurando)timer=setTimeout(atualizar,800);}
   catch{if(atual!==ciclo||encerrado||saindo)return;confirmacaoPendente=true;assinatura='';el('fase').textContent='Reconectando';el('status').textContent='Aguardando confirmação do andamento…';el('conexao').hidden=false;el('conexao').textContent='Sem confirmação do andamento. Reconectando para conferir o lote; não reenvie os documentos.';el('campos').disabled=true;el('iniciar').disabled=true;el('escolher-pasta').disabled=true;el('escolher-emitentes').disabled=true;el('abrir-emitentes').disabled=true;el('editar-emitentes').disabled=true;el('abrir-pasta').disabled=true;timer=setTimeout(atualizar,1500);}
 }
 async function acao(caminho,dados={}){el('mensagem').textContent='';try{await api(caminho,dados);await atualizar();}catch(e){el('mensagem').textContent=e.message;}}
 const notasPermitidas=valor=>/^[0-9,; \t\r\n]*$/.test(valor);
 const avisoNotasVazias='Informe ao menos uma nota.';
+const avisoInicioPerdido='Início não confirmado.';
+const avisoPortalIndisponivel='Confira o portal e a conexão.';
+const orientacoesOperacao=Object.freeze({
+  timeout:avisoPortalIndisponivel,comunicacao:avisoPortalIndisponivel,
+  pasta_destino:'Confira a pasta de destino.',gravacao:'Confira o acesso à pasta.',
+  emitentes:'Arquivo emitentes indisponível.',sinalizacao:'Confira a sinalização no Cofre.',
+});
+function avisoTemporarioVisivel(){
+  return Object.values(orientacoesOperacao).includes(el('mensagem').textContent)||/^(?:[1-5][0-9]{2} · )?Início não confirmado\.$/.test(el('mensagem').textContent);
+}
+function limparAvisoInicio(){
+  if(avisoTemporarioVisivel()){el('mensagem').textContent='';el('mensagem').title='';}
+}
 // Captura antes da acao para preservar o aviso criado pela propria interacao.
 for(const evento of ['pointerdown','click','keydown','input','change','wheel']){
   window.addEventListener(evento,()=>{
-    if(el('mensagem').textContent===avisoNotasVazias)el('mensagem').textContent='';
+    if(el('mensagem').textContent===avisoNotasVazias){el('mensagem').textContent='';el('mensagem').title='';}
+    limparAvisoInicio();
   },{capture:true,passive:true});
 }
 let ultimasNotasValidas=el('notas').value;
@@ -154,7 +186,13 @@ el('formulario').onsubmit=async e=>{
   el('resumo').dataset.finalizado='false';
   enviando=true;confirmacaoPendente=true;el('campos').disabled=true;el('iniciar').disabled=true;el('mensagem').textContent='';
   try{await api('/api/iniciar',{notas:el('notas').value,empresa:selecionado('empresa'),tipo:selecionado('tipo'),competencia:el('competencia').value,pasta:el('mesma-pasta').checked?el('competencia').value:el('pasta').value});}
-  catch(e){el('mensagem').textContent=e.message;}
+  catch(e){
+    const status=Number.isInteger(e.statusHTTP)&&e.statusHTTP>=100&&e.statusHTTP<=599?e.statusHTTP:null;
+    const tipo=['Error','TypeError','SyntaxError','AbortError','TimeoutError'].includes(e.name)?e.name:'Error';
+    diagnosticoInicioPendente={tipo,status};
+    el('mensagem').textContent=status===503?avisoPortalIndisponivel:(status?status+' · ':'')+avisoInicioPerdido;
+    el('mensagem').title='';
+  }
   finally{enviando=false;assinatura='';await atualizar();}
 };
 function informarPasta(mensagem){

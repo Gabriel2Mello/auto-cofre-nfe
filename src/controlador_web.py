@@ -20,6 +20,18 @@ class ExecucaoInterrompida(Exception):
   pass
 
 
+class PastaDestinoIndisponivel(ValueError):
+  pass
+
+
+class EmitentesIndisponiveis(ValueError):
+  pass
+
+
+class FalhaGravacaoDocumento(OSError):
+  pass
+
+
 def competencia(valor: object) -> tuple[int, int]:
   if not isinstance(valor, str):
     raise ValueError('Informe a competência no formato AAAA-MM.')
@@ -77,13 +89,19 @@ def executar_lote(pedido: Pedido, estado: 'EstadoInterface') -> None:
 
 def mensagem_erro(erro: Exception) -> str:
   # Exceções HTTP podem carregar URL com identificadores; não expor resposta ou credenciais.
+  if isinstance(erro, PastaDestinoIndisponivel):
+    return 'Não foi possível acessar a pasta DOCUMENTOS DE ENTRADA.'
+  if isinstance(erro, EmitentesIndisponiveis):
+    return 'O arquivo de emitentes está indisponível.'
+  if isinstance(erro, FalhaGravacaoDocumento):
+    return 'Não foi possível gravar os arquivos do documento.'
   if isinstance(erro, ImportError):
     return 'Faltam dependências para executar. Confira a instalação de requirements.txt e reabra a aplicação.'
   from requests import RequestException, Timeout
   if isinstance(erro, Timeout):
-    return 'O portal demorou a responder. Confira a conexão antes de tentar novamente.'
+    return 'O Cofre não respondeu dentro do prazo.'
   if isinstance(erro, RequestException):
-    return 'Falha de comunicação com o Cofre NF-e. Confira o portal e a conexão.'
+    return 'Falha na comunicação com o Cofre.'
   if isinstance(erro, OSError):
     return 'Falha ao acessar ou gravar arquivos. Confira as permissões e o acesso à pasta.'
   if isinstance(erro, (ValueError, RuntimeError, KeyError)):
@@ -92,14 +110,12 @@ def mensagem_erro(erro: Exception) -> str:
 
 
 def mensagem_erro_documento(erro: Exception, salvo: bool) -> str:
-  from requests import RequestException, Timeout
-  if isinstance(erro, RequestException) and not isinstance(erro, Timeout):
-    if salvo:
-      return 'XML e PDF salvos; não foi possível confirmar a sinalização no Cofre NF-e. Confira o portal e a conexão.'
+  if salvo:
+    return 'XML e PDF salvos; não foi possível confirmar a sinalização no Cofre.'
+  from requests import RequestException
+  if isinstance(erro, (RequestException, FalhaGravacaoDocumento)):
     return mensagem_erro(erro)
-  prefixo = ('XML e PDF salvos; não foi possível confirmar a sinalização no portal. '
-             if salvo else 'O documento não foi concluído. Confira os arquivos antes de repetir. ')
-  return prefixo + mensagem_erro(erro)
+  return 'O documento não foi concluído. Confira os arquivos antes de repetir. ' + mensagem_erro(erro)
 
 
 class EstadoInterface:
@@ -153,7 +169,10 @@ class EstadoInterface:
     except ExecucaoInterrompida:
       self.informar('Execução interrompida. Os concluídos foram preservados.')
     except Exception as erro:
-      self.informar('Execução encerrada: ' + mensagem_erro(erro))
+      if self.avisar_falha_operacao(erro):
+        self.informar('Erro 503: Falha na comunicação com o Cofre.')
+      else:
+        self.informar('Execução encerrada: ' + mensagem_erro(erro))
     finally:
       with self.condicao:
         for resultado in self.dados['resultados']:
@@ -161,6 +180,24 @@ class EstadoInterface:
             resultado.update(situacao='Não processado', detalhe='A execução terminou antes de concluir este documento.')
         self.dados.update(ativo=False, parando=False, pergunta=None)
         self.condicao.notify_all()
+
+  def avisar_falha_operacao(self, erro: Exception, salvo: bool = False) -> bool:
+    try:
+      from requests import HTTPError, RequestException, Timeout
+    except ImportError:
+      # A falha original de dependências precisa continuar visível na abertura leve.
+      return False
+    http503 = isinstance(erro, HTTPError) and getattr(erro.response, 'status_code', None) == 503
+    tipo = ('sinalizacao' if salvo else
+            'pasta_destino' if isinstance(erro, PastaDestinoIndisponivel) else
+            'emitentes' if isinstance(erro, EmitentesIndisponiveis) else
+            'timeout' if isinstance(erro, Timeout) else
+            'comunicacao' if isinstance(erro, RequestException) else
+            'gravacao' if isinstance(erro, OSError) else None)
+    if tipo:
+      with self.condicao:
+        self.dados['aviso_portal'] = {'id': uuid4().hex, 'tipo': tipo, 'status': 503 if http503 else None}
+    return http503
 
   def informar(self, texto: str) -> None:
     with self.condicao:

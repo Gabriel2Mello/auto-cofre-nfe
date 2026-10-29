@@ -60,6 +60,9 @@ def main():
     assert sonda()['parametrosAntesNotas'] and sonda()['acaoAbaixoNotas'] and sonda()['acaoADireita']
     assert sonda()['rodapeNoFim'] and sonda()['rodapeAposConteudo']
     tamanho_inicial = sonda()['janela']
+    larguras_iniciais = {chave: sonda()[chave] for chave in ('larguraFormulario', 'larguraRolagem')}
+    assert sonda()['reservaRolagem'] == 0 and sonda()['paddingRolagem'] == '0px'
+    assert sonda()['indicadoresSobrepostos'] == 3
     assert sonda()['janelaFixa'] and not sonda()['paginaRola']
     assert abs(tamanho_inicial['largura'] - 1009) <= 1 and abs(tamanho_inicial['altura'] - 618) <= 1
     assert sonda()['estado_janela'] == 'Normal'
@@ -120,6 +123,11 @@ def main():
     assert sonda()['rodapeAposConteudo']
     assert sonda()['resultadosRolam'] and not sonda()['paginaRola'] and sonda()['rodapeNoFim']
     assert sonda()['janela'] == tamanho_inicial
+    assert all(abs(sonda()[chave] - valor) < 1 for chave, valor in larguras_iniciais.items())
+    assert sonda()['reservaRolagem'] == 0 and sonda()['paddingRolagem'] == '0px'
+    resultado['rolagem_sobreposta_sem_reserva_ou_deslocamento_do_layout'] = True
+    assert sonda()['barraResultados']['foraDoConteudo'] and sonda()['barraResultados']['dentroDaJanela']
+    resultado['barra_resultados_na_margem_sem_cobrir_conteudo'] = True
     resultado['janela_fixa_com_rolagem_somente_nos_resultados'] = True
     comando('claro')
     comando('capturar', nome='indicadores-etiquetas-claro')
@@ -147,9 +155,24 @@ def main():
     comando('reconectar')
     comando('emitente')
     esperar(lambda: sonda().get('pergunta'))
+    esperar(lambda: sonda().get('conferenciaEmitente') is not None)
+    conferencia = sonda()['conferenciaEmitente']
+    assert conferencia['semMensagem'] and conferencia['confirmarBloqueado']
+    assert conferencia['selecao'] is None and conferencia['emissao'] == conferencia['valor'] == '—'
+    comando('selecionar-emitente')
+    esperar(lambda: (sonda().get('conferenciaEmitente') or {}).get('selecao') == '1')
+    for tema in ('claro', 'escuro'):
+      comando(tema)
+      conferencia = sonda()['conferenciaEmitente']
+      assert conferencia['emissao'] == '02/10/2026' and conferencia['valor'] == '200,00'
+      assert not conferencia['confirmarBloqueado']
+      assert conferencia['semSobreposicao'] and conferencia['detalhesVisiveis'] and conferencia['acoesVisiveis']
+      comando('capturar', nome='emitentes-detalhes-' + tema)
+    resultado['emitente_com_detalhes_sem_mensagem_ou_sobreposicao'] = True
     pergunta = sonda()['pergunta']
     reabrir()
     assert sonda()['pergunta'] == pergunta and sonda()['carregamentos'] == 1
+    assert sonda()['conferenciaEmitente']['selecao'] == '1'
     comando('nome')
     esperar(lambda: sonda().get('pergunta') not in (None, pergunta))
     comando('editar-nome')

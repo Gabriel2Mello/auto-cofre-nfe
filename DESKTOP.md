@@ -14,6 +14,12 @@ interface na escala de destino. O tamanho de referência continua 1009 × 618
 unidades lógicas; os pixels físicos acompanham o monitor, com arredondamento
 de até poucos pixels. As escalas e o zoom do usuário são preservados.
 
+Validação do responsável em **29/10/2026**: no monitor do trabalho, o Cofre
+funcionou corretamente e preservou a qualidade visual ao trocar de DPI.
+O relato confirma a conferência humana nesse ambiente; os percentuais de escala
+não foram especificados nessa mensagem. Os ensaios automatizados permanecem
+como evidência separada.
+
 `dpi_windows.py` configura o processo antes de carregar WinForms e inicializa o
 .NET Framework com `desktop-winforms.config` em um AppDomain próprio, com
 alvo 4.8 explícito. O alvo é necessário porque o host Python não declara um
@@ -123,8 +129,8 @@ O pacote usa `%LOCALAPPDATA%\Nunes\Cofre` para `emitentes_conhecidos.json`,
 `.cofre-gravacoes`, `desktop-tema.json` e `desktop-janela.json`. Tema claro é
 o padrão; escolha manual e posição sobrevivem à troca de porta e reinício.
 A janela tem tamanho fixo de 1009 × 618 unidades lógicas. A largura foi ampliada
-para acomodar o espaço de 12 px antes da barra de rolagem, preservando a largura
-anterior do conteúdo dos resultados e do formulário; a altura segue a referência.
+em uma revisão anterior; a altura segue a referência. A barra de rolagem atual
+é sobreposta à borda, sem espaço reservado ou padding de compensação.
 Não permite redimensionar ou maximizar. Tamanhos e maximizações salvos por versões
 anteriores são ignorados. Monitor removido ajusta a posição à área útil.
 Fechar minimizada não faz o próximo início ficar oculto.
@@ -174,7 +180,12 @@ Arquivos anteriores continuam preservados pela E5.
 Andamento é discreto na lista. O resumo mostra três indicadores compactos de
 concluídas, pendentes e erros (incluindo itens para conferir), acima dos dados
 do lote. A lista usa uma linha acima de cada nota, incluindo a primeira,
-sem linha abaixo da última. Resultados
+sem linha abaixo da última. A rolagem da página, das notas e dos resultados
+preserva roda, teclado e toque nativos, com indicador sobreposto para arraste.
+Nos resultados, o indicador fica na margem já existente à direita da região
+rolável, sem cobrir controles, reservar espaço ou alterar a largura dos painéis.
+O conteúdo dos resultados não participa da altura mínima da página desktop.
+Resultados
 têm rolagem vertical própria, incluindo andamento e decisões; o título
 permanece visível. Cada nota mostra a situação em uma etiqueta com fundo suave acima do
 número e do detalhe, com separadores entre os itens. Listas extensas mantêm
@@ -183,6 +194,10 @@ Erros e conferências usam texto além de cor, com etiquetas verdes para conclus
 amarelas para atenção, rosadas para erro e neutras para espera/processamento.
 Rótulos e mensagens usam Segoe UI; o campo de notas e seus números na lista
 mantêm Cascadia Code/Consolas para facilitar a leitura dos identificadores.
+O corpo e os campos usam 15 px com entrelinha 1,5. Opções, situações, contagens,
+erros de entrada e detalhes dos resultados usam 13 px; dicas secundárias e a
+assinatura permanecem em 12 px. Em larguras de até 760 px, os campos de texto,
+competência e notas usam 16 px. Títulos e famílias tipográficas são preservados.
 Tipo, Empresa, Competência e Pasta têm contorno neutro mais visível nos dois
 temas, preservando formato e dimensões. O foco de teclado nesses controles é
 indicado por dentro do contorno, sem a borda verde externa.
@@ -200,6 +215,15 @@ Falha na leitura agenda nova consulta mesmo quando o último estado observado
 era ocioso: o lote iniciado ainda precisa de confirmação. Após recuperar um
 estado ocioso válido, cessam as consultas periódicas. A faixa informa a reconexão.
 Atualizações conservam a decisão em edição quando a pergunta não mudou.
+Na escolha entre emitentes, o título identifica o número solicitado da nota,
+preservando zeros à esquerda, e a lista mostra somente os nomes. Ao selecionar,
+a emissão e o valor total aparecem abaixo, em duas colunas, cada valor ao lado
+do respectivo rótulo. Confirmar e Parar execução usam a mesma altura de 28 px
+e o mesmo espaçamento interno de Limpar, com largura conforme o texto. Confirmar fica
+desabilitado até haver seleção; atualizações do andamento preservam essa escolha.
+Essa pergunta usa superfície neutra, sem mensagem explicativa adicional.
+Emissão, valor e ações permanecem juntos na borda inferior durante a rolagem
+da decisão, sem que os botões encubram os detalhes.
 O painel mostra os resultados da execução atual, sem opção de exportar a lista.
 
 Reutilizados: componente de tema distribuído sem alteração e suporte Windows

@@ -15,7 +15,7 @@ from src.http_client import TimeoutScraper
 from src.parsers import NotaNaoEncontrada, extrair_empresas_href
 from src.utils import salvar_arquivos
 from metricas_nunes import registrar_evento
-from src.controlador_web import ExecucaoInterrompida, mensagem_erro
+from src.controlador_web import ExecucaoInterrompida, mensagem_erro_documento
 
 if TYPE_CHECKING:
   from src.controlador_web import EstadoInterface, Pedido
@@ -43,7 +43,7 @@ def executar_lote(pedido: Pedido, estado: 'EstadoInterface') -> None:
         salvo = False
         try:
           dados = processar_nota(sessao, nota, pedido.tipo, pedido.mes_nota,
-                                pedido.ano_nota, estado.selecionar_emitente)
+                                pedido.ano_nota, lambda linhas: estado.selecionar_emitente(linhas, nota=nota))
           nome = emitentes.get_nome(dados['emitente'], estado.solicitar_nome)
           estado.verificar_parada()
           xml, pdf = baixar_arquivos(sessao, dados['empresa_id'], dados['chave'], pedido.tipo,
@@ -67,8 +67,6 @@ def executar_lote(pedido: Pedido, estado: 'EstadoInterface') -> None:
           estado.atualizar_nota(indice, 'Erro', 'Nenhuma nota encontrada')
         except Exception as erro:
           situacao = 'Conferir sinalização' if salvo else 'Erro'
-          detalhe = ('XML e PDF salvos; não foi possível confirmar a sinalização no portal. '
-                     if salvo else 'O documento não foi concluído. Confira os arquivos antes de repetir. ')
-          estado.atualizar_nota(indice, situacao, detalhe + mensagem_erro(erro))
+          estado.atualizar_nota(indice, situacao, mensagem_erro_documento(erro, salvo))
   finally:
     emitentes.close()

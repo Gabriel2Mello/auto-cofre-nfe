@@ -91,6 +91,17 @@ def mensagem_erro(erro: Exception) -> str:
   return f'Falha inesperada ({type(erro).__name__}). Solicite apoio ao responsável.'
 
 
+def mensagem_erro_documento(erro: Exception, salvo: bool) -> str:
+  from requests import RequestException, Timeout
+  if isinstance(erro, RequestException) and not isinstance(erro, Timeout):
+    if salvo:
+      return 'XML e PDF salvos; não foi possível confirmar a sinalização no Cofre NF-e. Confira o portal e a conexão.'
+    return mensagem_erro(erro)
+  prefixo = ('XML e PDF salvos; não foi possível confirmar a sinalização no portal. '
+             if salvo else 'O documento não foi concluído. Confira os arquivos antes de repetir. ')
+  return prefixo + mensagem_erro(erro)
+
+
 class EstadoInterface:
   def __init__(self, executor: Callable = executar_lote) -> None:
     self.condicao = Condition()
@@ -216,13 +227,13 @@ class EstadoInterface:
       self.resposta = valor
       self.condicao.notify_all()
 
-  def selecionar_emitente(self, linhas: list[DocumentoFiscal]) -> DocumentoFiscal:
+  def selecionar_emitente(self, linhas: list[DocumentoFiscal], *, nota: str) -> DocumentoFiscal:
     from bs4 import BeautifulSoup
     from src.parsers import resolve_emitente
     opcoes = [{'nome': resolve_emitente(l.emitente_html),
                'data': BeautifulSoup(l.data_emissao_html, 'lxml').get_text(' ', strip=True),
                'valor': BeautifulSoup(l.valor_total, 'lxml').get_text(' ', strip=True)} for l in linhas]
-    escolha = self.perguntar('emitente', opcoes=opcoes)
+    escolha = self.perguntar('emitente', nota=nota, opcoes=opcoes)
     return linhas[int(escolha)]
 
   def solicitar_nome(self, emitente: str) -> str:

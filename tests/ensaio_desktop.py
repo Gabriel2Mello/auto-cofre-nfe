@@ -41,7 +41,7 @@ def main():
   liberar_gravacao = Event()
 
   def simular(pedido, estado):
-    estado.perguntar('emitente', opcoes=[{'nome': 'FORNECEDOR SINTÉTICO A', 'data': '01/10/2026', 'valor': '100,00'},
+    estado.perguntar('emitente', nota=pedido.notas[0], opcoes=[{'nome': 'FORNECEDOR SINTÉTICO A', 'data': '01/10/2026', 'valor': '100,00'},
                                         {'nome': 'FORNECEDOR SINTÉTICO B', 'data': '02/10/2026', 'valor': '200,00'}])
     estado.solicitar_nome('FORNECEDOR DE DEMONSTRAÇÃO')
     estado.atualizar_nota(0, 'Concluído', 'SIMULAÇÃO · nenhum arquivo fiscal salvo; portal não acessado.')
@@ -129,6 +129,8 @@ def main():
               elif acao == 'nome':
                 p = estados[0].snapshot()['pergunta']
                 estados[0].responder({'id': p['id'], 'valor': '1'})
+              elif acao == 'selecionar-emitente':
+                janela.evaluate_js("document.querySelectorAll('#opcoes input')[1].click()")
               elif acao == 'editar-nome':
                 janela.evaluate_js("el('nome').value='Decisao sintetica em edicao';el('nome').focus()")
               elif acao == 'configurar-pasta':
@@ -230,14 +232,25 @@ def main():
             temaAoLado:!el('configuracoes').contains(el('tema'))&&Math.abs(el('tema').getBoundingClientRect().top-el('configuracoes').getBoundingClientRect().top)<1,
             pergunta:estado?.pergunta?.id,largura:innerWidth,altura:innerHeight,
             empresa:selecionado('empresa'),tipo:selecionado('tipo'),
-            pastaBase:el('pasta-base').textContent,pastaBloqueada:el('pasta').disabled,
+            pastaBase:el('pasta-base').value,pastaBloqueada:el('pasta').disabled,
             camposBloqueados:el('notas').matches(':disabled'),
             configurando:estado?.configurando,configuracaoStatus:el('configuracao-status').textContent,
             abrirAoLado:el('abrir-pasta').getBoundingClientRect().left>=el('escolher-pasta').getBoundingClientRect().right&&Math.abs(el('abrir-pasta').getBoundingClientRect().top-el('escolher-pasta').getBoundingClientRect().top)<1,
             resultadosAoLado:document.querySelector('.resultados').getBoundingClientRect().left>document.querySelector('.parametros').getBoundingClientRect().right,
             parametrosAntesNotas:document.querySelector('.parametros').getBoundingClientRect().bottom<=document.querySelector('.documentos').getBoundingClientRect().top,
             acaoAbaixoNotas:el('iniciar').getBoundingClientRect().top>=el('notas').getBoundingClientRect().bottom,
-            acaoADireita:Math.abs(el('iniciar').getBoundingClientRect().right-el('notas').getBoundingClientRect().right)<1,
+            acaoADireita:Math.abs(document.querySelector('.acoes-notas').getBoundingClientRect().right-el('notas').getBoundingClientRect().right)<1,
+            larguraFormulario:el('formulario').getBoundingClientRect().width,
+            larguraRolagem:document.querySelector('.rolagem-resultados').clientWidth,
+            reservaRolagem:document.querySelector('.rolagem-resultados').offsetWidth-document.querySelector('.rolagem-resultados').clientWidth,
+            paddingRolagem:getComputedStyle(document.querySelector('.rolagem-resultados')).paddingRight,
+            indicadoresSobrepostos:document.querySelectorAll('.barra-rolagem').length,
+            barraResultados:(() => {
+              const barra=document.querySelectorAll('.barra-rolagem')[2];
+              if(!barra||barra.hidden)return null;
+              const r=barra.getBoundingClientRect(),painel=document.querySelector('.rolagem-resultados').getBoundingClientRect();
+              return {foraDoConteudo:r.left>=painel.right-1,dentroDaJanela:r.left>=0&&r.right<=innerWidth+1};
+            })(),
             rodapeAposConteudo:document.querySelector('.rodape').getBoundingClientRect().top>=document.querySelector('main').getBoundingClientRect().bottom,
             rodapeNoFim:Math.abs(document.querySelector('.rodape').getBoundingClientRect().bottom-innerHeight)<1,
             acaoVisivel:el('iniciar').getBoundingClientRect().top>=0&&el('iniciar').getBoundingClientRect().bottom<=innerHeight,
@@ -251,6 +264,19 @@ def main():
             fimResultadosVisivel:el('linhas').lastElementChild?.getBoundingClientRect().bottom<=document.querySelector('.rolagem-resultados').getBoundingClientRect().bottom+1,
             tituloVisivel:el('titulo-resultados').getBoundingClientRect().top>=0,
             apelidoMaiusculo:getComputedStyle(el('nome')).textTransform==='uppercase',
+            conferenciaEmitente:(() => {
+              if(el('decisao').hidden||el('decisao').dataset.tipo!=='emitente')return null;
+              const area=document.querySelector('.rolagem-resultados').getBoundingClientRect();
+              const detalhes=el('detalhes-emitente').getBoundingClientRect();
+              const acoes=el('responder').parentElement.getBoundingClientRect();
+              return {semMensagem:el('ajuda-decisao').hidden&&!el('ajuda-decisao').textContent,
+                selecao:document.querySelector('input[name="emitente"]:checked')?.value||null,
+                emissao:el('emissao-emitente').textContent,valor:el('valor-emitente').textContent,
+                confirmarBloqueado:el('responder').disabled,
+                semSobreposicao:detalhes.bottom<=acoes.top+1,
+                detalhesVisiveis:detalhes.top>=area.top&&detalhes.bottom<=area.bottom+1,
+                acoesVisiveis:acoes.top>=area.top&&acoes.bottom<=area.bottom+1};
+            })(),
             rolagensInternas:[...document.querySelectorAll('main *')].filter(n=>
               ['auto','scroll'].includes(getComputedStyle(n).overflowY)&&n.scrollHeight>n.clientHeight).length})""")
           if dados is None and (janela.events.closed.is_set() or estados[0].encerrando):

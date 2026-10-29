@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="/cofre.css">
   <script src="/nunes-tema.js"></script>
   <script src="/cofre.js" defer></script>
+  <script src="/rolagem.js" defer></script>
 </head>
 <body>
 <main>
@@ -69,7 +70,17 @@
       <p id="conexao" class="conexao" role="alert" hidden></p>
       <section id="decisao" class="aviso" aria-labelledby="titulo-decisao" hidden>
         <h3 id="titulo-decisao" tabindex="-1">Confira o emitente</h3><p id="ajuda-decisao"></p>
-        <form id="form-decisao"><div id="opcoes"></div><div id="campo-nome" hidden><label for="nome">Apelido</label><input id="nome" type="text" maxlength="120" autocomplete="off"></div><div class="acoes"><button id="responder" class="botao-principal" type="submit">Confirmar</button><button id="cancelar-decisao" type="button">Parar execução</button></div></form>
+        <form id="form-decisao">
+          <fieldset id="selecao-emitente" hidden><legend class="sr-only">Emitentes encontrados</legend><div id="opcoes"></div></fieldset>
+          <div id="campo-nome" hidden><label for="nome">Apelido</label><input id="nome" type="text" maxlength="120" autocomplete="off"></div>
+          <div class="confirmacao-decisao">
+            <dl id="detalhes-emitente" aria-label="Detalhes do documento selecionado" aria-live="polite" aria-atomic="true" hidden>
+              <div><dt>Emissão</dt><dd id="emissao-emitente">—</dd></div>
+              <div><dt>Valor total</dt><dd id="valor-emitente">—</dd></div>
+            </dl>
+            <div class="acoes"><button id="responder" class="botao-principal" type="submit">Confirmar</button><button id="cancelar-decisao" type="button">Parar execução</button></div>
+          </div>
+        </form>
         <p id="erro-decisao" class="mensagem" role="alert"></p>
       </section>
       <ul id="linhas" class="lista-resultados" aria-label="Resultado por nota"><li class="vazio">O resultado das notas aparecerá aqui.</li></ul>

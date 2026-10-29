@@ -72,13 +72,29 @@ function renderizar(dados){
 function renderizarPergunta(p){
   el('decisao').hidden=!p;
   if(!p){perguntaId='';return;}if(p.id===perguntaId)return;perguntaId=p.id;
-  el('erro-decisao').textContent='';el('responder').disabled=false;el('opcoes').replaceChildren();
+  el('erro-decisao').textContent='';el('responder').disabled=p.tipo==='emitente';el('opcoes').replaceChildren();
+  el('decisao').dataset.tipo=p.tipo;
+  el('selecao-emitente').hidden=p.tipo!=='emitente';el('detalhes-emitente').hidden=p.tipo!=='emitente';
+  el('emissao-emitente').textContent='—';el('valor-emitente').textContent='—';
   el('campo-nome').hidden=p.tipo!=='nome';el('nome').required=p.tipo==='nome';
-  el('titulo-decisao').textContent=p.tipo==='nome'?'Apelido':'Qual emitente corresponde ao documento?';
+  el('titulo-decisao').textContent=p.tipo==='nome'?'Apelido':`Qual emitente da nota ${p.nota}?`;
   el('titulo-decisao').className=p.tipo==='nome'?'sr-only':'';
-  el('ajuda-decisao').textContent=p.tipo==='nome'?`Emitente novo: ${p.emitente}`:'Há mais de um resultado para este número e competência. Selecione o documento correto.';
+  el('ajuda-decisao').hidden=p.tipo!=='nome';
+  el('ajuda-decisao').textContent=p.tipo==='nome'?`Emitente novo: ${p.emitente}`:'';
   if(p.tipo==='nome'){el('nome').value=p.sugestao;el('nome').focus();}
-  else{p.opcoes.forEach((opcao,i)=>{const label=document.createElement('label');label.className='escolha';const radio=document.createElement('input');radio.type='radio';radio.name='emitente';radio.value=String(i);radio.required=true;const conteudo=document.createElement('span');conteudo.append(texto('strong',opcao.nome),texto('small',`${opcao.data} · ${opcao.valor}`));label.append(radio,conteudo);el('opcoes').append(label);});el('titulo-decisao').focus();}
+  else{
+    p.opcoes.forEach((opcao,i)=>{
+      const label=document.createElement('label');label.className='escolha';
+      const radio=document.createElement('input');radio.type='radio';radio.name='emitente';radio.value=String(i);radio.required=true;
+      radio.addEventListener('change',()=>{
+        if(!radio.checked)return;
+        el('emissao-emitente').textContent=opcao.data;el('valor-emitente').textContent=opcao.valor;
+        el('responder').disabled=false;
+      });
+      label.append(radio,texto('strong',opcao.nome));el('opcoes').append(label);
+    });
+    el('titulo-decisao').focus();
+  }
   el('decisao').scrollIntoView({block:'nearest'});
 }
 async function atualizar(){

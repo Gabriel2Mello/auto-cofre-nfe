@@ -6,6 +6,7 @@ from http.client import HTTPConnection
 from threading import Event, Thread
 from time import monotonic
 from unittest.mock import MagicMock, patch
+from requests import HTTPError, Timeout
 
 from src.controlador_web import EstadoInterface, Pedido, executar_lote
 from src.enums import Empresa, TipoDocumento
@@ -118,6 +119,8 @@ class TestFluxo(unittest.TestCase):
             self.assertTrue(estado.condicao.wait_for(
               lambda: estado.dados['pergunta'] is not None and estado.dados['pergunta']['tipo'] == tipo, 3))
             pergunta = estado.snapshot()['pergunta']
+          if tipo == 'emitente':
+            self.assertEqual(pergunta['nota'], '00123', 'Preservar o número solicitado, inclusive zeros à esquerda.')
           estado.responder({'id': pergunta['id'], 'valor': resposta})
         estado.worker.join(3)
         self.assertFalse(estado.worker.is_alive())
@@ -170,6 +173,23 @@ class TestFluxo(unittest.TestCase):
     self.assertIn('XML e PDF salvos', resultado['detalhe'])
     flag.assert_called_once()
 
+  def test_falha_de_comunicacao_usa_mensagens_curtas_sem_perder_estado(self):
+    resultado, flag = self.executar_simulado(falha_consulta=HTTPError('HTTP 503'))
+    self.assertEqual(resultado['situacao'], 'Erro')
+    self.assertEqual(resultado['detalhe'], 'Falha de comunicação com o Cofre NF-e. Confira o portal e a conexão.')
+    flag.assert_not_called()
+    resultado, flag = self.executar_simulado(falha_flag=HTTPError('HTTP 503'))
+    self.assertEqual(resultado['situacao'], 'Conferir sinalização')
+    self.assertEqual(resultado['detalhe'], 'XML e PDF salvos; não foi possível confirmar a sinalização no Cofre NF-e. Confira o portal e a conexão.')
+    flag.assert_called_once()
+
+  def test_outros_erros_conservam_orientacoes_anteriores(self):
+    resultado, _ = self.executar_simulado(falha_salvar=OSError('teste'))
+    self.assertEqual(resultado['detalhe'], 'O documento não foi concluído. Confira os arquivos antes de repetir. Falha ao acessar ou gravar arquivos. Confira as permissões e o acesso à pasta.')
+    resultado, _ = self.executar_simulado(falha_consulta=Timeout('teste'))
+    self.assertIn('O portal demorou a responder.', resultado['detalhe'])
+    self.assertTrue(resultado['detalhe'].startswith('O documento não foi concluído.'))
+
   def test_parada_apos_salvar_conclui_sinalizacao_sem_repetir(self):
     resultado, flag = self.executar_simulado(parar_ao_salvar=True)
     self.assertEqual(resultado['situacao'], 'Concluído')
@@ -219,7 +239,7 @@ class TestHTTP(unittest.TestCase):
     self.assertIsNone(self.estado.worker)
 
   def test_recursos_e_datas_estao_disponiveis(self):
-    for caminho in ['/cofre.css', '/cofre.js', '/nunes-tema.js', '/icons/icone.svg',
+    for caminho in ['/cofre.css', '/cofre.js', '/rolagem.js', '/nunes-tema.js', '/icons/icone.svg',
                     '/icons/tema-lua.svg', '/icons/tema-lua-sol.svg', '/favicon.ico']:
       self.assertEqual(self.requisicao('GET', caminho)[0], 200)
     _, pagina = self.requisicao('GET', '/')

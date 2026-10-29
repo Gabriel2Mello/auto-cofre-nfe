@@ -12,7 +12,7 @@ def simular(pedido, estado):
     estado.selecionar_emitente([
       LinhaNFe('', 'FORNECEDOR DEMONSTRAÇÃO A', '01/10/2026', nota, '100,00'),
       LinhaNFe('', 'FORNECEDOR DEMONSTRAÇÃO B', '02/10/2026', nota, '200,00'),
-    ])
+    ], nota=nota)
     nome = estado.solicitar_nome('FORNECEDOR DEMONSTRAÇÃO')
     estado.atualizar_nota(indice, 'Concluído', f'SIMULAÇÃO · {nome} · nenhum arquivo salvo ou portal acessado.')
 

@@ -19,7 +19,7 @@ let retorno={ativo:false,parando:false,status:'Pronto',resultados:[],pergunta:nu
 let iniciarPendente=null, falharEstado=false;
 const contexto = vm.createContext({
   document:{documentElement:{dataset:{},setAttribute(nome,valor){this.dataset.tema=valor;}},getElementById(id){if(!idsHtml.has(id))return null;if(!elementos.has(id))elementos.set(id,elemento());return elementos.get(id);},
-    querySelector(seletor){if(seletor==='#tipo input:checked')return elementos.get('tipo');if(seletor==='#empresa input:checked')return elementos.get('empresa');return elemento();},querySelectorAll(){return [];},createElement:elemento,createDocumentFragment:elemento,createTextNode(textContent){return {textContent};}},
+    querySelector(seletor){if(seletor==='#tipo input:checked')return elementos.get('tipo');if(seletor==='#empresa input:checked')return elementos.get('empresa');if(seletor==='input[name="emitente"]:checked')return elementos.get('opcoes').children.map(label=>label.children[0]).find(radio=>radio.checked)||null;return elemento();},querySelectorAll(){return [];},createElement:elemento,createDocumentFragment:elemento,createTextNode(textContent){return {textContent};}},
   localStorage:{getItem(){return null;},setItem(){}},matchMedia(){return {matches:false,addEventListener(){}};},
   crypto:{randomUUID(){return 'pagina-teste';}},
   window:{addEventListener(nome,acao){const anterior=eventos.get(nome);eventos.set(nome,anterior?e=>{anterior(e);acao(e);}:acao);}},
@@ -176,8 +176,53 @@ async function testar(){
   const linhasAntes=elementos.get('linhas').children;
   await vm.runInContext('atualizar()',contexto);
   assert.equal(elementos.get('linhas').children,linhasAntes,'Estado igual não deve reconstruir a tabela.');
+  retorno={...retorno,ativo:true,pergunta:{id:'emitente-1',tipo:'emitente',nota:'00123',opcoes:[
+    {nome:'FORNECEDOR A',data:'01/10/2026',valor:'100,00'},
+    {nome:'FORNECEDOR B',data:'02/10/2026',valor:'200,00'},
+  ]}};
+  await vm.runInContext('atualizar()',contexto);
+  assert.equal(elementos.get('titulo-decisao').textContent,'Qual emitente da nota 00123?');
+  assert.equal(elementos.get('ajuda-decisao').hidden,true,'A escolha não mostra mensagem explicativa adicional.');
+  assert.equal(elementos.get('ajuda-decisao').textContent,'');
+  assert.equal(elementos.get('selecao-emitente').hidden,false);
+  assert.equal(elementos.get('detalhes-emitente').hidden,false);
+  assert.equal(elementos.get('emissao-emitente').textContent,'—');
+  assert.equal(elementos.get('valor-emitente').textContent,'—');
+  assert.equal(elementos.get('responder').disabled,true,'Não confirmar sem seleção explícita.');
+  const opcoes=elementos.get('opcoes').children;
+  assert.equal(opcoes.length,2);
+  assert.equal(opcoes[0].children.length,2,'Cada opção contém apenas rádio e nome.');
+  assert.equal(opcoes[1].children[1].textContent,'FORNECEDOR B');
+  opcoes.forEach(label=>{label.children[0].checked=false;});
+  const respostasAntes=pedidos.filter(p=>p.caminho==='/api/responder').length;
+  await elementos.get('form-decisao').onsubmit({preventDefault(){}});
+  assert.equal(pedidos.filter(p=>p.caminho==='/api/responder').length,respostasAntes);
+  const radioB=opcoes[1].children[0];radioB.checked=true;radioB.eventos.get('change')();
+  assert.equal(elementos.get('responder').disabled,false);
+  assert.equal(elementos.get('emissao-emitente').textContent,'02/10/2026');
+  assert.equal(elementos.get('valor-emitente').textContent,'200,00');
+  retorno.status='Andamento atualizado durante a conferência';
+  await vm.runInContext('atualizar()',contexto);
+  assert.equal(elementos.get('opcoes').children,opcoes,'A mesma pergunta conserva os controles.');
+  assert.equal(radioB.checked,true);
+  assert.equal(elementos.get('valor-emitente').textContent,'200,00');
+  await elementos.get('form-decisao').onsubmit({preventDefault(){}});
+  const respostaEmitente=pedidos.filter(p=>p.caminho==='/api/responder').at(-1).dados;
+  assert.equal(respostaEmitente.id,'emitente-1');
+  assert.equal(respostaEmitente.valor,'1','Confirmar envia o índice original do emitente selecionado.');
+  retorno={...retorno,pergunta:{...retorno.pergunta,id:'emitente-2',nota:'00456'}};
+  await vm.runInContext('atualizar()',contexto);
+  assert.equal(elementos.get('titulo-decisao').textContent,'Qual emitente da nota 00456?');
+  assert.equal(elementos.get('responder').disabled,true,'Uma nova pergunta exige nova seleção.');
+  assert.equal(elementos.get('emissao-emitente').textContent,'—');
+  assert.equal(elementos.get('valor-emitente').textContent,'—');
   retorno={...retorno,ativo:true,pergunta:{id:'nome-1',tipo:'nome',emitente:'TESTE',sugestao:'NOME INICIAL'}};
   await vm.runInContext('atualizar()',contexto);
+  assert.equal(elementos.get('selecao-emitente').hidden,true);
+  assert.equal(elementos.get('detalhes-emitente').hidden,true);
+  assert.equal(elementos.get('ajuda-decisao').hidden,false);
+  assert.equal(elementos.get('ajuda-decisao').textContent,'Emitente novo: TESTE');
+  assert.equal(elementos.get('responder').disabled,false);
   elementos.get('nome').value='DECISÃO PARCIAL DO OPERADOR';
   retorno.status='Atualização de andamento';
   await vm.runInContext('atualizar()',contexto);

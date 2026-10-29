@@ -1,0 +1,9 @@
+#simulacao { flex-shrink:0; padding:10px 12px; margin-bottom:16px; border:1px solid var(--contorno-controle); border-radius:7px; background:var(--suave); }
+#simulacao h2 { font-size:13px; margin-bottom:8px; }
+.simulacao-controles { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+.simulacao-controles label { font-size:13px; font-weight:400; }
+#cenario { flex:1; min-width:140px; max-width:100%; font:inherit; color:var(--texto); background:var(--cartao); border:1px solid var(--contorno-controle); border-radius:7px; padding:4px 8px; }
+#preparar-cenario { min-height:32px; padding:4px 10px; }
+#ajuda-cenario { margin-top:6px; font-size:13px; overflow-wrap:anywhere; }
+.configuracoes { display:none; }
+@media(max-width:430px) { #cenario { flex-basis:100%; } }

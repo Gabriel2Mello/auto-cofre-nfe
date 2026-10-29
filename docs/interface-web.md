@@ -108,8 +108,9 @@ node --check src/cofre.js
 node tests/test_cofre_js.cjs
 ```
 
-`python -m tests.preview_interface` abre uma prévia sintética, sem consultar
-o portal nem gravar documentos. Esta prévia serve somente para testar a interface.
+**Testar Cofre NFe.cmd** abre uma janela sintética com seletor de cenários.
+`python -m tests.preview_interface` imprime a URL da mesma prévia para o navegador;
+com `--desktop`, abre o WebView2. Veja [cenários e isolamento](simulacao.md).
 Os testes simulados não comprovam login, download ou sinalização no portal real.
 
 Em 16/10/2026, passaram 16 testes Python e o teste JavaScript de ociosidade,

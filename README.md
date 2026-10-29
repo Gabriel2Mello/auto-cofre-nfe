@@ -18,6 +18,14 @@ queda de presença não encerra o desktop. O Hub também abre/restaura a janela.
 O modo console permanece em `main.py`. Veja [desktop, instalação, dados,
 empacotamento e validação](DESKTOP.md) e o [fluxo operacional](docs/interface-web.md).
 
+## Testar com dados sintéticos
+
+Para experimentar situações raras sem exemplos reais, abra **Testar Cofre NFe.cmd**.
+A janela separada oferece 17 cenários sintéticos, incluindo perguntas de emitente,
+falhas, HTTP 503 em três etapas, parada, reconexão e lote extenso. Ela não acessa
+o portal nem grava documentos fiscais ou estatísticas reais.
+Veja [como testar e os limites da simulação](docs/simulacao.md).
+
 ## Diagnóstico do acesso ao portal
 
 Desktop e console registram login, troca e confirmação da empresa em

@@ -3,12 +3,14 @@
   color-scheme:light;
   --fundo:#f6f5f2; --cartao:#fff; --texto:#24272b; --muted:#626871;
   --borda:#dfdfdc; --contorno-controle:#778599; --marca:#166534; --suave:#eaf4ed; --botao-texto:#fff;
+  --neon-notas:#42c970;
   --foco:#218046; --aviso:#765012; --aviso-fundo:#fff8e9; --aviso-borda:#dcc493; --erro:#aa2940; --erro-fundo:#fae9ed;
 }
 :root[data-tema=escuro] {
   color-scheme:dark;
   --fundo:#191b1e; --cartao:#22252a; --texto:#f0f0f0; --muted:#aeb4be;
   --borda:#373b42; --contorno-controle:#8293ac; --marca:#99d8ae; --suave:#283c30; --botao-texto:#142a1c;
+  --neon-notas:#39ff14;
   --foco:#99d8ae; --aviso:#f5d291; --aviso-fundo:#30281b; --aviso-borda:#6e562f; --erro:#ffadbd; --erro-fundo:#39252d;
 }
 @media (prefers-color-scheme:dark) {
@@ -16,6 +18,7 @@
     color-scheme:dark;
     --fundo:#191b1e; --cartao:#22252a; --texto:#f0f0f0; --muted:#aeb4be;
     --borda:#373b42; --contorno-controle:#8293ac; --marca:#99d8ae; --suave:#283c30; --botao-texto:#142a1c;
+    --neon-notas:#39ff14;
     --foco:#99d8ae; --aviso:#f5d291; --aviso-fundo:#30281b; --aviso-borda:#6e562f; --erro:#ffadbd; --erro-fundo:#39252d;
   }
 }
@@ -56,7 +59,8 @@ textarea { display:block; width:100%; min-height:60px; margin-top:7px; padding:9
 textarea::placeholder { color:var(--muted); }
 #notas,.detalhe-nota strong { font-family:"Cascadia Code",Consolas,monospace; }
 #nome { text-transform:uppercase; }
-#notas { resize:none; border-color:#39ff14; transition:border-color 180ms ease-in-out; }
+#notas { resize:none; border-color:var(--neon-notas); transition:border-color 180ms ease-in-out; }
+:root[data-tema=claro] #notas { border-width:2px; padding:8px 9px; }
 #notas:placeholder-shown { user-select:none; }
 /* Neutraliza o primeiro desenho enquanto o navegador aplica o foco inicial. */
 #notas[autofocus], #notas:focus, #notas:not(:placeholder-shown) { border-color:var(--borda); outline:none; }
@@ -151,6 +155,7 @@ textarea::placeholder { color:var(--muted); }
 
 /* O título fica visível enquanto andamento, decisões e notas rolam à direita. */
 .resultados { display:flex; flex-direction:column; grid-column:2; grid-row:1; min-width:0; min-height:0; contain:size; padding-left:24px; border-left:1px solid var(--borda); }
+:root[data-tema=claro] .resultados { border-color:var(--contorno-controle); }
 .rolagem-resultados { flex:1; min-height:0; overflow-y:auto; overflow-wrap:anywhere; }
 .rolagem-resultados:focus-visible { outline:none; box-shadow:inset 0 -3px 0 currentColor; }
 /* Mantém a rolagem nativa e sobrepõe apenas o indicador de arraste. */

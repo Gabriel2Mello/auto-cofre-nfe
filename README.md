@@ -1,5 +1,7 @@
 # 🤖 RPA - Automação de Notas Cofre NF-e & CT-e (Painel Web ➔ Empresa Nunes)
 
+Para recriar o ambiente de uma instalação ou build, use o perfil indicado em [Dependências reproduzíveis](DEPENDENCIAS.md).
+
 Este é um robô de automação de processos (RPA) desenvolvido em Python para otimizar o fluxo de gerenciamento interno de documentos fiscais da Empresa Nunes. O sistema realiza a varredura e download automatizado de Notas Fiscais Eletrônicas (NF-e) e Conhecimentos de Transporte Eletrônicos (CT-e) diretamente do portal Cofre NFe, processa metadados e organiza os arquivos em uma estrutura de diretórios locais.
 
 ## Interface desktop local

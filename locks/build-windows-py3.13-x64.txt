@@ -1,0 +1,36 @@
+# Gerado por scripts/dependencias.py do nunes-hub; não editar manualmente.
+# CPython 3.13.13 / Windows 64 bits
+# Raízes: requirements-build.txt; fechamento transitivo do perfil.
+# Instalar com --no-deps; usar somente neste runtime/arquitetura.
+altgraph==0.17.5
+beautifulsoup4==4.15.0
+bottle==0.13.4
+certifi==2026.6.17
+cffi==2.1.1
+charset-normalizer==3.4.9
+cloudscraper==1.2.71
+clr-loader==0.3.1
+idna==3.18
+lxml==6.1.1
+packaging==26.2
+pefile==2024.8.26
+proxy-tools==0.1.0
+pycparser==3.12
+pyinstaller==6.21.0
+pyinstaller-hooks-contrib==2026.6
+pyparsing==3.3.2
+pypdf==6.21.1
+python-dateutil==2.9.0.post0
+pythonnet==3.2.1
+pywebview==6.2.1
+pywin32==312
+pywin32-ctypes==0.2.3
+requests==2.34.2
+requests-toolbelt==1.0.0
+setuptools==83.0.0
+six==1.17.0
+soupsieve==2.8.4
+typing-extensions==4.16.0
+unidecode==1.4.0
+urllib3==2.7.0
+validate-docbr==2.0.0
